@@ -1,0 +1,24 @@
+<svg width="256" height="256" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="shield_rim_grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#00ccff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#00b3e0;stop-opacity:1" />
+    </linearGradient>
+    
+    <linearGradient id="shield_inner_grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ccf5ff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#00ccff;stop-opacity:1" />
+    </linearGradient>
+    
+    <linearGradient id="check_grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0099cc;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#008ab3;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <polygon points="128,10 240,65 240,191 128,246 16,191 16,65" fill="url(#shield_rim_grad)"/>
+  
+  <polygon points="128,30 220,77 220,179 128,226 36,179 36,77" fill="url(#shield_inner_grad)"/>
+  
+  <path d="M 94.7 159.3 C 92.5 161.5 88.9 161.5 86.7 159.3 L 57.5 130.1 C 55.3 127.9 55.3 124.3 57.5 122.1 L 63.9 115.7 C 66.1 113.5 69.7 113.5 71.9 115.7 L 90.7 134.5 L 184.1 41.1 C 186.3 38.9 189.9 38.9 192.1 41.1 L 198.5 47.5 C 200.7 49.7 200.7 53.3 198.5 55.5 Z" fill="url(#check_grad)" transform="translate(0, 50)"/>
+</svg>
