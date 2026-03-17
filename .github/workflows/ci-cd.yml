@@ -16,7 +16,7 @@ jobs:
   analyze:
     runs-on: ubuntu-latest
     permissions:
-      security-events: read
+      security-events: write
       contents: read
     steps:
       - uses: actions/checkout@v4
