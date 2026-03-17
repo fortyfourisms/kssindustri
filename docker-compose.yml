@@ -1,0 +1,25 @@
+services:
+  kssindustri:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # Injected from .env file or CI secrets — never hardcode
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL}
+    container_name: kssindustri
+    restart: unless-stopped
+    ports:
+      # Expose on localhost only — the host NGINX reverse-proxy
+      # will forward traffic from the public domain to this port.
+      - "127.0.0.1:3090:3090"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3090/"]
+      interval: 30s
+      timeout: 3s
+      start_period: 5s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

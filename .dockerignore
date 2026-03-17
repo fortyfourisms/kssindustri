@@ -1,8 +1,9 @@
 node_modules
 dist
+.git
+.github
+.gitignore
 .DS_Store
-server/public
-vite.config.ts.*
+*.md
 *.tar.gz
 .env*
-nginx.conf
