@@ -5,69 +5,101 @@ import {
     Monitor,
     Users,
     ClipboardList,
-    TrendingUp,
-    Award,
     ChevronRight,
-    Info,
     Mail,
     Building2,
     Phone,
     Globe,
-    MoreVertical,
     CheckCircle2,
     Briefcase,
     MapPin,
     Calendar,
-    Target
 } from "lucide-react";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { RadarChartIkas } from "@/components/RadarChartIkas";
+import { getMediaUrl } from "@/lib/utils";
 
 const moduleConfig = {
     IKAS: {
         label: "IKAS",
         fullName: "Indeks Keamanan Siber",
+        description: "Ukur dan pantau tingkat keamanan siber organisasi Anda secara komprehensif.",
         href: "/dashboard/ikas",
         icon: Shield,
-        color: "from-blue-500 to-indigo-600",
-        shadow: "shadow-blue-500/25",
-        bg: "bg-blue-50",
-        text: "text-blue-700",
+        cardBg: "bg-blue-50",
+        dotColor: "bg-blue-500",
+        titleColor: "text-blue-900",
+        descColor: "text-blue-700/70",
+        linkColor: "text-blue-700 hover:text-blue-900",
+        badgeBg: "bg-white/70",
+        badgeText: "text-blue-700",
+        shapeColor: "text-blue-200",
+        shapeStyle: "circles",
     },
     KSE: {
         label: "KSE",
         fullName: "Kapasitas SDM & Ekosistem",
+        description: "Evaluasi kapasitas sumber daya manusia dan ekosistem keamanan siber.",
         href: "/dashboard/kse",
         icon: Monitor,
-        color: "from-purple-500 to-indigo-600",
-        shadow: "shadow-purple-500/25",
-        bg: "bg-purple-50",
-        text: "text-purple-700",
+        cardBg: "bg-violet-50",
+        dotColor: "bg-violet-500",
+        titleColor: "text-violet-900",
+        descColor: "text-violet-700/70",
+        linkColor: "text-violet-700 hover:text-violet-900",
+        badgeBg: "bg-white/70",
+        badgeText: "text-violet-700",
+        shapeColor: "text-violet-200",
+        shapeStyle: "spiral",
     },
     CSIRT: {
         label: "CSIRT",
         fullName: "Status Tim Respons Insiden",
+        description: "Daftarkan dan kelola status tim respons insiden siber organisasi.",
         href: "/dashboard/csirt",
-        icon: Shield, // Using Shield as per image for CSIRT
-        color: "from-cyan-500 to-teal-500",
-        shadow: "shadow-cyan-500/25",
-        bg: "bg-cyan-50",
-        text: "text-cyan-700",
+        icon: Shield,
+        cardBg: "bg-teal-50",
+        dotColor: "bg-teal-500",
+        titleColor: "text-teal-900",
+        descColor: "text-teal-700/70",
+        linkColor: "text-teal-700 hover:text-teal-900",
+        badgeBg: "bg-white/70",
+        badgeText: "text-teal-700",
+        shapeColor: "text-teal-200",
+        shapeStyle: "squares",
+    },
+    SURVEI: {
+        label: "Survei Profil Resiko",
+        fullName: "Profil Resiko Siber",
+        description: "Isi survei profil risiko untuk mendapatkan gambaran kesiapan keamanan siber.",
+        href: "/dashboard/survei",
+        icon: ClipboardList,
+        cardBg: "bg-amber-50",
+        dotColor: "bg-amber-500",
+        titleColor: "text-amber-900",
+        descColor: "text-amber-700/70",
+        linkColor: "text-amber-700 hover:text-amber-900",
+        badgeBg: "bg-white/70",
+        badgeText: "text-amber-700",
+        shapeColor: "text-amber-200",
+        shapeStyle: "diamonds",
     },
 };
 
 export default function Dashboard() {
     const { data: user } = useUser();
-    const {
-        displayEmail,
-        displayPhone,
-        displayLocation,
-        displayJabatan,
-        displayJoined
-    } = useProfile();
+    
+    // Fetch perusahaan langsung dari GET /api/perusahaan/{id}
+    const perusahaanId = user?.id_perusahaan || user?.perusahaan?.id;
+    const { data: perusahaanResponse } = useQuery({
+        queryKey: ["perusahaan", perusahaanId],
+        queryFn: () => api.getPerusahaanById(String(perusahaanId)),
+        enabled: !!perusahaanId,
+    });
+    const perusahaan = perusahaanResponse ?? user?.perusahaan;
 
     // Fetch data for modules to show status
     const { data: ikasData } = useQuery({ queryKey: ["ikas"], queryFn: api.getIkas });
@@ -85,7 +117,6 @@ export default function Dashboard() {
         tanggulih: { nilai_tanggulih: 0, kategori_tanggulih: "INPUT BELUM LENGKAP", nilai_subdomain1: 0, nilai_subdomain2: 0, nilai_subdomain3: 0, nilai_subdomain4: 0 },
     };
 
-    const perusahaan = user?.perusahaan ?? user;
     const isIkasFilled = ikasData && Object.keys(ikasData).length > 0;
     const activeIkasData = isIkasFilled ? ikasData : ikasDataFallback;
     const isKseFilled = kseData && Object.keys(kseData).length > 0;
@@ -102,7 +133,7 @@ export default function Dashboard() {
                         <motion.div
                             initial={{ opacity: 0, y: 16 }}
                             animate={{ opacity: 1, y: 0 }}
-                            className="relative rounded-[2rem] overflow-hidden group h-[280px] shadow-2xl shadow-blue-900/10 border border-white/20"
+                            className="relative rounded-[2rem] overflow-hidden group h-[180px] sm:h-[240px] md:h-[280px] shadow-2xl shadow-blue-900/10 border border-white/20"
                         >
                             <img
                                 src="/images/banner.png"
@@ -111,7 +142,7 @@ export default function Dashboard() {
                             />
                             <div className="absolute inset-0 bg-gradient-to-tr from-blue-900/60 via-blue-900/20 to-transparent" />
 
-                            <div className="absolute inset-0 p-10 flex flex-col justify-between">
+                            <div className="absolute inset-0 p-5 md:p-10 flex flex-col justify-between">
                                 <div className="flex items-center gap-3">
                                     <h1 className="text-2xl font-black text-white tracking-tight drop-shadow-md">
                                         {perusahaan?.nama_perusahaan ?? "Nama Perusahaan"}
@@ -121,21 +152,22 @@ export default function Dashboard() {
                         </motion.div>
 
                         {/* Module Action Cards - Directly below banner */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <ModuleActionCard
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <SocietyCard
                                 {...moduleConfig.IKAS}
                                 status={isIkasFilled ? "Sudah Diisi" : "Belum Diisi"}
-                                subText="Indeks Keamanan Siber"
                             />
-                            <ModuleActionCard
+                            <SocietyCard
                                 {...moduleConfig.KSE}
                                 status={isKseFilled ? "Sudah Diisi" : "Belum Diisi"}
-                                subText="Kapasitas SDM & Ekosistem"
                             />
-                            <ModuleActionCard
+                            <SocietyCard
                                 {...moduleConfig.CSIRT}
                                 status={isCsirtFilled ? "Sudah Diisi" : "Belum Diisi"}
-                                subText="Status Tim Respons Insiden"
+                            />
+                            <SocietyCard
+                                {...moduleConfig.SURVEI}
+                                status={surveiData && (Array.isArray(surveiData) ? surveiData.length > 0 : Object.keys(surveiData).length > 0) ? "Sudah Diisi" : "Belum Diisi"}
                             />
                         </div>
 
@@ -166,7 +198,7 @@ export default function Dashboard() {
                             <div className="relative">
                                 <div className="w-24 h-24 rounded-full bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center overflow-hidden border-4 border-white shadow-lg">
                                     <img
-                                        src={user?.foto_profile}
+                                        src={getMediaUrl(user?.foto_profile)}
                                         alt="User Avatar"
                                         className="w-full h-full object-cover"
                                     />
@@ -185,12 +217,12 @@ export default function Dashboard() {
                                     <h3 className="text-sm font-black text-slate-800 tracking-tight uppercase">Informasi Akun</h3>
                                 </div>
                                 <div className="bg-slate-50/50 rounded-[1.5rem] border border-slate-100 divide-y divide-slate-100 overflow-hidden">
-                                    <AccountItem icon={Mail} label="EMAIL" value={displayEmail} />
-                                    <AccountItem icon={Phone} label="TELEPON" value={displayPhone} />
-                                    <AccountItem icon={MapPin} label="LOKASI" value={displayLocation} />
-                                    <AccountItem icon={Briefcase} label="JABATAN" value={displayJabatan} />
+                                    <AccountItem icon={Mail} label="EMAIL" value={user?.email} />
+                                    <AccountItem icon={Phone} label="TELEPON" value={perusahaan?.telepon} />
+                                    <AccountItem icon={MapPin} label="LOKASI" value={perusahaan?.alamat} />
+                                    <AccountItem icon={Briefcase} label="JABATAN" value={user?.jabatan_name} />
                                     <AccountItem icon={Building2} label="PERUSAHAAN" value={perusahaan?.nama_perusahaan ?? "Nama Perusahaan"} />
-                                    <AccountItem icon={Calendar} label="BERGABUNG" value={displayJoined} />
+                                    <AccountItem icon={Calendar} label="BERGABUNG" value={user?.created_at || user?.createdAt ? new Date(user.created_at || user.createdAt).toLocaleDateString("id-ID", { year: "numeric", month: "long", day: "numeric" }) : "Tidak diketahui"} />
                                 </div>
                             </div>
                         </motion.div>
@@ -227,7 +259,49 @@ export default function Dashboard() {
 
 }
 
-function ModuleActionCard({ label, fullName, href, icon: Icon, color, shadow, bg, text, status, subText }: any) {
+function DecorativeShape({ style, colorClass }: { style: string; colorClass: string }) {
+    if (style === "circles") return (
+        <div className={`absolute -right-6 -bottom-6 opacity-60 ${colorClass}`}>
+            <svg width="140" height="140" viewBox="0 0 140 140" fill="currentColor">
+                <circle cx="90" cy="50" r="48" opacity="0.5" />
+                <circle cx="60" cy="100" r="34" opacity="0.4" />
+                <circle cx="110" cy="110" r="24" opacity="0.3" />
+            </svg>
+        </div>
+    );
+    if (style === "spiral") return (
+        <div className={`absolute -right-4 -bottom-4 opacity-60 ${colorClass}`}>
+            <svg width="140" height="140" viewBox="0 0 140 140" fill="currentColor">
+                <circle cx="100" cy="100" r="50" opacity="0.35" />
+                <circle cx="100" cy="100" r="36" opacity="0.30" />
+                <circle cx="100" cy="100" r="22" opacity="0.25" />
+                <circle cx="100" cy="100" r="10" opacity="0.4" />
+            </svg>
+        </div>
+    );
+    if (style === "squares") return (
+        <div className={`absolute -right-4 -bottom-4 opacity-60 ${colorClass}`}>
+            <svg width="140" height="140" viewBox="0 0 140 140" fill="currentColor">
+                <rect x="60" y="10" width="60" height="60" rx="12" opacity="0.5" />
+                <rect x="30" y="60" width="55" height="55" rx="12" opacity="0.35" />
+                <rect x="80" y="75" width="45" height="45" rx="10" opacity="0.25" />
+            </svg>
+        </div>
+    );
+    if (style === "diamonds") return (
+        <div className={`absolute -right-4 -bottom-4 opacity-60 ${colorClass}`}>
+            <svg width="140" height="140" viewBox="0 0 140 140" fill="currentColor">
+                <polygon points="100,10 130,60 100,110 70,60" opacity="0.45" />
+                <polygon points="70,50 100,90 70,130 40,90" opacity="0.30" />
+                <polygon points="110,65 130,95 110,125 90,95" opacity="0.25" />
+            </svg>
+        </div>
+    );
+    return null;
+}
+
+function SocietyCard({ label, fullName, description, href, cardBg, dotColor, titleColor, descColor, linkColor, badgeBg, badgeText, shapeColor, shapeStyle, status }: any) {
+    const isFilled = status === "Sudah Diisi";
     return (
         <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -236,39 +310,32 @@ function ModuleActionCard({ label, fullName, href, icon: Icon, color, shadow, bg
         >
             <Link
                 href={href}
-                className="block bg-white rounded-[2rem] p-6 shadow-lg shadow-slate-200/30 border border-slate-100 hover:shadow-2xl hover:shadow-blue-900/10 transition-all group cursor-pointer relative overflow-hidden"
+                className={`relative block ${cardBg} rounded-[2rem] p-7 overflow-hidden group cursor-pointer border border-black/5 hover:shadow-xl transition-all duration-300`}
             >
-                <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-4">
-                        <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${color} flex items-center justify-center shadow-lg ${shadow} transition-transform group-hover:scale-110`}>
-                            <Icon className="w-7 h-7 text-white" />
-                        </div>
-                        <div>
-                            <h4 className="font-black text-slate-900 text-lg font-display">{label}</h4>
-                            <div className="flex items-center gap-2 mt-0.5">
-                                <div className={`px-3 py-0.5 rounded-full ${bg} ${text} text-[10px] font-bold flex items-center gap-1`}>
-                                    <div className={`w-1 h-1 rounded-full ${text.replace('text', 'bg')}`} />
-                                    {status}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <button className="text-slate-300 hover:text-slate-500">
-                        <MoreVertical className="w-5 h-5" />
-                    </button>
+                {/* Status badge */}
+                <div className="relative z-10">
+                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold ${badgeBg} ${badgeText} backdrop-blur-sm border border-black/5`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${isFilled ? dotColor : "bg-slate-400"}`} />
+                        {status}
+                    </span>
                 </div>
 
-                <div className="mt-8 flex items-center gap-2 text-slate-400">
-                    <Info className="w-4 h-4" />
-                    <span className="text-xs font-semibold">{subText}</span>
+                {/* Title & Description */}
+                <div className="relative z-10 mt-5 mb-10">
+                    <h4 className={`text-2xl font-black tracking-tight ${titleColor}`}>{label}</h4>
+                    <p className={`text-sm mt-2 leading-relaxed font-medium ${descColor} max-w-[65%]`}>{description}</p>
                 </div>
 
-                <div className="mt-2 flex items-center justify-between">
-                    <span className="text-blue-600 text-sm font-bold opacity-0 group-hover:opacity-100 transition-opacity">Lihat Detail</span>
-                    <div className="p-2 bg-slate-50 rounded-full group-hover:bg-blue-600 group-hover:text-white transition-all ml-auto">
+                {/* CTA Link */}
+                <div className="relative z-10">
+                    <span className={`text-sm font-bold underline underline-offset-2 flex items-center gap-1 w-fit transition-all ${linkColor} group-hover:gap-2`}>
+                        {isFilled ? "Lihat Detail" : "Isi Sekarang"}
                         <ChevronRight className="w-4 h-4" />
-                    </div>
+                    </span>
                 </div>
+
+                {/* Decorative shape */}
+                <DecorativeShape style={shapeStyle} colorClass={shapeColor} />
             </Link>
         </motion.div>
     );

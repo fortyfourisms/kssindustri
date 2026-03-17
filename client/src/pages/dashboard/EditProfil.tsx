@@ -1,16 +1,24 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+import { apiClient } from "@/services/apiClient";
+import { perusahaanService } from "@/services/perusahaan.service";
 import { useUser } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, Save, UserCircle, Lock, Mail, User, Building2, MapPin, Phone, Globe, Image as ImageIcon } from "lucide-react";
+import { Loader2, Save, UserCircle, Lock, Mail, User, Building2, MapPin, Phone, Globe, Image as ImageIcon, MoreVertical } from "lucide-react";
 import { motion } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useSearch } from "wouter";
+import { getMediaUrl } from "@/lib/utils";
 
 const ProfileSchema = z.object({
     name: z.string().min(2, "Nama minimal 2 karakter"),
@@ -56,10 +64,17 @@ export default function EditProfil() {
     const search = useSearch();
     const initialTab = new URLSearchParams(search).get("tab") === "perusahaan" ? "perusahaan" : "pengguna";
 
-    // Single query: useUser returns user array element + nested perusahaan (if backend adds it back for backward compatibility)
     const { data: user, isLoading: isUserLoading } = useUser();
-    const perusahaan = user?.perusahaan;
-    const { data: subSektors } = useQuery({ queryKey: ["subSektor"], queryFn: api.getSubSektor });
+
+    // Fetch perusahaan langsung dari GET /api/perusahaan/{id}
+    const perusahaanId = user?.id_perusahaan || user?.perusahaan?.id;
+    const { data: perusahaan } = useQuery({
+        queryKey: ["perusahaan", perusahaanId],
+        queryFn: () => perusahaanService.getById(String(perusahaanId)),
+        enabled: !!perusahaanId,
+    });
+
+    const { data: subSektors } = useQuery({ queryKey: ["subSektor"], queryFn: () => apiClient.get<any[]>("/api/sub_sektor") });
 
     const profileForm = useForm<ProfileForm>({ resolver: zodResolver(ProfileSchema) });
     const passwordForm = useForm<PasswordForm>({ resolver: zodResolver(PasswordSchema) });
@@ -72,19 +87,19 @@ export default function EditProfil() {
     useEffect(() => {
         if (perusahaan) {
             perusahaanForm.reset({
-                nama_perusahaan: perusahaan.nama_perusahaan || perusahaan.name || "",
+                nama_perusahaan: perusahaan.nama_perusahaan || "",
                 alamat: perusahaan.alamat || "",
                 email: perusahaan.email || "",
                 telepon: perusahaan.telepon || "",
                 website: perusahaan.website || "",
                 photo: perusahaan.photo || "",
-                id_sub_sektor: perusahaan.sub_sektor?.id || perusahaan.id_sub_sektor || "",
+                id_sub_sektor: perusahaan.sub_sektor?.id || "",
             });
         }
     }, [perusahaan, perusahaanForm]);
 
     const profileMutation = useMutation({
-        mutationFn: (d: ProfileForm) => api.updateProfile(d),
+        mutationFn: (d: ProfileForm) => apiClient.put<any>("/api/profile", d),
         onSuccess: (updated) => {
             qc.setQueryData(["me"], updated);
             toast({ title: "Profil diperbarui" });
@@ -94,7 +109,7 @@ export default function EditProfil() {
 
     const passwordMutation = useMutation({
         mutationFn: (d: PasswordForm) =>
-            api.updateProfile({ currentPassword: d.currentPassword, newPassword: d.newPassword }),
+            apiClient.put<any>("/api/profile", { currentPassword: d.currentPassword, newPassword: d.newPassword }),
         onSuccess: () => {
             passwordForm.reset();
             toast({ title: "Password diperbarui" });
@@ -103,18 +118,61 @@ export default function EditProfil() {
     });
 
     const perusahaanMutation = useMutation({
-        // Update via PUT /api/perusahaan/:id — same as Vue stakeholders update
         mutationFn: (d: PerusahaanForm) => {
-            const id = user?.id_perusahaan || perusahaan?.id;
-            if (!id) throw new Error("ID perusahaan tidak ditemukan");
-            return api.updatePerusahaan(String(id), d);
+            if (!perusahaanId) throw new Error("ID perusahaan tidak ditemukan");
+            return perusahaanService.update(String(perusahaanId), d as any);
         },
         onSuccess: () => {
+            qc.invalidateQueries({ queryKey: ["perusahaan", perusahaanId] });
             qc.invalidateQueries({ queryKey: ["me"] });
             toast({ title: "Profil perusahaan diperbarui" });
         },
         onError: (e: any) => toast({ title: "Gagal", description: e.message, variant: "destructive" }),
     });
+
+    const uploadProfileImageMutation = useMutation({
+        mutationFn: (formData: FormData) => apiClient.putForm<any>("/api/profile", formData),
+        onSuccess: (updated) => {
+            qc.setQueryData(["me"], updated);
+            toast({ title: "Foto profil berhasil diperbarui" });
+        },
+        onError: (e: any) => toast({ title: "Gagal mengunggah foto", description: e.message, variant: "destructive" }),
+    });
+
+    const uploadPerusahaanImageMutation = useMutation({
+        mutationFn: (formData: FormData) => {
+            if (!perusahaanId) throw new Error("ID perusahaan tidak ditemukan");
+            return perusahaanService.update(String(perusahaanId), formData);
+        },
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: ["perusahaan", perusahaanId] });
+            qc.invalidateQueries({ queryKey: ["me"] });
+            toast({ title: "Foto perusahaan berhasil diperbarui" });
+        },
+        onError: (e: any) => toast({ title: "Gagal mengunggah foto", description: e.message, variant: "destructive" }),
+    });
+
+    const userPhotoInputRef = useRef<HTMLInputElement>(null);
+    const userBannerInputRef = useRef<HTMLInputElement>(null);
+    const perusahaanPhotoInputRef = useRef<HTMLInputElement>(null);
+    const perusahaanBannerInputRef = useRef<HTMLInputElement>(null);
+
+    const handleUpload = (type: 'user_photo' | 'user_banner' | 'perusahaan_photo' | 'perusahaan_banner', file: File) => {
+        const formData = new FormData();
+        if (type === 'user_photo') {
+            formData.append("foto_profile", file); // Depending on your backend, using 'foto_profile' or 'photo'
+            uploadProfileImageMutation.mutate(formData);
+        } else if (type === 'user_banner') {
+            formData.append("banner", file);
+            uploadProfileImageMutation.mutate(formData);
+        } else if (type === 'perusahaan_photo') {
+            formData.append("photo", file); // According to PerusahaanSchema, the field is 'photo'
+            uploadPerusahaanImageMutation.mutate(formData);
+        } else if (type === 'perusahaan_banner') {
+            formData.append("banner", file);
+            uploadPerusahaanImageMutation.mutate(formData);
+        }
+    };
 
     if (isUserLoading) {
         return (
@@ -134,19 +192,99 @@ export default function EditProfil() {
                     </TabsList>
 
                     <TabsContent value="pengguna" className="space-y-6">
-                        {/* Avatar */}
+                        {/* Banner & Avatar Profile */}
                         <motion.div
                             initial={{ opacity: 0, y: 16 }}
                             animate={{ opacity: 1, y: 0 }}
-                            className="bg-white/70 backdrop-blur-sm border border-white/60 rounded-2xl p-6 flex items-center gap-5"
+                            className="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-200 relative"
                         >
-                            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-2xl font-black shadow-xl shadow-blue-500/25">
-                                {(user?.username || user?.name) ? getInitials(user.username || user.name) : <User className="w-8 h-8" />}
+                            {/* Banner */}
+                            <div
+                                className={`h-32 w-full bg-cover bg-center ${!user?.banner ? 'bg-gradient-to-r from-orange-100 to-rose-100' : ''}`}
+                                style={{ backgroundImage: user?.banner ? `url(${getMediaUrl(user.banner)})` : undefined }}
+                            />
+
+                            {/* 3 Dots Menu */}
+                            <div className="absolute right-4 top-4 z-20">
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <button className="p-2 text-slate-800 bg-white/50 backdrop-blur hover:bg-white rounded-full transition-colors shadow-sm">
+                                            <MoreVertical className="w-5 h-5" />
+                                        </button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end" className="z-[100]">
+                                        <DropdownMenuItem onClick={() => userPhotoInputRef.current?.click()}>
+                                            Ganti Foto Profil
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => userBannerInputRef.current?.click()}>
+                                            Ganti Banner
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                                
+                                <input 
+                                    type="file" 
+                                    ref={userPhotoInputRef} 
+                                    className="hidden" 
+                                    accept="image/*"
+                                    onChange={(e) => {
+                                        if (e.target.files?.[0]) handleUpload('user_photo', e.target.files[0]);
+                                    }}
+                                />
+                                <input 
+                                    type="file" 
+                                    ref={userBannerInputRef} 
+                                    className="hidden" 
+                                    accept="image/*"
+                                    onChange={(e) => {
+                                        if (e.target.files?.[0]) handleUpload('user_banner', e.target.files[0]);
+                                    }}
+                                />
                             </div>
-                            <div>
-                                <h2 className="font-black text-slate-900 font-display text-xl">{user?.username || user?.name}</h2>
-                                <p className="text-slate-500 text-sm">{user?.email}</p>
-                                <p className="text-xs text-slate-400 mt-1">Bergabung: {user?.created_at || user?.createdAt ? new Date(user.created_at || user.createdAt).toLocaleDateString("id-ID", { year: "numeric", month: "long", day: "numeric" }) : ""}</p>
+
+                            {/* Info Area */}
+                            <div className="px-6 pb-6 relative">
+                                {/* Profile Picture */}
+                                <div className="absolute -top-12 left-6">
+                                    <div className="w-24 h-24 rounded-full border-4 border-white bg-slate-100 overflow-hidden flex items-center justify-center shadow-sm">
+                                        {user?.foto_profile ? (
+                                            <img
+                                                src={getMediaUrl(user.foto_profile)}
+                                                alt="Profile"
+                                                className="w-full h-full object-cover"
+                                            />
+                                        ) : (
+                                            <div className="w-full h-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-3xl font-black">
+                                                {(user?.username || user?.name) ? getInitials(user.username || user.name) : <User className="w-10 h-10" />}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="pt-14">
+                                    <h2 className="font-bold text-slate-900 text-2xl">{user?.username || user?.name}</h2>
+
+                                    <div className="flex flex-col gap-1.5 mt-1.5">
+                                        <div className="flex flex-wrap items-center gap-x-2 text-sm">
+                                            <span className="font-medium text-slate-600">{user?.email}</span>
+
+                                            {user?.jabatan_name && (
+                                                <>
+                                                    <span className="text-slate-300">•</span>
+                                                    <div className="flex items-center gap-1.5 text-slate-700">
+                                                        <div className="w-4 h-4 bg-blue-600 rounded flex items-center justify-center">
+                                                            <Building2 className="w-2.5 h-2.5 text-white" />
+                                                        </div>
+                                                        <span className="font-medium">{user.jabatan_name}</span>
+                                                    </div>
+                                                </>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <p className="text-xs text-slate-400 mt-4">
+                                        Bergabung: {user?.created_at || user?.createdAt ? new Date(user.created_at || user.createdAt).toLocaleDateString("id-ID", { year: "numeric", month: "long", day: "numeric" }) : ""}
+                                    </p>
+                                </div>
                             </div>
                         </motion.div>
 
@@ -242,6 +380,102 @@ export default function EditProfil() {
                         <motion.div
                             initial={{ opacity: 0, y: 16 }}
                             animate={{ opacity: 1, y: 0 }}
+                            className="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-200 relative mb-6"
+                        >
+                            {/* Banner (Menggunakan default gradient karena perusahaan belum memiliki banner khusus) */}
+                            <div className="h-32 w-full bg-gradient-to-r from-blue-100 to-indigo-100" />
+                            
+                            {/* 3 Dots Menu */}
+                            <div className="absolute right-4 top-4 z-20">
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <button className="p-2 text-slate-800 bg-white/50 backdrop-blur hover:bg-white rounded-full transition-colors shadow-sm">
+                                            <MoreVertical className="w-5 h-5" />
+                                        </button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end" className="z-[100]">
+                                        <DropdownMenuItem onClick={() => perusahaanPhotoInputRef.current?.click()}>
+                                            Ganti Foto Perusahaan
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => perusahaanBannerInputRef.current?.click()}>
+                                            Ganti Banner Perusahaan
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+
+                                <input 
+                                    type="file" 
+                                    ref={perusahaanPhotoInputRef} 
+                                    className="hidden" 
+                                    accept="image/*"
+                                    onChange={(e) => {
+                                        if (e.target.files?.[0]) handleUpload('perusahaan_photo', e.target.files[0]);
+                                    }}
+                                />
+                                <input 
+                                    type="file" 
+                                    ref={perusahaanBannerInputRef} 
+                                    className="hidden" 
+                                    accept="image/*"
+                                    onChange={(e) => {
+                                        if (e.target.files?.[0]) handleUpload('perusahaan_banner', e.target.files[0]);
+                                    }}
+                                />
+                            </div>
+
+                            {/* Info Area */}
+                            <div className="px-6 pb-6 relative">
+                                {/* Profile Picture / Logo Perusahaan */}
+                                <div className="absolute -top-12 left-6">
+                                    <div className="w-24 h-24 rounded-full border-4 border-white bg-slate-100 overflow-hidden flex items-center justify-center shadow-sm">
+                                        {perusahaan?.photo ? (
+                                            <img 
+                                                src={getMediaUrl(perusahaan.photo)} 
+                                                alt="Logo Perusahaan" 
+                                                className="w-full h-full object-cover" 
+                                            />
+                                        ) : (
+                                            <div className="w-full h-full bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center text-white text-3xl font-black">
+                                                {perusahaan?.nama_perusahaan ? getInitials(perusahaan.nama_perusahaan) : <Building2 className="w-10 h-10" />}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                                
+                                <div className="pt-14">
+                                    <h2 className="font-bold text-slate-900 text-2xl">{perusahaan?.nama_perusahaan || "Nama Perusahaan"}</h2>
+                                    
+                                    <div className="flex flex-col gap-1.5 mt-1.5">
+                                        <div className="flex flex-wrap items-center gap-x-2 text-sm">
+                                            {perusahaan?.email && (
+                                                <span className="font-medium text-slate-600">{perusahaan.email}</span>
+                                            )}
+                                            
+                                            {perusahaan?.telepon && (
+                                                <>
+                                                    {perusahaan?.email && <span className="text-slate-300">•</span>}
+                                                    <div className="flex items-center gap-1.5 text-slate-700">
+                                                        <Phone className="w-3.5 h-3.5 text-slate-400" />
+                                                        <span className="font-medium">{perusahaan.telepon}</span>
+                                                    </div>
+                                                </>
+                                            )}
+                                        </div>
+                                    </div>
+                                    {perusahaan?.alamat && (
+                                        <p className="text-sm text-slate-500 mt-3 flex items-start gap-1.5">
+                                            <MapPin className="w-4 h-4 text-slate-400 mt-0.5 shrink-0" />
+                                            {perusahaan.alamat}
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                        </motion.div>
+
+                        <motion.div
+                            initial={{ opacity: 0, y: 16 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.1 }}
                             className="bg-white/70 backdrop-blur-sm border border-white/60 rounded-2xl p-6"
                         >
                             <div className="flex items-center gap-2 mb-5">
@@ -303,16 +537,16 @@ export default function EditProfil() {
                                 </div>
 
                                 <div>
-                                    <label className={LABEL_CLS}>Sub Sektor</label>
+                                    <label className={LABEL_CLS}>Sektor</label>
                                     <div className="relative">
                                         <select
                                             {...perusahaanForm.register("id_sub_sektor")}
                                             className={`${INPUT_CLS} appearance-none cursor-pointer pr-10`}
                                         >
-                                            <option value="">-- Pilih Sub Sektor --</option>
+                                            <option value="">-- Pilih Sektor --</option>
                                             {subSektors?.map((s: any) => (
                                                 <option key={s.id} value={s.id}>
-                                                    {s.nama_sektor} - {s.nama_sub_sektor}
+                                                    {s.nama_sub_sektor}
                                                 </option>
                                             ))}
                                         </select>

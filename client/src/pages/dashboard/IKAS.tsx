@@ -92,23 +92,23 @@ export default function IKAS() {
                 <div className="max-w-7xl mx-auto space-y-6">
 
                     {/* Unified Header */}
-                    <div className="bg-gradient-to-br from-blue-900 via-blue-700 to-blue-500 rounded-2xl p-6 relative overflow-hidden flex flex-wrap items-center justify-between gap-6 shadow-xl text-white border border-blue-400/20">
+                    <div className="bg-gradient-to-br from-blue-900 via-blue-700 to-blue-500 rounded-2xl p-4 md:p-6 relative overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl text-white border border-blue-400/20">
                         <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-blue-300 to-emerald-300 opacity-60"></div>
                         <div className="flex items-center gap-4 relative z-10">
-                            <div className="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center backdrop-blur-sm shadow-inner overflow-hidden border border-white/20">
-                                <Building2 className="w-8 h-8 text-white drop-shadow" />
+                            <div className="w-12 h-12 md:w-16 md:h-16 rounded-2xl bg-white/10 flex items-center justify-center backdrop-blur-sm shadow-inner overflow-hidden border border-white/20">
+                                <Building2 className="w-6 h-6 md:w-8 md:h-8 text-white drop-shadow" />
                             </div>
                             <div>
-                                <h1 className="text-xl md:text-2xl font-black drop-shadow-sm">IKAS - {user?.perusahaan?.nama_perusahaan || 'Stakeholder'}</h1>
+                                <h1 className="text-lg md:text-2xl font-black drop-shadow-sm">IKAS - {user?.perusahaan?.nama_perusahaan || 'Stakeholder'}</h1>
                                 {user?.perusahaan?.subSektor && (
-                                    <p className="text-sm md:text-base font-semibold text-white/90 mt-1 drop-shadow-sm flex items-center">
+                                    <p className="text-sm font-semibold text-white/90 mt-1 drop-shadow-sm flex items-center">
                                         <span className="text-white/70 text-[13px]">{user.perusahaan.subSektor.name || 'Sektor'}</span>
                                     </p>
                                 )}
                             </div>
                         </div>
-                        <div className="text-right relative z-10">
-                            <span className="inline-block px-5 py-2 rounded-full bg-white/15 text-white text-sm font-bold tracking-wide border border-white/30 uppercase backdrop-blur-md shadow-lg">
+                        <div className="relative z-10">
+                            <span className="inline-block px-4 md:px-5 py-2 rounded-full bg-white/15 text-white text-sm font-bold tracking-wide border border-white/30 uppercase backdrop-blur-md shadow-lg">
                                 {ikasDataDynamic.total_kategori}
                             </span>
                         </div>
@@ -312,7 +312,7 @@ export default function IKAS() {
                         </div>
 
                         {/* Action Bar */}
-                        <div className="flex justify-end items-center gap-3 mt-6 pt-5 border-t border-slate-100">
+                        <div className="flex flex-wrap justify-end items-center gap-3 mt-6 pt-5 border-t border-slate-100">
                             <input
                                 type="file"
                                 ref={fileInputRef}

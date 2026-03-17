@@ -1,80 +1,69 @@
-// Centralized API client — all requests include credentials (HttpOnly cookie)
+// ─── Simplified API façade ────────────────────────────────────────────────────
+// Re-exports service functions and fills gaps for domains that don't have
+// their own service file yet.  All HTTP calls go through apiClient.
+// ──────────────────────────────────────────────────────────────────────────────
 
-// Vite expose VITE_ prefix vars ke client, non-VITE_ vars hanya untuk server
-const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
-
-async function request<T>(
-    method: string,
-    path: string,
-    body?: unknown
-): Promise<T> {
-    const res = await fetch(`${BASE_URL}${path}`, {
-        method,
-        credentials: "include",         // ✅ kirim httpOnly cookie otomatis
-        headers: body ? { "Content-Type": "application/json" } : {},
-        body: body ? JSON.stringify(body) : undefined,
-    });
-
-    if (!res.ok) {
-        const err = await res.json().catch(() => ({ message: res.statusText }));
-        throw new Error(err.message ?? "Terjadi kesalahan");
-    }
-
-    // Some DELETE responses may be empty
-    const text = await res.text();
-    return text ? JSON.parse(text) : ({} as T);
-}
+import { apiClient } from "@/services/apiClient";
+import { authService } from "@/services/auth.service";
+import { csirtService } from "@/services/csirt.service";
+import { perusahaanService } from "@/services/perusahaan.service";
 
 export const api = {
-    // ── Auth ──────────────────────────────────────────────────────────────────
+    // ── Auth (delegates to authService) ──────────────────────────────────────
     register: (data: { name: string; email: string; password: string; perusahaanId: string }) =>
-        request<{ message: string }>("POST", "/api/register", data),
+        authService.register({
+            username: data.name,
+            email: data.email,
+            password: data.password,
+            id_perusahaan: data.perusahaanId,
+        }),
 
     login: (data: { email: string; password: string }) =>
-        request<{ message: string; requireMfa: boolean }>("POST", "/api/login", data),
+        authService.login(data),
 
-    logout: () => request<{ message: string }>("POST", "/api/logout"),
+    logout: () => authService.logout(),
 
-    getMe: () => request<any>("GET", `/api/me`),
+    getMe: () => authService.verifySession(),
 
-    updateProfile: (data: any) => request<any>("PUT", "/api/profile", data),
-
-    // ── MFA ───────────────────────────────────────────────────────────────────
+    // ── MFA (delegates to authService) ───────────────────────────────────────
     getMfaSetup: () =>
-        request<{ qrCode: string; secret: string; mfaEnabled: boolean }>("GET", "/api/mfa/setup"),
+        apiClient.get<{ qrCode: string; secret: string; mfaEnabled: boolean }>("/api/mfa/setup"),
 
     verifyMfa: (token: string) =>
-        request<{ message: string; user: any }>("POST", "/api/mfa/verify", { token }),
+        apiClient.post<{ message: string; user: any }>("/api/mfa/verify", { token }),
 
-    // ── Perusahaan ────────────────────────────────────────────────────────────
-    // Note: company data for the logged-in user is included in GET /api/me
-    // as a nested `perusahaan` object — use getMe() for that.
-    getPerusahaan: () => request<any[]>("GET", "/api/perusahaan"),
-    getPerusahaanDropdown: () => request<any[]>("GET", "/api/perusahaan/dropdown"),
-    createPerusahaan: (nama_perusahaan: string) => request<any>("POST", "/api/perusahaan", { nama_perusahaan }),
-    updatePerusahaan: (id: string, data: any) => request<any>("PUT", `/api/perusahaan/${id}`, data),
+    // ── Profile ──────────────────────────────────────────────────────────────
+    updateProfile: (data: any) => apiClient.put<any>("/api/profile", data),
 
-    // ── Sub Sektor ────────────────────────────────────────────────────────────
-    getSubSektor: () => request<any[]>("GET", "/api/sub_sektor"),
+    // ── Perusahaan (delegates to perusahaanService) ─────────────────────────
+    getPerusahaan: () => perusahaanService.getAll(),
+    getPerusahaanDropdown: () => perusahaanService.getDropdown(),
+    createPerusahaan: (data: any) => perusahaanService.create(data),
+    getPerusahaanById: (id: string) => perusahaanService.getById(id),
+    updatePerusahaan: (id: string, data: any) => perusahaanService.update(id, data),
+    deletePerusahaan: (id: string) => perusahaanService.delete(id),
 
-    // ── IKAS ──────────────────────────────────────────────────────────────────
-    getIkas: () => request<any>("GET", "/api/ikas"),
-    getIkasById: (id: string) => request<any>("GET", `/api/maturity/ikas/${id}`),
+    // ── Sub Sektor ───────────────────────────────────────────────────────────
+    getSubSektor: () => apiClient.get<any[]>("/api/sub_sektor"),
+
+    // ── IKAS ─────────────────────────────────────────────────────────────────
+    getIkas: () => apiClient.get<any>("/api/ikas"),
+    getIkasById: (id: string) => apiClient.get<any>(`/api/maturity/ikas/${id}`),
     saveIkas: (responses: Record<string, string>) =>
-        request<any>("POST", "/api/ikas", { responses }),
+        apiClient.post<any>("/api/ikas", { responses }),
 
-    // ── KSE ───────────────────────────────────────────────────────────────────
-    getKse: () => request<any>("GET", "/api/kse"),
-    saveKse: (data: any) => request<any>("POST", "/api/kse", data),
+    // ── KSE ──────────────────────────────────────────────────────────────────
+    getKse: () => apiClient.get<any>("/api/kse"),
+    saveKse: (data: any) => apiClient.post<any>("/api/kse", data),
 
-    // ── CSIRT ─────────────────────────────────────────────────────────────────
-    getCsirt: () => request<any[]>("GET", "/api/csirt"),
-    createCsirt: (data: any) => request<any>("POST", "/api/csirt", data),
-    updateCsirt: (id: string, data: any) => request<any>("PUT", `/api/csirt/${id}`, data),
-    deleteCsirt: (id: string) => request<any>("DELETE", `/api/csirt/${id}`),
+    // ── CSIRT (delegates to csirtService) ────────────────────────────────────
+    getCsirt: () => csirtService.getMembers(),
+    createCsirt: (data: any) => csirtService.create(data),
+    updateCsirt: (id: string, data: any) => csirtService.update(Number(id), data),
+    deleteCsirt: (id: string) => csirtService.delete(Number(id)),
 
-    // ── Survei ────────────────────────────────────────────────────────────────
-    getSurvei: () => request<any>("GET", "/api/survei"),
+    // ── Survei ───────────────────────────────────────────────────────────────
+    getSurvei: () => apiClient.get<any>("/api/survei"),
     saveSurvei: (answers: Record<string, number>) =>
-        request<any>("POST", "/api/survei", { answers }),
+        apiClient.post<any>("/api/survei", { answers }),
 };

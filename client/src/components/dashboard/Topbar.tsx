@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect } from "react";
 import { Link } from "wouter";
-import { ChevronDown, UserCircle, User } from "lucide-react";
+import { ChevronDown, UserCircle, User, Menu } from "lucide-react";
 import { useUser } from "@/hooks/useAuth";
-import { cn } from "@/lib/utils";
+import { cn, getMediaUrl } from "@/lib/utils";
 
 interface TopbarProps {
     title?: string;
+    onMenuClick?: () => void;
 }
 
 function getInitials(name: string): string {
@@ -17,7 +18,7 @@ function getInitials(name: string): string {
         .toUpperCase();
 }
 
-export function Topbar({ title }: TopbarProps) {
+export function Topbar({ title, onMenuClick }: TopbarProps) {
     const { data: user } = useUser();
     const [open, setOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
@@ -33,9 +34,17 @@ export function Topbar({ title }: TopbarProps) {
     }, []);
 
     return (
-        <header className="h-16 flex items-center justify-between px-6 border-b border-slate-100/80 bg-white/60 backdrop-blur-xl sticky top-0 z-30">
-            {/* Title */}
-            <div>
+        <header className="h-16 flex items-center justify-between px-4 md:px-6 border-b border-slate-100/80 bg-white/60 backdrop-blur-xl sticky top-0 z-30">
+            {/* Left: Hamburger (mobile) + Title */}
+            <div className="flex items-center gap-3">
+                {/* Hamburger for mobile */}
+                <button
+                    onClick={onMenuClick}
+                    className="md:hidden p-2 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition"
+                    aria-label="Open menu"
+                >
+                    <Menu className="w-5 h-5" />
+                </button>
                 {title && (
                     <h2 className="text-lg font-black text-slate-900 font-display">{title}</h2>
                 )}
@@ -47,9 +56,17 @@ export function Topbar({ title }: TopbarProps) {
                     onClick={() => setOpen((v) => !v)}
                     className="flex items-center gap-2.5 rounded-2xl px-3 py-1.5 hover:bg-slate-100 transition"
                 >
-                    {/* Avatar circle */}
-                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-sm font-bold shadow-lg shadow-blue-500/25 flex-shrink-0">
-                        {user?.name ? getInitials(user.name) : <User className="w-4 h-4" />}
+                    {/* Avatar */}
+                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-sm font-bold shadow-lg shadow-blue-500/25 flex-shrink-0 overflow-hidden">
+                        {user?.foto_profile ? (
+                            <img
+                                src={getMediaUrl(user.foto_profile)}
+                                alt="Profile"
+                                className="w-full h-full object-cover"
+                            />
+                        ) : (
+                            user?.name ? getInitials(user.name) : <User className="w-4 h-4" />
+                        )}
                     </div>
                     <div className="hidden sm:block text-left">
                         <p className="text-sm font-semibold text-slate-800 leading-none">{user?.username}</p>

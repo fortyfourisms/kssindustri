@@ -34,7 +34,7 @@ const GridLine = ({ orientation }: { orientation: 'horizontal' | 'vertical' }) =
 
 export function Features() {
   return (
-    <section id="features" className="py-32 bg-white relative overflow-hidden">
+    <section id="features" className="py-16 md:py-32 bg-white relative overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
         <FeatureHeader />
 
@@ -130,7 +130,7 @@ export function Features() {
             {/* Feature: Main Statement / Results */}
             <motion.div
               variants={itemVariants}
-              className="md:col-span-2 p-12 border-r border-b border-slate-200/60 bg-white group hover:bg-primary transition-all duration-500 cursor-pointer">
+              className="md:col-span-2 p-6 md:p-12 border-r border-b border-slate-200/60 bg-white group hover:bg-primary transition-all duration-500 cursor-pointer">
               <div className="relative z-10">
                 <span className="text-xs font-semibold text-primary uppercase tracking-widest mb-6 block group-hover:text-white transition-colors">IKAS</span>
                 <h3 className="text-4xl md:text-5xl font-bold text-slate-900 mb-6 tracking-tight leading-tight group-hover:text-white transition-colors">
@@ -153,7 +153,7 @@ export function Features() {
             {/* Feature 4: CSIRT (Wide) */}
             <motion.div
               variants={itemVariants}
-              className="md:col-span-2 p-12 border-r border-b border-slate-200/60 relative overflow-hidden group hover:bg-primary transition-all duration-500 cursor-pointer"
+              className="md:col-span-2 p-6 md:p-12 border-r border-b border-slate-200/60 relative overflow-hidden group hover:bg-primary transition-all duration-500 cursor-pointer"
             >
               <div className="relative z-10 max-w-md">
                 <h3 className="text-3xl font-bold text-slate-900 mb-4 group-hover:text-white transition-colors">CSIRT Services</h3>

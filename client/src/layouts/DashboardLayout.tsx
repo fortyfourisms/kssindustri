@@ -2,8 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Topbar } from "@/components/dashboard/Topbar";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-import { useQuery } from "@tanstack/react-query";
-import { api } from "@/lib/api";
 import { useUser } from "@/hooks/useAuth";
 import { useLocation } from "wouter";
 import { Building2, ArrowRight, X } from "lucide-react";
@@ -85,6 +83,8 @@ interface DashboardLayoutProps {
 }
 
 export function DashboardLayout({ children, title }: DashboardLayoutProps) {
+    const [sidebarOpen, setSidebarOpen] = useState(false);
+
     return (
         <ProtectedRoute>
             <div className="min-h-screen bg-[#f5f7ff] flex">
@@ -100,17 +100,18 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
                 />
 
                 {/* Sidebar */}
-                <Sidebar />
+                <Sidebar mobileOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
                 {/* Company incomplete guard – shows modal once per session */}
                 <CompanyGuard />
 
                 {/* Main area */}
                 <div className="flex-1 flex flex-col min-w-0 relative z-10">
-                    <Topbar title={title} />
-                    <main className="flex-1 p-6 overflow-y-auto">{children}</main>
+                    <Topbar title={title} onMenuClick={() => setSidebarOpen(true)} />
+                    <main className="flex-1 p-4 md:p-6 overflow-y-auto">{children}</main>
                 </div>
             </div>
         </ProtectedRoute>
     );
 }
+

@@ -34,7 +34,7 @@ export function Hero() {
   }, [displayText, isDeleting, typingSpeed]);
 
   return (
-    <section className="relative pt-32 pb-20 md:pt-48 md:pb-32 overflow-hidden bg-transparent min-h-[90vh] flex items-center">
+    <section className="relative pt-24 pb-16 md:pt-48 md:pb-32 overflow-hidden bg-transparent min-h-[90vh] flex items-center">
       {/* Subtle overlay for better text contrast */}
       <div className="absolute inset-0 bg-white/10 backdrop-blur-[0.5px] z-[1]" />
 
@@ -44,7 +44,7 @@ export function Hero() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.1 }}
-            className="font-display text-5xl sm:text-6xl md:text-7xl font-bold tracking-tight text-slate-900 leading-[1.1] mb-2 drop-shadow-sm"
+            className="font-display text-4xl sm:text-5xl md:text-7xl font-bold tracking-tight text-slate-900 leading-[1.1] mb-2 drop-shadow-sm"
           >
             Platform Penilaian Keamanan Siber <br />
             <span className="text-primary bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-cyan-500">
@@ -58,7 +58,7 @@ export function Hero() {
             transition={{ duration: 0.5, delay: 0.5 }}
             className="h-12 mb-6 flex items-center"
           >
-            <h2 className="text-2xl md:text-3xl font-mono font-bold text-slate-800 bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-cyan-500">
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-mono font-bold text-slate-800 bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-cyan-500">
               <i>{displayText}</i>
               <span className="inline-block w-[3px] h-8 bg-blue-600 ml-1 animate-pulse" />
             </h2>

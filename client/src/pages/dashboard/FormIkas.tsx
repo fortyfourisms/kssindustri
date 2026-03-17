@@ -102,7 +102,7 @@ export default function FormIkas() {
                 <div className="max-w-7xl mx-auto space-y-6 pb-12">
 
                     {/* Header Info */}
-                    <div className="bg-white/70 backdrop-blur-sm border border-white/60 rounded-2xl p-5 flex items-center gap-4 shadow-sm">
+                    <div className="bg-white/70 backdrop-blur-sm border border-white/60 rounded-2xl p-4 md:p-5 flex flex-col sm:flex-row items-start sm:items-center gap-3 shadow-sm">
                         <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/25">
                             <FileText className="w-6 h-6 text-white" />
                         </div>
@@ -117,7 +117,7 @@ export default function FormIkas() {
                     </div>
 
                     {/* Step Indicator */}
-                    <div className="bg-white/70 backdrop-blur-md border border-slate-200/60 rounded-2xl p-4 shadow-sm">
+                    <div className="bg-white/70 backdrop-blur-md border border-slate-200/60 rounded-2xl p-3 md:p-4 shadow-sm">
                         <div className="flex items-center justify-center gap-4 relative">
                             {/* Line connecting steps */}
                             <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-1 bg-slate-200 rounded -z-10">
@@ -262,7 +262,7 @@ export default function FormIkas() {
                                 </div>
                             </div>
 
-                            <div className="flex justify-between items-center mt-8 pt-5 border-t border-slate-100">
+                            <div className="flex flex-col-reverse sm:flex-row justify-between items-stretch sm:items-center gap-3 mt-8 pt-5 border-t border-slate-100">
                                 <button type="button" onClick={() => setLocation('/dashboard/ikas')} className="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm shadow-sm hover:bg-slate-50 transition-colors flex items-center gap-2">
                                     <ArrowLeft className="w-4 h-4" /> Kembali
                                 </button>

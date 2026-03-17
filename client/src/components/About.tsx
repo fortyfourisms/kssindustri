@@ -14,7 +14,7 @@ export function About() {
                             whileHover={{ scale: 1.02 }}
                             transition={{ duration: 0.6 }}
                             viewport={{}}
-                            className="bg-white border border-slate-100 rounded-[2.5rem] p-10 md:p-12 shadow-sm flex flex-col justify-end min-h-[300px] md:min-h-[450px] cursor-default transition-shadow hover:shadow-xl"
+                            className="bg-white border border-slate-100 rounded-[2.5rem] p-7 md:p-12 shadow-sm flex flex-col justify-end min-h-[220px] md:min-h-[450px] cursor-default transition-shadow hover:shadow-xl"
                         >
                             <h2 className="font-display text-4xl md:text-5xl font-bold text-[#0D121F] mb-6 leading-tight">
                                 Navigasi Ancaman <br />
@@ -32,7 +32,7 @@ export function About() {
                             whileHover={{ scale: 1.02 }}
                             transition={{ duration: 0.6, delay: 0.2 }}
                             viewport={{}}
-                            className="bg-white border border-slate-100 rounded-[3rem] p-10 md:p-12 shadow-sm flex flex-col justify-between min-h-[300px] md:min-h-[400px] cursor-default transition-shadow hover:shadow-xl"
+                            className="bg-white border border-slate-100 rounded-[3rem] p-7 md:p-12 shadow-sm flex flex-col justify-between min-h-[240px] md:min-h-[400px] cursor-default transition-shadow hover:shadow-xl"
                         >
                             <p className="text-slate-800 text-lg font-medium leading-relaxed max-w-xs">
                                 Misi kami adalah memperkuat kedaulatan digital nasional dengan menyediakan platform penilaian keamanan siber yang komprehensif bagi sektor industri strategis.
@@ -56,7 +56,7 @@ export function About() {
                             whileHover={{ scale: 1.02 }}
                             transition={{ duration: 0.6, delay: 0.1 }}
                             viewport={{}}
-                            className="bg-white border border-slate-100 rounded-[2.5rem] p-10 md:p-12 shadow-sm min-h-[250px] md:min-h-[300px] cursor-default transition-shadow hover:shadow-xl"
+                            className="bg-white border border-slate-100 rounded-[2.5rem] p-7 md:p-12 shadow-sm min-h-[180px] md:min-h-[300px] cursor-default transition-shadow hover:shadow-xl"
                         >
                             <p className="text-slate-500 text-base md:text-lg leading-relaxed max-w-xs">
                                 Arsitektur keamanan berbasis Zero Trust untuk memastikan integritas data dan perlindungan aset kritikal dari level infrastruktur hingga aplikasi.
@@ -70,7 +70,7 @@ export function About() {
                             whileHover={{ scale: 1.02 }}
                             transition={{ duration: 0.6, delay: 0.3 }}
                             viewport={{ once: true }}
-                            className="bg-white border border-slate-100 rounded-[3rem] p-10 md:p-12 shadow-sm flex flex-col justify-end min-h-[350px] md:min-h-[550px] cursor-default transition-shadow hover:shadow-xl"
+                            className="bg-white border border-slate-100 rounded-[3rem] p-7 md:p-12 shadow-sm flex flex-col justify-end min-h-[280px] md:min-h-[550px] cursor-default transition-shadow hover:shadow-xl"
                         >
                             <h2 className="font-display text-4xl md:text-5xl font-bold text-[#0D121F] mb-6 leading-tight">
                                 Optimasi <br />
