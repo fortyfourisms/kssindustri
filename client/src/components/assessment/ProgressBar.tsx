@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 
 interface ProgressBarProps {
   answered: number;
@@ -11,34 +11,29 @@ interface ProgressBarProps {
 export default function ProgressBar({
   answered,
   total,
-  currentPage,
-  totalPages,
-  title = 'Assessment',
+  title,
 }: ProgressBarProps) {
   const percentage = total > 0 ? Math.round((answered / total) * 100) : 0;
 
   return (
-    <div className="w-full bg-background pt-4 pb-2 mb-8">
+    <div className="w-full">
       {/* Header */}
-      <div className="flex justify-start mb-2">
+      <div className="flex justify-between items-end mb-2.5">
         <span className="text-sm font-bold text-foreground">
-          {currentPage} of {totalPages}
+          {title && <span className="mr-2 opacity-70 font-semibold">{title}</span>}
+          Terjawab {answered} dari {total}
+        </span>
+        <span className="text-xs font-bold text-[#10B981]">
+          {percentage}%
         </span>
       </div>
 
-      {/* Segments */}
-      <div className="flex gap-2 w-full h-1.5">
-        {Array.from({ length: totalPages }).map((_, idx) => {
-          const isCompleted = idx < currentPage; // or idx < answered if we want progress by answered questions, but image says 3 of 15 implies page progress
-          return (
-            <div
-              key={idx}
-              className={`flex-1 rounded-full transition-colors duration-300 ${
-                isCompleted ? 'bg-[#10B981]' : 'bg-slate-200 dark:bg-slate-800'
-              }`}
-            />
-          );
-        })}
+      {/* Bar */}
+      <div className="w-full h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+        <div 
+          className="h-full bg-[#10B981] transition-all duration-500 ease-out rounded-full" 
+          style={{ width: `${percentage}%` }}
+        />
       </div>
     </div>
   );

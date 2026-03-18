@@ -1,5 +1,5 @@
 import { apiClient } from './apiClient';
-import type { CsirtMember, CreateCsirtPayload, SdmCsirt, SeCsirt } from '@/types/csirt.types';
+import type { CsirtMember, CreateCsirtPayload, SdmCsirt, SeCsirt, CreateSePayload } from '@/types/csirt.types';
 
 /**
  * CSIRT Service — handles data fetching for CSIRT domain.
@@ -38,5 +38,22 @@ export const csirtService = {
     /** Get SE (systems/infrastructure) for a CSIRT */
     async getSeByCsirtId(id: number): Promise<SeCsirt[]> {
         return apiClient.get<SeCsirt[]>(`/api/se_csirt/${id}`);
+    },
+
+    // ── SE (Sistem Elektronik) CRUD via /api/se ─────────────────────────────
+
+    /** Get SE by its own ID (GET /api/se/{id}) */
+    async getSeById(id: string | number): Promise<SeCsirt> {
+        return apiClient.get<SeCsirt>(`/api/se/${id}`);
+    },
+
+    /** Create a new SE record (POST /api/se) */
+    async createSe(payload: CreateSePayload): Promise<SeCsirt> {
+        return apiClient.post<SeCsirt>('/api/se', payload);
+    },
+
+    /** Update a SE record by its own ID (PUT /api/se/{id}) */
+    async updateSe(id: number | string, payload: Partial<Omit<SeCsirt, 'id'>>): Promise<SeCsirt> {
+        return apiClient.put<SeCsirt>(`/api/se/${id}`, payload);
     },
 };

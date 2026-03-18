@@ -53,8 +53,8 @@ export const api = {
         apiClient.post<any>("/api/ikas", { responses }),
 
     // ── KSE ──────────────────────────────────────────────────────────────────
-    getKse: () => apiClient.get<any>("/api/kse"),
-    saveKse: (data: any) => apiClient.post<any>("/api/kse", data),
+    getKse: () => apiClient.get<any>("/api/se"),
+    saveKse: (data: any) => apiClient.post<any>("/api/se", data),
 
     // ── CSIRT (delegates to csirtService) ────────────────────────────────────
     getCsirt: () => csirtService.getMembers(),
