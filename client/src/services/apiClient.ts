@@ -29,11 +29,15 @@ export const apiClient = {
     get: <T>(path: string) =>
         request<T>(path, { method: 'GET' }),
 
-    post: <T>(path: string, body: unknown) =>
-        request<T>(path, { method: 'POST', body: JSON.stringify(body) }),
+    post: <T>(path: string, body: unknown) => {
+        const isForm = body instanceof FormData;
+        return request<T>(path, { method: 'POST', body: isForm ? body : JSON.stringify(body) });
+    },
 
-    put: <T>(path: string, body: unknown) =>
-        request<T>(path, { method: 'PUT', body: JSON.stringify(body) }),
+    put: <T>(path: string, body: unknown) => {
+        const isForm = body instanceof FormData;
+        return request<T>(path, { method: 'PUT', body: isForm ? body : JSON.stringify(body) });
+    },
 
     patch: <T>(path: string, body: unknown) =>
         request<T>(path, { method: 'PATCH', body: JSON.stringify(body) }),

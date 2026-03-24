@@ -16,6 +16,7 @@ import Dashboard from "@/pages/dashboard/Dashboard";
 import IKAS from "@/pages/dashboard/IKAS";
 import FormIkas from "@/pages/dashboard/FormIkas";
 import KSE from "@/pages/dashboard/KSE";
+import FormKse from "@/pages/dashboard/FormKse";
 import CSIRT from "@/pages/dashboard/CSIRT";
 import SurveiProfil from "@/pages/dashboard/SurveiProfil";
 import EditProfil from "@/pages/dashboard/EditProfil";
@@ -34,6 +35,7 @@ function Router() {
       <Route path="/dashboard/ikas" component={IKAS} />
       <Route path="/dashboard/form-ikas" component={FormIkas} />
       <Route path="/dashboard/kse" component={KSE} />
+      <Route path="/dashboard/form-kse" component={FormKse} />
       <Route path="/dashboard/csirt" component={CSIRT} />
       <Route path="/dashboard/survei" component={SurveiProfil} />
       <Route path="/dashboard/profil" component={EditProfil} />

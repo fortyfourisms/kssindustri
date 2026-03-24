@@ -12,21 +12,16 @@ import { useAssessmentStore } from "@/stores/assessment.store";
 import AssessmentView from "@/pages/dashboard/Assessment/AssessmentView";
 
 const respondentSchema = z.object({
-    instansi: z.string().min(1, "Instansi wajib diisi"),
-    namaSistem: z.string().min(1, "Nama sistem wajib diisi"),
-    jenisSistem: z.enum(["IT", "OT", "IT & OT"]),
-    sektor: z.string().min(1, "Sektor wajib diisi"),
-    alamat: z.string().min(1, "Alamat wajib diisi"),
-    email: z.string().email("Format email tidak valid").min(1, "Email wajib diisi"),
-    nomorTelepon: z.string().min(1, "Nomor telepon wajib diisi"),
     namaResponden: z.string().min(1, "Nama responden wajib diisi"),
     jabatanResponden: z.string().min(1, "Jabatan responden wajib diisi"),
+    email: z.string().email("Format email tidak valid").min(1, "Email wajib diisi"),
+    nomorTelepon: z.string().min(1, "Nomor telepon wajib diisi"),
+    sektor: z.string().min(1, "Sektor wajib diisi"),
+    tanggalPengisian: z.string().min(1, "Tanggal wajib diisi"),
+    alamat: z.string().min(1, "Alamat wajib diisi"),
     tahunPengukuran: z.string().min(4, "Tahun tidak valid"),
     targetLevel: z.coerce.number().min(1).max(5),
-    targetNilai: z.string().min(1, "Target nilai wajib diisi"),
-    acuanManajemenRisiko: z.string().min(1, "Acuan manajemen risiko wajib diisi"),
-    acuanKeamananSiber: z.string().min(1, "Acuan keamanan siber wajib diisi"),
-    tanggalPengisian: z.string().min(1, "Tanggal wajib diisi")
+    targetNilai: z.string().min(1, "Target nilai wajib diisi")
 });
 
 type RespondentFormValues = z.infer<typeof respondentSchema>;
@@ -76,7 +71,6 @@ export default function FormIkas() {
     const { register, handleSubmit, formState: { errors } } = useForm<RespondentFormValues>({
         resolver: zodResolver(respondentSchema),
         defaultValues: respondentProfile() || {
-            jenisSistem: "IT",
             sektor: "Kesehatan",
             tahunPengukuran: new Date().getFullYear().toString(),
             targetLevel: 3,
@@ -156,59 +150,7 @@ export default function FormIkas() {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="col-span-1 md:col-span-2 border-b border-slate-100 pb-2">
                                     <h2 className="font-bold text-slate-800 flex items-center gap-2">
-                                        <Building2 className="w-5 h-5 text-blue-500" /> Informasi Instansi & Sistem
-                                    </h2>
-                                </div>
-
-                                <div>
-                                    <label className={LABEL_CLS}>Instansi / Penyelenggara <span className="text-red-500">*</span></label>
-                                    <input {...register("instansi")} className={INPUT_CLS} placeholder="Contoh: Kementerian XYZ" />
-                                    {errors.instansi && <p className="text-red-500 text-xs mt-1">{errors.instansi.message}</p>}
-                                </div>
-
-                                <div>
-                                    <label className={LABEL_CLS}>Nama Sistem Elektronik <span className="text-red-500">*</span></label>
-                                    <input {...register("namaSistem")} className={INPUT_CLS} placeholder="Contoh: Sistem Informasi ABC" />
-                                    {errors.namaSistem && <p className="text-red-500 text-xs mt-1">{errors.namaSistem.message}</p>}
-                                </div>
-
-                                <div>
-                                    <label className={LABEL_CLS}>Jenis Sistem <span className="text-red-500">*</span></label>
-                                    <select {...register("jenisSistem")} className={INPUT_CLS}>
-                                        <option value="IT">IT</option>
-                                        <option value="OT">OT</option>
-                                        <option value="IT & OT">IT & OT</option>
-                                    </select>
-                                </div>
-
-                                <div>
-                                    <label className={LABEL_CLS}>Sektor <span className="text-red-500">*</span></label>
-                                    <select {...register("sektor")} className={INPUT_CLS}>
-                                        {SEKTOR_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                                    </select>
-                                </div>
-
-                                <div className="col-span-1 md:col-span-2">
-                                    <label className={LABEL_CLS}>Alamat Lengkap <span className="text-red-500">*</span></label>
-                                    <textarea {...register("alamat")} rows={2} className={INPUT_CLS} placeholder="Alamat instansi" />
-                                    {errors.alamat && <p className="text-red-500 text-xs mt-1">{errors.alamat.message}</p>}
-                                </div>
-
-                                <div>
-                                    <label className={LABEL_CLS}>Email <span className="text-red-500">*</span></label>
-                                    <input type="email" {...register("email")} className={INPUT_CLS} placeholder="email@example.com" />
-                                    {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>}
-                                </div>
-
-                                <div>
-                                    <label className={LABEL_CLS}>Nomor Telepon <span className="text-red-500">*</span></label>
-                                    <input type="tel" {...register("nomorTelepon")} className={INPUT_CLS} placeholder="021-1234567" />
-                                    {errors.nomorTelepon && <p className="text-red-500 text-xs mt-1">{errors.nomorTelepon.message}</p>}
-                                </div>
-
-                                <div className="col-span-1 md:col-span-2 border-b border-slate-100 pb-2 mt-4">
-                                    <h2 className="font-bold text-slate-800 flex items-center gap-2">
-                                        <UserCircle2 className="w-5 h-5 text-indigo-500" /> Detail Responden & Pengukuran
+                                        <UserCircle2 className="w-5 h-5 text-indigo-500" /> Detail Responden & Informasi Umum
                                     </h2>
                                 </div>
 
@@ -225,13 +167,44 @@ export default function FormIkas() {
                                 </div>
 
                                 <div>
+                                    <label className={LABEL_CLS}>Email <span className="text-red-500">*</span></label>
+                                    <input type="email" {...register("email")} className={INPUT_CLS} placeholder="email@example.com" />
+                                    {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>}
+                                </div>
+
+                                <div>
+                                    <label className={LABEL_CLS}>Nomor Telepon <span className="text-red-500">*</span></label>
+                                    <input type="tel" {...register("nomorTelepon")} className={INPUT_CLS} placeholder="021-1234567" />
+                                    {errors.nomorTelepon && <p className="text-red-500 text-xs mt-1">{errors.nomorTelepon.message}</p>}
+                                </div>
+
+                                <div>
+                                    <label className={LABEL_CLS}>Sektor <span className="text-red-500">*</span></label>
+                                    <select {...register("sektor")} className={INPUT_CLS}>
+                                        {SEKTOR_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className={LABEL_CLS}>Tanggal Pengisian <span className="text-red-500">*</span></label>
+                                    <input type="date" {...register("tanggalPengisian")} className={INPUT_CLS} />
+                                    {errors.tanggalPengisian && <p className="text-red-500 text-xs mt-1">{errors.tanggalPengisian.message}</p>}
+                                </div>
+
+                                <div className="col-span-1 md:col-span-2">
+                                    <label className={LABEL_CLS}>Alamat Lengkap <span className="text-red-500">*</span></label>
+                                    <textarea {...register("alamat")} rows={2} className={INPUT_CLS} placeholder="Alamat instansi" />
+                                    {errors.alamat && <p className="text-red-500 text-xs mt-1">{errors.alamat.message}</p>}
+                                </div>
+
+                                <div>
                                     <label className={LABEL_CLS}>Tahun Pengukuran <span className="text-red-500">*</span></label>
                                     <input type="number" {...register("tahunPengukuran")} className={INPUT_CLS} />
                                     {errors.tahunPengukuran && <p className="text-red-500 text-xs mt-1">{errors.tahunPengukuran.message}</p>}
                                 </div>
 
                                 <div>
-                                    <label className={LABEL_CLS}>Target Level <span className="text-red-500">*</span></label>
+                                    <label className={LABEL_CLS}>Target Level Kematangan <span className="text-red-500">*</span></label>
                                     <select {...register("targetLevel")} className={INPUT_CLS}>
                                         {TARGET_LEVEL_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                                     </select>
@@ -241,24 +214,6 @@ export default function FormIkas() {
                                     <label className={LABEL_CLS}>Target Nilai <span className="text-red-500">*</span></label>
                                     <input {...register("targetNilai")} className={INPUT_CLS} />
                                     {errors.targetNilai && <p className="text-red-500 text-xs mt-1">{errors.targetNilai.message}</p>}
-                                </div>
-
-                                <div>
-                                    <label className={LABEL_CLS}>Tanggal Pengisian <span className="text-red-500">*</span></label>
-                                    <input type="date" {...register("tanggalPengisian")} className={INPUT_CLS} />
-                                    {errors.tanggalPengisian && <p className="text-red-500 text-xs mt-1">{errors.tanggalPengisian.message}</p>}
-                                </div>
-
-                                <div>
-                                    <label className={LABEL_CLS}>Acuan Manajemen Risiko <span className="text-red-500">*</span></label>
-                                    <input {...register("acuanManajemenRisiko")} className={INPUT_CLS} placeholder="Contoh: ISO 27005" />
-                                    {errors.acuanManajemenRisiko && <p className="text-red-500 text-xs mt-1">{errors.acuanManajemenRisiko.message}</p>}
-                                </div>
-
-                                <div>
-                                    <label className={LABEL_CLS}>Acuan Keamanan Siber <span className="text-red-500">*</span></label>
-                                    <input {...register("acuanKeamananSiber")} className={INPUT_CLS} placeholder="Contoh: NIST CSF" />
-                                    {errors.acuanKeamananSiber && <p className="text-red-500 text-xs mt-1">{errors.acuanKeamananSiber.message}</p>}
                                 </div>
                             </div>
 

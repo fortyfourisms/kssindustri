@@ -7,7 +7,10 @@ export function cn(...inputs: ClassValue[]) {
 
 export function getMediaUrl(path: string | undefined | null) {
   if (!path) return "";
+  // Absolute URL or already-rooted path — return as-is
   if (path.startsWith("http") || path.startsWith("/")) return path;
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || "";
-  return `${baseUrl}/uploads/${path}`;
+  // Path already includes 'uploads/' prefix (e.g. "uploads/csirt_photo/uuid.png")
+  if (path.startsWith("uploads/")) return `/${path}`;
+  // Bare filename / UUID → serve via /uploads proxy
+  return `/uploads/${path}`;
 }

@@ -11,33 +11,33 @@ export const csirtService = {
     },
 
     /** Get CSIRT member by ID */
-    async getMemberById(id: number): Promise<CsirtMember> {
+    async getMemberById(id: number | string): Promise<CsirtMember> {
         return apiClient.get<CsirtMember>(`/api/csirt/${id}`);
     },
 
     /** Create a new CSIRT member */
-    async create(payload: CreateCsirtPayload): Promise<CsirtMember> {
+    async create(payload: CreateCsirtPayload | FormData): Promise<CsirtMember> {
         return apiClient.post<CsirtMember>('/api/csirt', payload);
     },
 
     /** Update a CSIRT member by ID */
-    async update(id: number, payload: Partial<CreateCsirtPayload>): Promise<CsirtMember> {
-        return apiClient.patch<CsirtMember>(`/api/csirt/${id}`, payload);
+    async update(id: number | string, payload: Partial<CreateCsirtPayload> | FormData): Promise<CsirtMember> {
+        return apiClient.put<CsirtMember>(`/api/csirt/${id}`, payload);
     },
 
     /** Delete a CSIRT member by ID */
-    async delete(id: number): Promise<void> {
+    async delete(id: number | string): Promise<void> {
         return apiClient.delete(`/api/csirt/${id}`);
     },
 
     /** Get SDM (human resources) for a CSIRT */
-    async getSdmByCsirtId(id: number): Promise<SdmCsirt[]> {
-        return apiClient.get<SdmCsirt[]>(`/api/sdm_csirt/${id}`);
+    async getSdmByCsirtId(id: number | string): Promise<SdmCsirt[]> {
+        return apiClient.get<SdmCsirt[]>(`/api/sdm_csirt?id_csirt=${id}`);
     },
 
     /** Get SE (systems/infrastructure) for a CSIRT */
-    async getSeByCsirtId(id: number): Promise<SeCsirt[]> {
-        return apiClient.get<SeCsirt[]>(`/api/se_csirt/${id}`);
+    async getSeByCsirtId(id: number | string): Promise<SeCsirt[]> {
+        return apiClient.get<SeCsirt[]>(`/api/se?id_csirt=${id}`);
     },
 
     // ── SE (Sistem Elektronik) CRUD via /api/se ─────────────────────────────
@@ -57,3 +57,4 @@ export const csirtService = {
         return apiClient.put<SeCsirt>(`/api/se/${id}`, payload);
     },
 };
+
