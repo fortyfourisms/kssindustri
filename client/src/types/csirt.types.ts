@@ -90,6 +90,15 @@ export interface SeCsirt {
     teknik_kriptografi?: string;
 }
 
+export interface CreateSdmPayload {
+    id_csirt: string | number;
+    nama_personel: string;
+    jabatan_csirt: string;
+    jabatan_perusahaan: string;
+    skill: string;
+    sertifikasi: string;
+}
+
 export interface CreateSePayload {
     id_csirt: string;
     id_perusahaan?: string;
