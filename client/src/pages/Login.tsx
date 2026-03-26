@@ -68,7 +68,7 @@ export default function Login() {
                 <div className="absolute bottom-[-20%] right-[10%] w-[70%] h-[60%] bg-[#818CF8] rounded-full blur-[110px] opacity-70" />
                 
                 {/* Noise/Texture Overlay */}
-                <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03] mix-blend-overlay" />
+                <div className="absolute inset-0 bg-[url('/noise.svg')] opacity-[0.03] mix-blend-overlay" />
                 <div className="absolute inset-0 bg-gradient-to-tr from-black/10 via-transparent to-white/10" />
             </div>
 

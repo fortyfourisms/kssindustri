@@ -1,4 +1,5 @@
 import { apiClient } from './apiClient';
+import type { Perusahaan, CreatePerusahaanPayload, CreatePerusahaanResponse } from '@/types/perusahaan.types';
 
 /**
  * Perusahaan Service
@@ -13,31 +14,48 @@ import { apiClient } from './apiClient';
  */
 export const perusahaanService = {
     /** GET /api/perusahaan — List semua perusahaan */
-    async getAll(): Promise<any[]> {
-        return apiClient.get<any[]>('/api/perusahaan');
+    async getAll(): Promise<Perusahaan[]> {
+        return apiClient.get<Perusahaan[]>('/api/perusahaan');
     },
 
     /** POST /api/perusahaan — Tambah perusahaan baru */
-    async create(data: any): Promise<any> {
-        return apiClient.post<any>('/api/perusahaan', data);
+    async create(data: CreatePerusahaanPayload): Promise<CreatePerusahaanResponse> {
+        const formData = new FormData();
+        formData.append('nama_perusahaan', data.nama_perusahaan);
+        formData.append('id_sub_sektor', data.id_sub_sektor);
+        formData.append('email', data.email);
+        formData.append('alamat', data.alamat);
+        formData.append('telepon', data.telepon);
+        formData.append('website', data.website);
+        if (data.photo instanceof File) {
+            formData.append('photo', data.photo);
+        }
+        return apiClient.post<CreatePerusahaanResponse>('/api/perusahaan', formData);
     },
 
     /** GET /api/perusahaan/dropdown — List perusahaan untuk dropdown */
-    async getDropdown(): Promise<any[]> {
-        return apiClient.get<any[]>('/api/perusahaan/dropdown');
+    async getDropdown(): Promise<Perusahaan[]> {
+        return apiClient.get<Perusahaan[]>('/api/perusahaan/dropdown');
     },
 
     /** GET /api/perusahaan/{id} — Ambil perusahaan berdasarkan ID */
-    async getById(id: string): Promise<any> {
-        return apiClient.get<any>(`/api/perusahaan/${id}`);
+    async getById(id: string): Promise<Perusahaan> {
+        return apiClient.get<Perusahaan>(`/api/perusahaan/${id}`);
     },
 
     /** PUT /api/perusahaan/{id} — Update perusahaan */
-    async update(id: string, data: any): Promise<any> {
-        if (data instanceof FormData) {
-            return apiClient.putForm<any>(`/api/perusahaan/${id}`, data);
+    async update(id: string, data: Partial<CreatePerusahaanPayload>): Promise<Perusahaan> {
+        const formData = new FormData();
+        if (data.nama_perusahaan) formData.append('nama_perusahaan', data.nama_perusahaan);
+        if (data.id_sub_sektor) formData.append('id_sub_sektor', data.id_sub_sektor);
+        if (data.email) formData.append('email', data.email);
+        if (data.alamat) formData.append('alamat', data.alamat);
+        if (data.telepon) formData.append('telepon', data.telepon);
+        if (data.website) formData.append('website', data.website);
+        if (data.photo instanceof File) {
+            formData.append('photo', data.photo);
         }
-        return apiClient.put<any>(`/api/perusahaan/${id}`, data);
+        return apiClient.put<Perusahaan>(`/api/perusahaan/${id}`, formData);
     },
 
     /** DELETE /api/perusahaan/{id} — Hapus perusahaan */

@@ -120,7 +120,13 @@ export default function EditProfil() {
     const perusahaanMutation = useMutation({
         mutationFn: (d: PerusahaanForm) => {
             if (!perusahaanId) throw new Error("ID perusahaan tidak ditemukan");
-            return perusahaanService.update(String(perusahaanId), d as any);
+            // Strip `photo` (handled separately via file upload) and convert empty id_sub_sektor to null
+            const { photo: _photo, ...rest } = d;
+            const payload = {
+                ...rest,
+                id_sub_sektor: rest.id_sub_sektor || null,
+            };
+            return perusahaanService.update(String(perusahaanId), payload as any);
         },
         onSuccess: () => {
             qc.invalidateQueries({ queryKey: ["perusahaan", perusahaanId] });
@@ -221,20 +227,20 @@ export default function EditProfil() {
                                         </DropdownMenuItem>
                                     </DropdownMenuContent>
                                 </DropdownMenu>
-                                
-                                <input 
-                                    type="file" 
-                                    ref={userPhotoInputRef} 
-                                    className="hidden" 
+
+                                <input
+                                    type="file"
+                                    ref={userPhotoInputRef}
+                                    className="hidden"
                                     accept="image/*"
                                     onChange={(e) => {
                                         if (e.target.files?.[0]) handleUpload('user_photo', e.target.files[0]);
                                     }}
                                 />
-                                <input 
-                                    type="file" 
-                                    ref={userBannerInputRef} 
-                                    className="hidden" 
+                                <input
+                                    type="file"
+                                    ref={userBannerInputRef}
+                                    className="hidden"
                                     accept="image/*"
                                     onChange={(e) => {
                                         if (e.target.files?.[0]) handleUpload('user_banner', e.target.files[0]);
@@ -384,7 +390,7 @@ export default function EditProfil() {
                         >
                             {/* Banner (Menggunakan default gradient karena perusahaan belum memiliki banner khusus) */}
                             <div className="h-32 w-full bg-gradient-to-r from-blue-100 to-indigo-100" />
-                            
+
                             {/* 3 Dots Menu */}
                             <div className="absolute right-4 top-4 z-20">
                                 <DropdownMenu>
@@ -403,19 +409,19 @@ export default function EditProfil() {
                                     </DropdownMenuContent>
                                 </DropdownMenu>
 
-                                <input 
-                                    type="file" 
-                                    ref={perusahaanPhotoInputRef} 
-                                    className="hidden" 
+                                <input
+                                    type="file"
+                                    ref={perusahaanPhotoInputRef}
+                                    className="hidden"
                                     accept="image/*"
                                     onChange={(e) => {
                                         if (e.target.files?.[0]) handleUpload('perusahaan_photo', e.target.files[0]);
                                     }}
                                 />
-                                <input 
-                                    type="file" 
-                                    ref={perusahaanBannerInputRef} 
-                                    className="hidden" 
+                                <input
+                                    type="file"
+                                    ref={perusahaanBannerInputRef}
+                                    className="hidden"
                                     accept="image/*"
                                     onChange={(e) => {
                                         if (e.target.files?.[0]) handleUpload('perusahaan_banner', e.target.files[0]);
@@ -429,10 +435,10 @@ export default function EditProfil() {
                                 <div className="absolute -top-12 left-6">
                                     <div className="w-24 h-24 rounded-full border-4 border-white bg-slate-100 overflow-hidden flex items-center justify-center shadow-sm">
                                         {perusahaan?.photo ? (
-                                            <img 
-                                                src={getMediaUrl(perusahaan.photo)} 
-                                                alt="Logo Perusahaan" 
-                                                className="w-full h-full object-cover" 
+                                            <img
+                                                src={getMediaUrl(perusahaan.photo)}
+                                                alt="Logo Perusahaan"
+                                                className="w-full h-full object-cover"
                                             />
                                         ) : (
                                             <div className="w-full h-full bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center text-white text-3xl font-black">
@@ -441,16 +447,16 @@ export default function EditProfil() {
                                         )}
                                     </div>
                                 </div>
-                                
+
                                 <div className="pt-14">
                                     <h2 className="font-bold text-slate-900 text-2xl">{perusahaan?.nama_perusahaan || "Nama Perusahaan"}</h2>
-                                    
+
                                     <div className="flex flex-col gap-1.5 mt-1.5">
                                         <div className="flex flex-wrap items-center gap-x-2 text-sm">
                                             {perusahaan?.email && (
                                                 <span className="font-medium text-slate-600">{perusahaan.email}</span>
                                             )}
-                                            
+
                                             {perusahaan?.telepon && (
                                                 <>
                                                     {perusahaan?.email && <span className="text-slate-300">•</span>}
@@ -528,31 +534,22 @@ export default function EditProfil() {
                                         </div>
                                     </div>
                                     <div>
-                                        <label className={LABEL_CLS}>Photo URL</label>
+                                        <label className={LABEL_CLS}>Sektor</label>
                                         <div className="relative">
-                                            <ImageIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                                            <input {...perusahaanForm.register("photo")} className={`${INPUT_CLS} pl-10`} placeholder="https://..." />
+                                            <select
+                                                {...perusahaanForm.register("id_sub_sektor")}
+                                                className={`${INPUT_CLS} appearance-none cursor-pointer pr-10`}
+                                            >
+                                                <option value="">-- Pilih Sektor --</option>
+                                                {subSektors?.map((s: any) => (
+                                                    <option key={s.id} value={s.id}>
+                                                        {s.nama_sub_sektor}
+                                                    </option>
+                                                ))}
+                                            </select>
                                         </div>
                                     </div>
                                 </div>
-
-                                <div>
-                                    <label className={LABEL_CLS}>Sektor</label>
-                                    <div className="relative">
-                                        <select
-                                            {...perusahaanForm.register("id_sub_sektor")}
-                                            className={`${INPUT_CLS} appearance-none cursor-pointer pr-10`}
-                                        >
-                                            <option value="">-- Pilih Sektor --</option>
-                                            {subSektors?.map((s: any) => (
-                                                <option key={s.id} value={s.id}>
-                                                    {s.nama_sub_sektor}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                </div>
-
                                 <button
                                     type="submit"
                                     disabled={perusahaanMutation.isPending}

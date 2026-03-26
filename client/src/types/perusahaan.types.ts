@@ -1,6 +1,6 @@
-// ─── Stakeholder Types ───────────────────────────────────────────────────────
+// ─── Perusahaan Types ─────────────────────────────────────────────────────────
 
-export interface Stakeholder {
+export interface Perusahaan {
     id: string;
     slug: string;
     photo?: string;
@@ -14,17 +14,17 @@ export interface Stakeholder {
     updated_at?: string;
 }
 
-export interface CreateStakeholderPayload {
+export interface CreatePerusahaanPayload {
     alamat: string;
     email: string;
     nama_perusahaan: string;
-    photo: string;
-    sektor: string;
+    photo?: File | string;
+    id_sub_sektor: string;
     telepon: string;
     website: string;
 }
 
-export interface CreateStakeholderResponse {
+export interface CreatePerusahaanResponse {
     id: string;
     nilai_deteksi: number;
     nilai_subdomain1: number;
