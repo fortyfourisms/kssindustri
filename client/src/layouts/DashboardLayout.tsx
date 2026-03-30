@@ -2,17 +2,14 @@ import { useEffect, useRef, useState } from "react";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Topbar } from "@/components/dashboard/Topbar";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { isCompanyEmpty } from "@/components/RequireCompanyProfile";
 import { useUser } from "@/hooks/useAuth";
+import { useQuery } from "@tanstack/react-query";
+import { perusahaanService } from "@/services/perusahaan.service";
 import { useLocation } from "wouter";
 import { Building2, ArrowRight, X } from "lucide-react";
 
 const COMPANY_CHECK_KEY = "company_prompt_shown";
-
-function isCompanyEmpty(p: any): boolean {
-    if (!p) return true;
-    // Consider company "incomplete" if alamat, email, telepon are all missing
-    return !p.alamat && !p.email && !p.telepon;
-}
 
 function CompanyModal({ onClose, onGo }: { onClose: () => void; onGo: () => void }) {
     return (
@@ -53,20 +50,36 @@ function CompanyGuard() {
     const [showModal, setShowModal] = useState(false);
     const checked = useRef(false);
 
-    // Company data comes from useUser (which includes a nested `perusahaan` object, if backend supports it)
-    const { data: meData, isSuccess } = useUser();
+    const { data: meData, isSuccess: isUserSuccess } = useUser();
+
+    // Resolve company ID from user data
+    const perusahaanId = meData?.id_perusahaan || meData?.perusahaan?.id;
+
+    // Fetch company data when we have an ID
+    const { data: perusahaan, isSuccess: isPerusahaanSuccess } = useQuery({
+        queryKey: ["perusahaan", perusahaanId],
+        queryFn: () => perusahaanService.getById(String(perusahaanId)),
+        enabled: !!perusahaanId,
+        staleTime: 1000 * 60 * 5,
+    });
+
+    // Wait until we have both user and company data (or know there's no company)
+    const isReady = isUserSuccess && (!perusahaanId || isPerusahaanSuccess);
 
     useEffect(() => {
-        if (!isSuccess || checked.current) return;
+        if (!isReady || checked.current) return;
         checked.current = true;
+
         const alreadyShown = sessionStorage.getItem(COMPANY_CHECK_KEY);
-        // Check the nested perusahaan from /api/me response
-        const perusahaan = meData?.perusahaan ?? meData;
-        if (!alreadyShown && isCompanyEmpty(perusahaan)) {
+        if (alreadyShown) return;
+
+        // Check company completeness: use fetched perusahaan or nested object from meData
+        const companyData = perusahaan ?? meData?.perusahaan ?? null;
+        if (!perusahaanId || isCompanyEmpty(companyData)) {
             sessionStorage.setItem(COMPANY_CHECK_KEY, "1");
             setShowModal(true);
         }
-    }, [isSuccess, meData]);
+    }, [isReady, perusahaan, meData, perusahaanId]);
 
     const handleGo = () => {
         setShowModal(false);

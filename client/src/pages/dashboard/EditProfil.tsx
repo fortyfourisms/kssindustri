@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, Save, UserCircle, Lock, Mail, User, Building2, MapPin, Phone, Globe, Image as ImageIcon, MoreVertical } from "lucide-react";
+import { Loader2, Save, UserCircle, Lock, Mail, User, Building2, MapPin, Phone, Globe, Image as ImageIcon, MoreVertical, Briefcase } from "lucide-react";
 import { motion } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -21,8 +21,9 @@ import { useSearch } from "wouter";
 import { getMediaUrl } from "@/lib/utils";
 
 const ProfileSchema = z.object({
-    name: z.string().min(2, "Nama minimal 2 karakter"),
+    username: z.string().min(2, "Username minimal 2 karakter"),
     email: z.string().email("Email tidak valid"),
+    jabatan: z.string().optional().nullable(),
 });
 
 const PasswordSchema = z
@@ -55,7 +56,7 @@ const LABEL_CLS = "block text-sm font-semibold text-slate-700 mb-1.5";
 
 function getInitials(name: string) {
     if (!name) return "";
-    return name.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+    return name.trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
 }
 
 export default function EditProfil() {
@@ -81,22 +82,29 @@ export default function EditProfil() {
     const perusahaanForm = useForm<PerusahaanForm>({ resolver: zodResolver(PerusahaanSchema) });
 
     useEffect(() => {
-        if (user) profileForm.reset({ name: user.username || user.name, email: user.email });
+        if (user) {
+            profileForm.reset({ 
+                username: user.username, 
+                email: user.email,
+                jabatan: user.jabatan_name || user.id_jabatan || user.jabatan || "",
+            });
+        }
     }, [user, profileForm]);
 
     useEffect(() => {
-        if (perusahaan) {
+        const pData = perusahaan || user?.perusahaan;
+        if (pData) {
             perusahaanForm.reset({
-                nama_perusahaan: perusahaan.nama_perusahaan || "",
-                alamat: perusahaan.alamat || "",
-                email: perusahaan.email || "",
-                telepon: perusahaan.telepon || "",
-                website: perusahaan.website || "",
-                photo: perusahaan.photo || "",
-                id_sub_sektor: perusahaan.sub_sektor?.id || "",
+                nama_perusahaan: pData.nama_perusahaan || "",
+                alamat: pData.alamat || "",
+                email: pData.email || "",
+                telepon: pData.telepon || "",
+                website: pData.website || "",
+                photo: pData.photo || "",
+                id_sub_sektor: pData.sub_sektor?.id || pData.id_sub_sektor || "",
             });
         }
-    }, [perusahaan, perusahaanForm]);
+    }, [perusahaan, user?.perusahaan, perusahaanForm]);
 
     const profileMutation = useMutation({
         mutationFn: (d: ProfileForm) => apiClient.put<any>("/api/profile", d),
@@ -261,25 +269,22 @@ export default function EditProfil() {
                                             />
                                         ) : (
                                             <div className="w-full h-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-3xl font-black">
-                                                {(user?.username || user?.name) ? getInitials(user.username || user.name) : <User className="w-10 h-10" />}
+                                                {user?.username ? getInitials(user.username) : <User className="w-10 h-10" />}
                                             </div>
                                         )}
                                     </div>
                                 </div>
-
                                 <div className="pt-14">
-                                    <h2 className="font-bold text-slate-900 text-2xl">{user?.username || user?.name}</h2>
-
+                                    <h2 className="font-bold text-slate-900 text-2xl">{user?.username || "Username"}</h2>
                                     <div className="flex flex-col gap-1.5 mt-1.5">
                                         <div className="flex flex-wrap items-center gap-x-2 text-sm">
                                             <span className="font-medium text-slate-600">{user?.email}</span>
-
                                             {user?.jabatan_name && (
                                                 <>
                                                     <span className="text-slate-300">•</span>
                                                     <div className="flex items-center gap-1.5 text-slate-700">
                                                         <div className="w-4 h-4 bg-blue-600 rounded flex items-center justify-center">
-                                                            <Building2 className="w-2.5 h-2.5 text-white" />
+                                                            <Briefcase className="w-2.5 h-2.5 text-white" />
                                                         </div>
                                                         <span className="font-medium">{user.jabatan_name}</span>
                                                     </div>
@@ -288,7 +293,7 @@ export default function EditProfil() {
                                         </div>
                                     </div>
                                     <p className="text-xs text-slate-400 mt-4">
-                                        Bergabung: {user?.created_at || user?.createdAt ? new Date(user.created_at || user.createdAt).toLocaleDateString("id-ID", { year: "numeric", month: "long", day: "numeric" }) : ""}
+                                        Bergabung: {user?.created_at ? new Date(user.created_at).toLocaleDateString("id-ID", { year: "numeric", month: "long", day: "numeric" }) : ""}
                                     </p>
                                 </div>
                             </div>
@@ -307,13 +312,13 @@ export default function EditProfil() {
                             </div>
                             <form onSubmit={profileForm.handleSubmit((d) => profileMutation.mutate(d))} className="space-y-4">
                                 <div>
-                                    <label className={LABEL_CLS}>Nama Lengkap</label>
+                                    <label className={LABEL_CLS}>Username</label>
                                     <div className="relative">
                                         <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                                        <input {...profileForm.register("name")} className={`${INPUT_CLS} pl-10`} />
+                                        <input {...profileForm.register("username")} className={`${INPUT_CLS} pl-10`} />
                                     </div>
-                                    {profileForm.formState.errors.name && (
-                                        <p className="text-red-500 text-xs mt-1">{profileForm.formState.errors.name.message}</p>
+                                    {profileForm.formState.errors.username && (
+                                        <p className="text-red-500 text-xs mt-1">{profileForm.formState.errors.username.message}</p>
                                     )}
                                 </div>
                                 <div>
@@ -324,6 +329,16 @@ export default function EditProfil() {
                                     </div>
                                     {profileForm.formState.errors.email && (
                                         <p className="text-red-500 text-xs mt-1">{profileForm.formState.errors.email.message}</p>
+                                    )}
+                                </div>
+                                <div>
+                                    <label className={LABEL_CLS}>Jabatan</label>
+                                    <div className="relative">
+                                        <Briefcase className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                        <input {...profileForm.register("jabatan")} className={`${INPUT_CLS} pl-10`} placeholder="Jabatan atau peranan" />
+                                    </div>
+                                    {profileForm.formState.errors.jabatan && (
+                                        <p className="text-red-500 text-xs mt-1">{profileForm.formState.errors.jabatan.message}</p>
                                     )}
                                 </div>
                                 <button
@@ -388,8 +403,11 @@ export default function EditProfil() {
                             animate={{ opacity: 1, y: 0 }}
                             className="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-200 relative mb-6"
                         >
-                            {/* Banner (Menggunakan default gradient karena perusahaan belum memiliki banner khusus) */}
-                            <div className="h-32 w-full bg-gradient-to-r from-blue-100 to-indigo-100" />
+                            {/* Banner / Foto Perusahaan */}
+                            <div
+                                className={`h-40 w-full bg-cover bg-center ${!perusahaan?.photo ? 'bg-gradient-to-r from-blue-100 to-indigo-100' : ''}`}
+                                style={{ backgroundImage: perusahaan?.photo ? `url(${getMediaUrl(perusahaan.photo)})` : undefined }}
+                            />
 
                             {/* 3 Dots Menu */}
                             <div className="absolute right-4 top-4 z-20">
@@ -431,24 +449,7 @@ export default function EditProfil() {
 
                             {/* Info Area */}
                             <div className="px-6 pb-6 relative">
-                                {/* Profile Picture / Logo Perusahaan */}
-                                <div className="absolute -top-12 left-6">
-                                    <div className="w-24 h-24 rounded-full border-4 border-white bg-slate-100 overflow-hidden flex items-center justify-center shadow-sm">
-                                        {perusahaan?.photo ? (
-                                            <img
-                                                src={getMediaUrl(perusahaan.photo)}
-                                                alt="Logo Perusahaan"
-                                                className="w-full h-full object-cover"
-                                            />
-                                        ) : (
-                                            <div className="w-full h-full bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center text-white text-3xl font-black">
-                                                {perusahaan?.nama_perusahaan ? getInitials(perusahaan.nama_perusahaan) : <Building2 className="w-10 h-10" />}
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-
-                                <div className="pt-14">
+                                <div className="pt-6">
                                     <h2 className="font-bold text-slate-900 text-2xl">{perusahaan?.nama_perusahaan || "Nama Perusahaan"}</h2>
 
                                     <div className="flex flex-col gap-1.5 mt-1.5">
@@ -493,7 +494,7 @@ export default function EditProfil() {
                                     <label className={LABEL_CLS}>Nama Perusahaan</label>
                                     <div className="relative">
                                         <Building2 className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                                        <input {...perusahaanForm.register("nama_perusahaan")} className={`${INPUT_CLS} pl-10`} placeholder="Nama Perusahaan" />
+                                        <input {...perusahaanForm.register("nama_perusahaan")} readOnly className={`${INPUT_CLS} pl-10 bg-slate-50 cursor-not-allowed text-slate-600`} placeholder="Nama Perusahaan" />
                                     </div>
                                     {perusahaanForm.formState.errors.nama_perusahaan && (
                                         <p className="text-red-500 text-xs mt-1">{perusahaanForm.formState.errors.nama_perusahaan.message}</p>

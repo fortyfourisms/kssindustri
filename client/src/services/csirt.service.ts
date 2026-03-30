@@ -38,7 +38,6 @@ export const csirtService = {
     /** Get all CSIRT members */
     async getMembers(): Promise<CsirtMember[]> {
         const res = await apiClient.get<any>('/api/csirt');
-        console.log('[CSIRT DEBUG] GET /api/csirt raw:', res);
         return normalizeList<CsirtMember>(res);
     },
 
@@ -56,8 +55,7 @@ export const csirtService = {
     /** Update a CSIRT member by ID */
     async update(id: number | string, payload: Partial<CreateCsirtPayload> | FormData): Promise<CsirtMember> {
         if (payload instanceof FormData) {
-            payload.append("_method", "PUT");
-            return apiClient.post<CsirtMember>(`/api/csirt/${id}`, payload);
+            return apiClient.putForm<CsirtMember>(`/api/csirt/${id}`, payload);
         }
         return apiClient.put<CsirtMember>(`/api/csirt/${id}`, payload);
     },
@@ -70,14 +68,12 @@ export const csirtService = {
     /** Get SDM (human resources) for a CSIRT */
     async getSdmByCsirtId(id: number | string): Promise<SdmCsirt[]> {
         const res = await apiClient.get<any>(`/api/sdm_csirt?id_csirt=${id}`);
-        console.log('[CSIRT DEBUG] GET /api/sdm_csirt raw:', res);
         return normalizeList<SdmCsirt>(res);
     },
 
     /** Get SE (systems/infrastructure) for a CSIRT */
     async getSeByCsirtId(id: number | string): Promise<SeCsirt[]> {
         const res = await apiClient.get<any>(`/api/se?id_csirt=${id}`);
-        console.log('[CSIRT DEBUG] GET /api/se raw:', res);
         return normalizeList<SeCsirt>(res);
     },
 

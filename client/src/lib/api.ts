@@ -59,8 +59,8 @@ export const api = {
     // ── CSIRT (delegates to csirtService) ────────────────────────────────────
     getCsirt: () => csirtService.getMembers(),
     createCsirt: (data: any) => csirtService.create(data),
-    updateCsirt: (id: string, data: any) => csirtService.update(Number(id), data),
-    deleteCsirt: (id: string) => csirtService.delete(Number(id)),
+    updateCsirt: (id: string, data: any) => csirtService.update(id, data),
+    deleteCsirt: (id: string) => csirtService.delete(id),
 
     // ── Survei ───────────────────────────────────────────────────────────────
     getSurvei: () => apiClient.get<any>("/api/survei"),

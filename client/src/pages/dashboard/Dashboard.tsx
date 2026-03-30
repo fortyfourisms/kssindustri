@@ -217,12 +217,11 @@ export default function Dashboard() {
                                     <h3 className="text-sm font-black text-slate-800 tracking-tight uppercase">Informasi Akun</h3>
                                 </div>
                                 <div className="bg-slate-50/50 rounded-[1.5rem] border border-slate-100 divide-y divide-slate-100 overflow-hidden">
+                                    <AccountItem icon={Users} label="USERNAME" value={user?.username} />
                                     <AccountItem icon={Mail} label="EMAIL" value={user?.email} />
-                                    <AccountItem icon={Phone} label="TELEPON" value={perusahaan?.telepon} />
-                                    <AccountItem icon={MapPin} label="LOKASI" value={perusahaan?.alamat} />
-                                    <AccountItem icon={Briefcase} label="JABATAN" value={user?.jabatan_name} />
-                                    <AccountItem icon={Building2} label="PERUSAHAAN" value={perusahaan?.nama_perusahaan ?? "Nama Perusahaan"} />
-                                    <AccountItem icon={Calendar} label="BERGABUNG" value={user?.created_at || user?.createdAt ? new Date(user.created_at || user.createdAt).toLocaleDateString("id-ID", { year: "numeric", month: "long", day: "numeric" }) : "Tidak diketahui"} />
+                                    <AccountItem icon={Briefcase} label="JABATAN" value={user?.jabatan_name || "-"} />
+                                    <AccountItem icon={Shield} label="ROLE" value={user?.role_name || "-"} />
+                                    <AccountItem icon={Calendar} label="BERGABUNG" value={user?.created_at || user?.updated_at ? new Date(user.created_at || user.updated_at).toLocaleDateString("id-ID", { year: "numeric", month: "long", day: "numeric" }) : "Tidak diketahui"} />
                                 </div>
                             </div>
                         </motion.div>
