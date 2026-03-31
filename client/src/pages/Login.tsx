@@ -29,7 +29,7 @@ export default function Login() {
     } = useForm<LoginForm>({ resolver: zodResolver(LoginSchema) });
 
     const onSubmit = async (data: LoginForm) => {
-        const result = await login({ email: data.username, password: data.password });
+        const result = await login({ identifier: data.username, password: data.password });
 
         if (result.error) {
             toast({ title: "Login failed", description: result.error, variant: "destructive" });
@@ -57,16 +57,16 @@ export default function Login() {
             <div className="absolute inset-0 z-0 bg-[#5046e5]">
                 {/* Deep Blue Core (Left) */}
                 <div className="absolute top-[20%] left-[-20%] w-[100%] h-[100%] bg-[#0000FF] rounded-full blur-[120px] opacity-90" />
-                
+
                 {/* Bright Light Blue / White (Right Center) */}
                 <div className="absolute top-[10%] right-[-10%] w-[80%] h-[90%] bg-[#E0F2FE] rounded-full blur-[100px] opacity-80" />
-                
+
                 {/* Purple / Lavender Accent (Top Right) */}
                 <div className="absolute top-[-10%] right-[-5%] w-[50%] h-[50%] bg-[#C084FC] rounded-full blur-[80px] opacity-60" />
-                
+
                 {/* Soft Purple Glow (Bottom) */}
                 <div className="absolute bottom-[-20%] right-[10%] w-[70%] h-[60%] bg-[#818CF8] rounded-full blur-[110px] opacity-70" />
-                
+
                 {/* Noise/Texture Overlay */}
                 <div className="absolute inset-0 bg-[url('/noise.svg')] opacity-[0.03] mix-blend-overlay" />
                 <div className="absolute inset-0 bg-gradient-to-tr from-black/10 via-transparent to-white/10" />

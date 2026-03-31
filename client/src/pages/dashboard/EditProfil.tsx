@@ -83,8 +83,8 @@ export default function EditProfil() {
 
     useEffect(() => {
         if (user) {
-            profileForm.reset({ 
-                username: user.username, 
+            profileForm.reset({
+                username: user.username,
                 email: user.email,
                 jabatan: user.jabatan_name || user.id_jabatan || user.jabatan || "",
             });
@@ -168,10 +168,9 @@ export default function EditProfil() {
 
     const userPhotoInputRef = useRef<HTMLInputElement>(null);
     const userBannerInputRef = useRef<HTMLInputElement>(null);
-    const perusahaanPhotoInputRef = useRef<HTMLInputElement>(null);
     const perusahaanBannerInputRef = useRef<HTMLInputElement>(null);
 
-    const handleUpload = (type: 'user_photo' | 'user_banner' | 'perusahaan_photo' | 'perusahaan_banner', file: File) => {
+    const handleUpload = (type: 'user_photo' | 'user_banner' | 'perusahaan_banner', file: File) => {
         const formData = new FormData();
         if (type === 'user_photo') {
             formData.append("foto_profile", file); // Depending on your backend, using 'foto_profile' or 'photo'
@@ -179,9 +178,6 @@ export default function EditProfil() {
         } else if (type === 'user_banner') {
             formData.append("banner", file);
             uploadProfileImageMutation.mutate(formData);
-        } else if (type === 'perusahaan_photo') {
-            formData.append("photo", file); // According to PerusahaanSchema, the field is 'photo'
-            uploadPerusahaanImageMutation.mutate(formData);
         } else if (type === 'perusahaan_banner') {
             formData.append("banner", file);
             uploadPerusahaanImageMutation.mutate(formData);
@@ -418,24 +414,11 @@ export default function EditProfil() {
                                         </button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end" className="z-[100]">
-                                        <DropdownMenuItem onClick={() => perusahaanPhotoInputRef.current?.click()}>
-                                            Ganti Foto Perusahaan
-                                        </DropdownMenuItem>
                                         <DropdownMenuItem onClick={() => perusahaanBannerInputRef.current?.click()}>
                                             Ganti Banner Perusahaan
                                         </DropdownMenuItem>
                                     </DropdownMenuContent>
                                 </DropdownMenu>
-
-                                <input
-                                    type="file"
-                                    ref={perusahaanPhotoInputRef}
-                                    className="hidden"
-                                    accept="image/*"
-                                    onChange={(e) => {
-                                        if (e.target.files?.[0]) handleUpload('perusahaan_photo', e.target.files[0]);
-                                    }}
-                                />
                                 <input
                                     type="file"
                                     ref={perusahaanBannerInputRef}
