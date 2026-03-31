@@ -35,7 +35,7 @@ RUN mkdir -p /app && chown appuser:appgroup /app
 WORKDIR /app
 
 # Copy built assets from build stage
-COPY --from=build --chown=appuser:appgroup /app/dist ./dist
+COPY --from=build --chown=appuser:appgroup /app/client/dist ./dist
 
 # Switch to non-root user
 USER appuser
