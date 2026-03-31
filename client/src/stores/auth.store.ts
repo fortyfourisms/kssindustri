@@ -1,13 +1,14 @@
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
 import { authService } from '@/services/auth.service';
 import type { LoginPayload, RegisterPayload } from '@/types/auth.types';
 
-// Temporary sessionStorage keys for MFA tokens (cleared after use)
+// ─── MFA transient tokens ─────────────────────────────────────────────────────
+// Disimpan di sessionStorage HANYA selama alur MFA berlangsung (one-time use).
+// Ini BUKAN auth token — hanya step token untuk proses MFA.
+// Dihapus segera setelah MFA selesai.
 const MFA_SETUP_TOKEN_KEY = 'mfa_setup_token_tmp';
 const MFA_VERIFY_TOKEN_KEY = 'mfa_verify_token_tmp';
 
-// Basic synchronous XOR encryption to obfuscate sensitive data in storage
 const ENCRYPTION_KEY = "kssindustri_secure_storage_key_2026";
 
 function encryptData(text: string): string {
@@ -39,12 +40,10 @@ function decryptData(base64: string): string {
 function saveToken(key: string, token: string) {
     sessionStorage.setItem(key, encryptData(token));
 }
-
 function readToken(key: string): string | null {
     const val = sessionStorage.getItem(key);
     if (!val) return null;
-    const decrypted = decryptData(val);
-    return decrypted || null;
+    return decryptData(val) || null;
 }
 
 function saveMfaSetupToken(token: string) { saveToken(MFA_SETUP_TOKEN_KEY, token); }
@@ -55,21 +54,6 @@ function clearMfaSessionTokens() {
 }
 export function readMfaSetupToken(): string | null { return readToken(MFA_SETUP_TOKEN_KEY); }
 export function readMfaVerifyToken(): string | null { return readToken(MFA_VERIFY_TOKEN_KEY); }
-
-// Custom encrypted storage for zustand
-const encryptedSessionStorage = {
-    getItem: (name: string): string | null => {
-        const value = sessionStorage.getItem(name);
-        if (!value) return null;
-        return decryptData(value) || null;
-    },
-    setItem: (name: string, value: string): void => {
-        sessionStorage.setItem(name, encryptData(value));
-    },
-    removeItem: (name: string): void => {
-        sessionStorage.removeItem(name);
-    }
-};
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -90,17 +74,19 @@ interface AuthResult {
 }
 
 interface AuthState {
-    // ── Persisted (sessionStorage via persist middleware) ──────────────────────
+    // ── In-memory only — TIDAK disimpan ke storage apapun ─────────────────────
+    // Auth state hidup di memory Zustand. Session di-restore dari HTTP-only
+    // cookie via GET /api/me setiap kali app di-mount (lihat ProtectedRoute).
     authenticated: boolean;
     currentUser: CurrentUser | null;
 
-    // ── Transient (NOT persisted — tokens live only in memory) ────────────────
+    // ── Transient state ───────────────────────────────────────────────────────
     loading: boolean;
     error: string | null;
-    setupToken: string | null;
-    mfaToken: string | null;
+    setupToken: string | null;   // MFA step — in memory + sessionStorage backup
+    mfaToken: string | null;     // MFA step — in memory + sessionStorage backup
 
-    // ── Derived getters (computed via selectors or inline) ────────────────────
+    // ── Derived getters ───────────────────────────────────────────────────────
     isAdmin: () => boolean;
     isMfaSetupRequired: () => boolean;
     isMfaVerifyRequired: () => boolean;
@@ -113,7 +99,13 @@ interface AuthState {
     clearMfaState: () => void;
     registerUser: (payload: RegisterPayload) => Promise<{ success: boolean; error?: string }>;
     logUserOut: () => Promise<void>;
-    checkAuthOnStartup: () => void;
+
+    /**
+     * Restore session dari HTTP-only cookie via GET /api/me.
+     * Dipanggil oleh ProtectedRoute setiap kali tab baru dibuka atau app di-mount.
+     * Mengembalikan true jika cookie masih valid dan state berhasil di-hydrate.
+     */
+    rehydrateFromServer: () => Promise<boolean>;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -136,128 +128,124 @@ function mapToCurrentUser(data: unknown): CurrentUser {
 }
 
 // ─── Store ────────────────────────────────────────────────────────────────────
+// Murni in-memory — tidak ada persist middleware.
+// Auth state tidak pernah menyentuh localStorage atau sessionStorage.
+// Session restore dilakukan via HTTP-only cookie (rehydrateFromServer).
 
 export const useAuthStore = create<AuthState>()(
-    persist(
-        (set, get) => ({
-            // ── Initial state ───────────────────────────────────────────────────────
-            authenticated: false,
-            currentUser: null,
-            loading: false,
-            error: null,
-            setupToken: null,
-            mfaToken: null,
+    (set, get) => ({
+        // ── Initial state ───────────────────────────────────────────────────────
+        authenticated: false,
+        currentUser: null,
+        loading: false,
+        error: null,
+        setupToken: null,
+        mfaToken: null,
 
-            // ── Derived (use as functions, not properties) ──────────────────────────
-            isAdmin: () => get().currentUser?.role === 'admin',
-            isMfaSetupRequired: () => !!get().setupToken,
-            isMfaVerifyRequired: () => !!get().mfaToken,
-            formattedJoinDate: () => {
-                const date = get().currentUser?.createdAt;
-                if (!date) return '';
-                try {
-                    return new Date(date).toLocaleDateString('id-ID', {
-                        day: 'numeric', month: 'long', year: 'numeric',
-                    });
-                } catch {
-                    return date;
-                }
-            },
-
-            // ── Actions ─────────────────────────────────────────────────────────────
-            authenticateUser: async (payload) => {
-                set({ loading: true, error: null, setupToken: null, mfaToken: null });
-                try {
-                    const response = await authService.login(payload);
-
-                    // Case 1: MFA first-time setup required
-                    if (response.setup_token) {
-                        saveMfaSetupToken(response.setup_token);
-                        set({ setupToken: response.setup_token, loading: false });
-                        return { authenticated: false, mfaSetup: true };
-                    }
-
-                    // Case 2: MFA verification required (returning user)
-                    if (response.mfa_token) {
-                        saveMfaVerifyToken(response.mfa_token);
-                        set({ mfaToken: response.mfa_token, loading: false });
-                        return { authenticated: false, mfaVerify: true };
-                    }
-
-                    // Case 3: Direct login (access_token or cookie-based)
-                    const userData = mapToCurrentUser(response);
-                    set({ authenticated: true, currentUser: userData, loading: false });
-                    return { authenticated: true };
-                } catch (error: unknown) {
-                    const msg = error instanceof Error ? error.message : 'Login failed';
-                    set({
-                        error: msg, authenticated: false, currentUser: null, loading: false,
-                        setupToken: null, mfaToken: null
-                    });
-                    return { authenticated: false, error: msg };
-                }
-            },
-
-            completeMfaSetup: (response) => {
-                const userData = mapToCurrentUser(response);
-                clearMfaSessionTokens();
-                set({ authenticated: true, currentUser: userData, setupToken: null, mfaToken: null });
-            },
-
-            completeMfaVerify: (response) => {
-                const userData = mapToCurrentUser(response);
-                clearMfaSessionTokens();
-                set({ authenticated: true, currentUser: userData, setupToken: null, mfaToken: null });
-            },
-
-            clearMfaState: () => {
-                clearMfaSessionTokens();
-                set({ setupToken: null, mfaToken: null });
-            },
-
-            registerUser: async (payload) => {
-                set({ loading: true, error: null });
-                try {
-                    await authService.register(payload);
-                    return { success: true };
-                } catch (error: unknown) {
-                    const msg = error instanceof Error ? error.message : 'Registration failed';
-                    set({ error: msg });
-                    return { success: false, error: msg };
-                } finally {
-                    set({ loading: false });
-                }
-            },
-
-            logUserOut: async () => {
-                await authService.logout();
-                set({
-                    authenticated: false,
-                    currentUser: null,
-                    error: null,
-                    setupToken: null,
-                    mfaToken: null,
+        // ── Derived (call as functions) ─────────────────────────────────────────
+        isAdmin: () => get().currentUser?.role === 'admin',
+        isMfaSetupRequired: () => !!get().setupToken,
+        isMfaVerifyRequired: () => !!get().mfaToken,
+        formattedJoinDate: () => {
+            const date = get().currentUser?.createdAt;
+            if (!date) return '';
+            try {
+                return new Date(date).toLocaleDateString('id-ID', {
+                    day: 'numeric', month: 'long', year: 'numeric',
                 });
-            },
+            } catch {
+                return date;
+            }
+        },
 
-            checkAuthOnStartup: () => {
-                // The persist middleware already restores authenticated + currentUser from
-                // sessionStorage on mount. This action validates the hydrated state.
-                const { authenticated, currentUser } = get();
-                if (authenticated && !currentUser) {
-                    // Inconsistent state — reset
-                    set({ authenticated: false, currentUser: null });
+        // ── Actions ─────────────────────────────────────────────────────────────
+        authenticateUser: async (payload) => {
+            set({ loading: true, error: null, setupToken: null, mfaToken: null });
+            try {
+                const response = await authService.login(payload);
+
+                // Case 1: MFA first-time setup required
+                if (response.setup_token) {
+                    saveMfaSetupToken(response.setup_token);
+                    set({ setupToken: response.setup_token, loading: false });
+                    return { authenticated: false, mfaSetup: true };
                 }
-            },
-        }),
-        {
-            name: 'auth-session',           // sessionStorage key
-            storage: createJSONStorage(() => encryptedSessionStorage),
-            // ⚠️ Only persist UI state — tokens are NEVER persisted
-            partialize: (state) => ({
-                authenticated: state.authenticated,
-                currentUser: state.currentUser,
-            }),
-        }
-    )
+
+                // Case 2: MFA verification required (returning user)
+                if (response.mfa_token) {
+                    saveMfaVerifyToken(response.mfa_token);
+                    set({ mfaToken: response.mfa_token, loading: false });
+                    return { authenticated: false, mfaVerify: true };
+                }
+
+                // Case 3: Backend set HTTP-only cookie → hydrate store dari response
+                const userData = mapToCurrentUser(response);
+                set({ authenticated: true, currentUser: userData, loading: false });
+                return { authenticated: true };
+            } catch (error: unknown) {
+                const msg = error instanceof Error ? error.message : 'Login failed';
+                set({
+                    error: msg, authenticated: false, currentUser: null, loading: false,
+                    setupToken: null, mfaToken: null
+                });
+                return { authenticated: false, error: msg };
+            }
+        },
+
+        completeMfaSetup: (response) => {
+            const userData = mapToCurrentUser(response);
+            clearMfaSessionTokens();
+            set({ authenticated: true, currentUser: userData, setupToken: null, mfaToken: null });
+        },
+
+        completeMfaVerify: (response) => {
+            const userData = mapToCurrentUser(response);
+            clearMfaSessionTokens();
+            set({ authenticated: true, currentUser: userData, setupToken: null, mfaToken: null });
+        },
+
+        clearMfaState: () => {
+            clearMfaSessionTokens();
+            set({ setupToken: null, mfaToken: null });
+        },
+
+        registerUser: async (payload) => {
+            set({ loading: true, error: null });
+            try {
+                await authService.register(payload);
+                return { success: true };
+            } catch (error: unknown) {
+                const msg = error instanceof Error ? error.message : 'Registration failed';
+                set({ error: msg });
+                return { success: false, error: msg };
+            } finally {
+                set({ loading: false });
+            }
+        },
+
+        logUserOut: async () => {
+            await authService.logout();
+            set({
+                authenticated: false,
+                currentUser: null,
+                error: null,
+                setupToken: null,
+                mfaToken: null,
+            });
+        },
+
+        rehydrateFromServer: async () => {
+            try {
+                const response = await authService.verifySession();
+                if (!response) return false;
+                const userData = mapToCurrentUser(response);
+                set({ authenticated: true, currentUser: userData });
+                return true;
+            } catch {
+                // Cookie tidak valid atau expired — biarkan state tetap unauthenticated
+                set({ authenticated: false, currentUser: null });
+                return false;
+            }
+        },
+    })
 );

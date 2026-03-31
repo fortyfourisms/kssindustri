@@ -115,7 +115,7 @@ export function useAuth() {
         completeMfaSetup: (response: unknown) => store.completeMfaSetup(response),
         completeMfaVerify: (response: unknown) => store.completeMfaVerify(response),
         clearMfaState: () => store.clearMfaState(),
-        checkSession: () => store.checkAuthOnStartup(),
+        checkSession: () => store.rehydrateFromServer(),
         formattedJoinDate: store.formattedJoinDate(),
     };
 }
