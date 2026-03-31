@@ -7,14 +7,69 @@ import type { LoginPayload, RegisterPayload } from '@/types/auth.types';
 const MFA_SETUP_TOKEN_KEY = 'mfa_setup_token_tmp';
 const MFA_VERIFY_TOKEN_KEY = 'mfa_verify_token_tmp';
 
-function saveMfaSetupToken(token: string) { sessionStorage.setItem(MFA_SETUP_TOKEN_KEY, token); }
-function saveMfaVerifyToken(token: string) { sessionStorage.setItem(MFA_VERIFY_TOKEN_KEY, token); }
+// Basic synchronous XOR encryption to obfuscate sensitive data in storage
+const ENCRYPTION_KEY = "kssindustri_secure_storage_key_2026";
+
+function encryptData(text: string): string {
+    try {
+        const encodedText = encodeURIComponent(text);
+        let result = '';
+        for (let i = 0; i < encodedText.length; i++) {
+            result += String.fromCharCode(encodedText.charCodeAt(i) ^ ENCRYPTION_KEY.charCodeAt(i % ENCRYPTION_KEY.length));
+        }
+        return btoa(result);
+    } catch {
+        return '';
+    }
+}
+
+function decryptData(base64: string): string {
+    try {
+        const text = atob(base64);
+        let result = '';
+        for (let i = 0; i < text.length; i++) {
+            result += String.fromCharCode(text.charCodeAt(i) ^ ENCRYPTION_KEY.charCodeAt(i % ENCRYPTION_KEY.length));
+        }
+        return decodeURIComponent(result);
+    } catch {
+        return '';
+    }
+}
+
+function saveToken(key: string, token: string) {
+    sessionStorage.setItem(key, encryptData(token));
+}
+
+function readToken(key: string): string | null {
+    const val = sessionStorage.getItem(key);
+    if (!val) return null;
+    const decrypted = decryptData(val);
+    return decrypted || null;
+}
+
+function saveMfaSetupToken(token: string) { saveToken(MFA_SETUP_TOKEN_KEY, token); }
+function saveMfaVerifyToken(token: string) { saveToken(MFA_VERIFY_TOKEN_KEY, token); }
 function clearMfaSessionTokens() {
     sessionStorage.removeItem(MFA_SETUP_TOKEN_KEY);
     sessionStorage.removeItem(MFA_VERIFY_TOKEN_KEY);
 }
-export function readMfaSetupToken(): string | null { return sessionStorage.getItem(MFA_SETUP_TOKEN_KEY); }
-export function readMfaVerifyToken(): string | null { return sessionStorage.getItem(MFA_VERIFY_TOKEN_KEY); }
+export function readMfaSetupToken(): string | null { return readToken(MFA_SETUP_TOKEN_KEY); }
+export function readMfaVerifyToken(): string | null { return readToken(MFA_VERIFY_TOKEN_KEY); }
+
+// Custom encrypted storage for zustand
+const encryptedSessionStorage = {
+    getItem: (name: string): string | null => {
+        const value = sessionStorage.getItem(name);
+        if (!value) return null;
+        return decryptData(value) || null;
+    },
+    setItem: (name: string, value: string): void => {
+        sessionStorage.setItem(name, encryptData(value));
+    },
+    removeItem: (name: string): void => {
+        sessionStorage.removeItem(name);
+    }
+};
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -197,7 +252,7 @@ export const useAuthStore = create<AuthState>()(
         }),
         {
             name: 'auth-session',           // sessionStorage key
-            storage: createJSONStorage(() => sessionStorage),
+            storage: createJSONStorage(() => encryptedSessionStorage),
             // ⚠️ Only persist UI state — tokens are NEVER persisted
             partialize: (state) => ({
                 authenticated: state.authenticated,
