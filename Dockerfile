@@ -47,4 +47,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
 
 # -s = SPA mode (rewrites all routes to index.html)
 # -l = listen port
-CMD ["bunx", "serve", "-s", "dist", "-l", "3090"]
+CMD sh -c "echo \"window._env_ = { VITE_API_BASE_URL: '${VITE_API_BASE_URL}' };\" > dist/env-config.js && bunx serve -s dist -l 3090"
