@@ -1,44 +1,43 @@
 # ── Stage 1: Build ────────────────────────────────────────────
-FROM node:25-alpine AS build
+FROM oven/bun:1.0.5-alpine AS build
 
 WORKDIR /app
+# Set ownership before switching user
+RUN chown bun:bun /app
+
+# Switch to non-root user built into oven/bun
+USER bun
 
 # Install dependencies first (layer cache)
-COPY package.json package-lock.json* ./
-RUN npm ci
+COPY --chown=bun:bun package.json bun.lock* ./
+RUN bun install --frozen-lockfile
 
 # Copy source and build
-COPY . .
+COPY --chown=bun:bun . .
 
 # Build-time env: the API URL is baked into the static bundle.
 # Passed via --build-arg in docker-compose / CI.
 ARG VITE_API_BASE_URL
 ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
 
-RUN npm run build
+RUN bun run build
 
 # ── Stage 2: Serve static files (no nginx) ───────────────────
-# Since the host already runs nginx as a reverse proxy,
-# we only need a lightweight static file server inside the container.
-FROM node:25-alpine AS production
-
-# Install a tiny static file server
-RUN npm install -g serve@latest
-
-# Create a non-root user
-RUN addgroup -g 1001 -S appgroup && \
-    adduser  -u 1001 -S appuser -G appgroup
-
-# Create app directory and set ownership
-RUN mkdir -p /app && chown appuser:appgroup /app
+FROM oven/bun:1.0.5-alpine AS production
 
 WORKDIR /app
-
-# Copy built assets from build stage
-COPY --from=build --chown=appuser:appgroup /app/client/dist ./dist
+# Set ownership before switching user
+RUN chown bun:bun /app
 
 # Switch to non-root user
-USER appuser
+USER bun
+
+# Initialize a package and install serve locally
+RUN bun init -y && \
+    bun add serve@latest
+
+# Copy built assets from build stage
+COPY --from=build --chown=bun:bun /app/client/dist ./dist
 
 EXPOSE 3090
 
@@ -48,4 +47,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
 
 # -s = SPA mode (rewrites all routes to index.html)
 # -l = listen port
-CMD ["serve", "-s", "dist", "-l", "3090"]
+CMD ["bunx", "serve", "-s", "dist", "-l", "3090"]

@@ -22,7 +22,15 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 
     // Some DELETE/POST responses may be empty
     const text = await res.text();
-    return (text ? JSON.parse(text) : {}) as T;
+    try {
+        return (text ? JSON.parse(text) : {}) as T;
+    } catch (parseError) {
+        const errMessage = parseError instanceof Error ? parseError.message : 'Unknown parse error';
+        if (text.trim().startsWith('<')) {
+            throw new Error(`Server returned HTML instead of JSON. Check your API URL or proxy configuration. (Status ${res.status})`);
+        }
+        throw new Error(`Failed to parse API response: ${errMessage}`);
+    }
 }
 
 export const apiClient = {
