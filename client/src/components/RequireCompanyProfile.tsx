@@ -1,7 +1,7 @@
 import { useUser } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { perusahaanService } from "@/services/perusahaan.service";
-import { useLocation } from "wouter";
+import { useNavigate } from "react-router-dom";
 import { Building2, Lock, ArrowRight } from "lucide-react";
 
 export function isCompanyEmpty(p: any): boolean {
@@ -31,7 +31,7 @@ interface RequireCompanyProfileProps {
  *    Users who have already filled in company profile pass through immediately.
  */
 export function RequireCompanyProfile({ children }: RequireCompanyProfileProps) {
-    const [, navigate] = useLocation();
+    const navigate = useNavigate();
 
     const { data: meData, isLoading: isUserLoading } = useUser();
 

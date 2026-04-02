@@ -1,4 +1,3 @@
-import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { useUser, useProfile } from "@/hooks/useAuth";
 import {
     Shield,
@@ -15,7 +14,7 @@ import {
     MapPin,
     Calendar,
 } from "lucide-react";
-import { Link } from "wouter";
+import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
@@ -123,8 +122,7 @@ export default function Dashboard() {
     const isCsirtFilled = csirtData && csirtData.length > 0;
 
     return (
-        <DashboardLayout title="Dashboard">
-            <div className="max-w-7xl mx-auto pb-12">
+        <div className="max-w-7xl mx-auto pb-12">
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
 
                     {/* Left Column (Main Content) */}
@@ -181,7 +179,7 @@ export default function Dashboard() {
                         </motion.div>
 
                         <div className="flex justify-end pr-4">
-                            <Link href="/dashboard/ikas" className="flex items-center gap-2 text-blue-600 font-black text-[10px] uppercase tracking-wider hover:gap-3 transition-all group">
+                            <Link to="/dashboard/ikas" className="flex items-center gap-2 text-blue-600 font-black text-[10px] uppercase tracking-wider hover:gap-3 transition-all group">
                                 Lihat Detail Lengkap <ChevronRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
                             </Link>
                         </div>
@@ -253,7 +251,6 @@ export default function Dashboard() {
                     </div>
                 </div>
             </div>
-        </DashboardLayout>
     );
 
 }
@@ -308,7 +305,7 @@ function SocietyCard({ label, fullName, description, href, cardBg, dotColor, tit
             transition={{ duration: 0.4 }}
         >
             <Link
-                href={href}
+                to={href}
                 className={`relative block ${cardBg} rounded-[2rem] p-7 overflow-hidden group cursor-pointer border border-black/5 hover:shadow-xl transition-all duration-300`}
             >
                 {/* Status badge */}

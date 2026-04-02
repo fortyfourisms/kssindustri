@@ -1,16 +1,15 @@
 import { useState, useRef } from "react";
-import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { RequireCompanyProfile } from "@/components/RequireCompanyProfile";
 import { ikasDataStatic } from "@/data/ikas-data";
 import { useQuery } from "@tanstack/react-query";
-import { useLocation } from "wouter";
+import { useNavigate } from "react-router-dom";
 import { api } from "@/lib/api";
 import { Building2, Search, Shield, Radar, Activity, Edit, FileSpreadsheet, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { RadarChartIkas } from "@/components/RadarChartIkas";
 
 export default function IKAS() {
-    const [, setLocation] = useLocation();
+    const navigate = useNavigate();
     const { toast } = useToast();
     const { data: user } = useQuery({ queryKey: ["me"], queryFn: api.getMe });
 
@@ -87,8 +86,7 @@ export default function IKAS() {
     const domainCss = "text-white font-extrabold text-center text-[11px] tracking-wider uppercase";
 
     return (
-        <DashboardLayout title="IKAS">
-            <RequireCompanyProfile>
+        <RequireCompanyProfile>
                 <div className="max-w-7xl mx-auto space-y-6">
 
                     {/* Unified Header */}
@@ -323,7 +321,7 @@ export default function IKAS() {
                             <button
                                 type="button"
                                 className="px-5 py-2.5 rounded-full bg-white border border-slate-200 text-slate-600 font-bold text-sm shadow-sm hover:bg-slate-50 transition-colors flex items-center gap-2"
-                                onClick={() => setLocation('/dashboard/form-ikas')}
+                                onClick={() => navigate('/dashboard/form-ikas')}
                             >
                                 <Edit className="w-4 h-4" /> Input Data
                             </button>
@@ -346,6 +344,5 @@ export default function IKAS() {
                     <RadarChartIkas ikasDataDynamic={ikasDataDynamic} />
                 </div>
             </RequireCompanyProfile>
-        </DashboardLayout>
     );
 }

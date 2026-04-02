@@ -7,7 +7,7 @@ import { authService } from "@/services/auth.service";
 import { useToast } from "@/hooks/use-toast";
 import { OTPInput, SlotProps } from "input-otp";
 import { cn } from "@/lib/utils";
-import { useLocation, Link } from "wouter";
+import { useNavigate, Link } from "react-router-dom";
 
 // ─── OTP Slot ────────────────────────────────────────────────────────────────
 
@@ -45,7 +45,7 @@ function OtpSlot({ char, hasFakeCaret, isActive }: SlotProps) {
  * sessionStorage used as fallback for page reload edge cases.
  */
 export default function MfaVerify() {
-    const [, navigate] = useLocation();
+    const navigate = useNavigate();
     const { toast } = useToast();
 
     // Read mode from URL query — same as Vue's route.query.mode
@@ -335,7 +335,7 @@ export default function MfaVerify() {
                             {/* Back to Login */}
                             <div className="text-center mt-4">
                                 <Link
-                                    href="/login"
+                                    to="/login"
                                     onClick={() => clearMfaState()}
                                     className="flex items-center justify-center gap-1 text-xs text-slate-400 hover:text-slate-600 transition"
                                 >

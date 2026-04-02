@@ -1,5 +1,4 @@
 import { useEffect, useRef } from "react";
-import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/services/apiClient";
 import { perusahaanService } from "@/services/perusahaan.service";
@@ -17,7 +16,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useSearch } from "wouter";
+import { useSearchParams } from "react-router-dom";
 import { getMediaUrl } from "@/lib/utils";
 
 const ProfileSchema = z.object({
@@ -62,8 +61,8 @@ function getInitials(name: string) {
 export default function EditProfil() {
     const { toast } = useToast();
     const qc = useQueryClient();
-    const search = useSearch();
-    const initialTab = new URLSearchParams(search).get("tab") === "perusahaan" ? "perusahaan" : "pengguna";
+    const [searchParams] = useSearchParams();
+    const initialTab = searchParams.get("tab") === "perusahaan" ? "perusahaan" : "pengguna";
 
     const { data: user, isLoading: isUserLoading } = useUser();
 
@@ -186,15 +185,12 @@ export default function EditProfil() {
 
     if (isUserLoading) {
         return (
-            <DashboardLayout title="Profil">
-                <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>
-            </DashboardLayout>
+            <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>
         );
     }
 
     return (
-        <DashboardLayout title="Profil">
-            <div className="max-w-2xl mx-auto space-y-6">
+        <div className="max-w-2xl mx-auto space-y-6">
                 <Tabs defaultValue={initialTab} className="w-full">
                     <TabsList className="grid w-full grid-cols-2 mb-6">
                         <TabsTrigger value="pengguna">Profil Pengguna</TabsTrigger>
@@ -547,6 +543,5 @@ export default function EditProfil() {
                     </TabsContent>
                 </Tabs>
             </div>
-        </DashboardLayout>
     );
 }

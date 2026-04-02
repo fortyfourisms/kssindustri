@@ -2,7 +2,7 @@ import { useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Link, useLocation } from "wouter";
+import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Eye, EyeOff, Loader2, ShieldCheck } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
@@ -20,7 +20,7 @@ export default function Login() {
     const [showPass, setShowPass] = useState(false);
     const { login, loading } = useAuth();
     const { toast } = useToast();
-    const [, navigate] = useLocation();
+    const navigate = useNavigate();
     const containerRef = useRef<HTMLDivElement>(null);
 
     const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -115,7 +115,7 @@ export default function Login() {
                 <div className="relative z-10 flex flex-col h-full">
                     {/* Top Section: Logo */}
                     <div className="mb-auto w-fit">
-                        <Link href="/">
+                        <Link to="/">
                             <div className="flex items-center gap-2 cursor-pointer group/logo w-fit">
                                 <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-2xl shadow-black/10 group-hover/logo:scale-110 transition-all duration-500">
                                     <img src={Logo} alt="Logo" className="w-6 h-6 object-contain" />
@@ -151,7 +151,7 @@ export default function Login() {
                 >
                     {/* Mobile Logo */}
                     <div className="mb-10 lg:hidden flex justify-center">
-                        <Link href="/">
+                        <Link to="/">
                             <div className="flex items-center gap-2 cursor-pointer group">
                                 <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-600/20 group-hover:scale-105 transition-transform">
                                     <ShieldCheck className="w-6 h-6 text-white" />
@@ -209,7 +209,7 @@ export default function Login() {
                                     Remember me
                                 </span>
                             </label>
-                            <Link href="#" className="text-slate-500 hover:text-slate-900 transition-colors tracking-wide">
+                            <Link to="#" className="text-slate-500 hover:text-slate-900 transition-colors tracking-wide">
                                 Forgot Password?
                             </Link>
                         </div>
@@ -233,7 +233,7 @@ export default function Login() {
                     <div className="mt-8 text-center pt-6 border-t border-slate-100">
                         <p className="text-slate-500 text-sm font-medium">
                             Don't have an account?{" "}
-                            <Link href="/register" className="text-slate-900 font-bold hover:text-blue-600 transition-colors inline-flex items-center gap-1 ml-1">
+                            <Link to="/register" className="text-slate-900 font-bold hover:text-blue-600 transition-colors inline-flex items-center gap-1 ml-1">
                                 Sign Up <span aria-hidden="true">&rarr;</span>
                             </Link>
                         </p>

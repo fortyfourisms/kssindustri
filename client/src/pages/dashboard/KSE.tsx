@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useLocation } from "wouter";
-import { DashboardLayout } from "@/layouts/DashboardLayout";
+import { useNavigate } from "react-router-dom";
 import { RequireCompanyProfile } from "@/components/RequireCompanyProfile";
 import { api } from "@/lib/api";
 import { getKategoriSE } from "@/data/kse-data";
@@ -51,23 +50,24 @@ function KategoriBadge({ kategori }: { kategori: string }) {
 }
 
 export default function KSE() {
-    const [, setLocation] = useLocation();
+    const navigate = useNavigate();
 
     const { data: seData, isLoading, isError, refetch } = useQuery<any>({
         queryKey: ["se"],
         queryFn: api.getKse,
     });
 
-    // Normalise: API might return a single object or an array
-    const seList: any[] = Array.isArray(seData)
-        ? seData
-        : seData && typeof seData === 'object' && seData.id
-            ? [seData]
-            : [];
+    // Normalise: API returns { data: [...], total_count: N }
+    const seList: any[] = Array.isArray(seData?.data)
+        ? seData.data
+        : Array.isArray(seData)
+            ? seData
+            : seData && typeof seData === 'object' && seData.id
+                ? [seData]
+                : [];
 
     return (
-        <DashboardLayout title="KSE">
-            <RequireCompanyProfile>
+        <RequireCompanyProfile>
                 <div className="max-w-7xl mx-auto space-y-6 pb-12">
 
                     {/* ── Page Header ── */}
@@ -80,7 +80,7 @@ export default function KSE() {
                             <p className="text-sm text-slate-500 mt-0.5">Daftar Sistem Elektronik yang telah dinilai beserta kategori dan skornya.</p>
                         </div>
                         <button
-                            onClick={() => setLocation('/dashboard/form-kse')}
+                            onClick={() => navigate('/dashboard/form-kse')}
                             className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold text-sm shadow-md shadow-blue-500/25
                                 hover:shadow-blue-500/40 hover:scale-[1.01] active:scale-[0.99] transition-all whitespace-nowrap"
                         >
@@ -117,7 +117,7 @@ export default function KSE() {
                                     <p className="text-sm text-slate-400 mt-1">Tambahkan sistem elektronik pertama Anda untuk memulai penilaian.</p>
                                 </div>
                                 <button
-                                    onClick={() => setLocation('/dashboard/form-kse')}
+                                    onClick={() => navigate('/dashboard/form-kse')}
                                     className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold text-sm shadow-md shadow-blue-500/20 hover:shadow-blue-500/35 transition-all"
                                 >
                                     <Plus className="w-4 h-4" /> Tambah SE Sekarang
@@ -171,7 +171,7 @@ export default function KSE() {
                                                     <td className="px-5 py-4 text-slate-500 whitespace-nowrap">{formatDate(se.updated_at)}</td>
                                                     <td className="px-5 py-4 text-center">
                                                         <button
-                                                            onClick={() => setLocation(`/dashboard/form-kse?id=${se.id}`)}
+                                                            onClick={() => navigate(`/dashboard/form-kse?id=${se.id}`)}
                                                             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 border border-blue-100 text-blue-600 font-bold text-xs
                                                                 hover:bg-blue-100 hover:border-blue-200 transition-colors group-hover:shadow-sm"
                                                         >
@@ -186,13 +186,12 @@ export default function KSE() {
 
                                 {/* Table footer */}
                                 <div className="px-5 py-3 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between">
-                                    <p className="text-xs text-slate-400 font-medium">{seList.length} sistem elektronik terdaftar</p>
+                                    <p className="text-xs text-slate-400 font-medium">{seList.length} sistem elektronik terdaftar{seData?.total_count != null ? ` (total: ${seData.total_count})` : ''}</p>
                                 </div>
                             </div>
                         )}
                     </motion.div>
                 </div>
             </RequireCompanyProfile>
-        </DashboardLayout>
     );
 }

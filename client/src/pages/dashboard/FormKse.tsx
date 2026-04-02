@@ -1,7 +1,6 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
-import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { useQuery } from "@tanstack/react-query";
-import { useLocation, useSearch } from "wouter";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "@/lib/api";
 import { csirtService } from "@/services/csirt.service";
 import { useToast } from "@/hooks/use-toast";
@@ -66,11 +65,10 @@ function getSlug(companyName: string) {
 }
 
 export default function FormKse() {
+    const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const editId = searchParams.get('id') || '';
     const { toast } = useToast();
-    const [, setLocation] = useLocation();
-    const searchStr = useSearch();
-    const params = new URLSearchParams(searchStr);
-    const editId = params.get('id') || '';
 
     const { data: user, isLoading: userLoading } = useQuery<any>({ queryKey: ["me"], queryFn: api.getMe });
 
@@ -82,14 +80,23 @@ export default function FormKse() {
     });
 
     // New mode: fetch company's SE list just for company defaults (first record)
-    const { data: seList } = useQuery<any>({
+    const { data: seListRaw } = useQuery<any>({
         queryKey: ["se"],
         queryFn: api.getKse,
         enabled: !!user && !editId,
     });
 
+    // Normalise: API returns { data: [...], total_count: N }
+    const seListNorm: any[] = Array.isArray(seListRaw?.data)
+        ? seListRaw.data
+        : Array.isArray(seListRaw)
+            ? seListRaw
+            : seListRaw && typeof seListRaw === 'object' && seListRaw.id
+                ? [seListRaw]
+                : [];
+
     // The resolved SE record to pre-fill from
-    const existingSe = editId ? seById : (Array.isArray(seList) ? seList[0] : seList);
+    const existingSe = editId ? seById : (seListNorm[0] ?? null);
 
     // ── Step state ───────────────────────────────────────────────────────────
     const [currentStep, setCurrentStep] = useState(1);
@@ -367,7 +374,7 @@ export default function FormKse() {
                 }
                 setIsSubmitted(true);
                 toast({ title: "Berhasil!", description: "Assessment berhasil diselesaikan dan disimpan." });
-                setTimeout(() => setLocation('/dashboard/kse'), 1200);
+                setTimeout(() => navigate('/dashboard/kse'), 1200);
             } else {
                 toast({ title: "Tersimpan", description: "Data berhasil disimpan sementara." });
             }
@@ -382,16 +389,13 @@ export default function FormKse() {
     // ── Loading state ────────────────────────────────────────────────────────
     if (userLoading) {
         return (
-            <DashboardLayout title="Form KSE">
                 <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-emerald-500" /></div>
-            </DashboardLayout>
         );
     }
 
     // ── Render ────────────────────────────────────────────────────────────────
     return (
-        <DashboardLayout title="Form KSE">
-            <RequireCompanyProfile>
+        <RequireCompanyProfile>
                 <div className="max-w-7xl mx-auto space-y-6 pb-12">
 
                     {/* Header Info */}
@@ -408,7 +412,7 @@ export default function FormKse() {
                             </p>
                         </div>
                         <button
-                            onClick={() => setLocation('/dashboard/kse')}
+                            onClick={() => navigate('/dashboard/kse')}
                             className="flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 text-slate-600 font-semibold text-sm hover:bg-slate-50 transition-colors"
                         >
                             <ArrowLeft className="w-4 h-4" /> Kembali
@@ -520,7 +524,7 @@ export default function FormKse() {
                                             <div className="flex flex-col-reverse sm:flex-row justify-between items-stretch sm:items-center gap-3 mt-6 pt-4 border-t border-slate-100">
                                                 <button
                                                     type="button"
-                                                    onClick={() => setLocation('/dashboard/kse')}
+                                                    onClick={() => navigate('/dashboard/kse')}
                                                     className="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 transition-colors flex items-center gap-2"
                                                 >
                                                     <ArrowLeft className="w-4 h-4" /> Kembali
@@ -728,6 +732,5 @@ export default function FormKse() {
                     </AnimatePresence>
                 </div>
             </RequireCompanyProfile>
-        </DashboardLayout>
     );
 }

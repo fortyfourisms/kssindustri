@@ -1,5 +1,5 @@
 import { useAuthStore } from "@/stores/auth.store";
-import { useLocation } from "wouter";
+import { useNavigate } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 
@@ -23,7 +23,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     const authenticated = useAuthStore((s) => s.authenticated);
     const currentUser = useAuthStore((s) => s.currentUser);
     const rehydrateFromServer = useAuthStore((s) => s.rehydrateFromServer);
-    const [, navigate] = useLocation();
+    const navigate = useNavigate();
 
     // Mulai dengan verifying=true — SELALU cek ke server saat mount
     const [isVerifying, setIsVerifying] = useState(true);

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Outlet, useMatches, useNavigate } from "react-router-dom";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Topbar } from "@/components/dashboard/Topbar";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
@@ -6,7 +7,6 @@ import { isCompanyEmpty } from "@/components/RequireCompanyProfile";
 import { useUser } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { perusahaanService } from "@/services/perusahaan.service";
-import { useLocation } from "wouter";
 import { Building2, ArrowRight, X } from "lucide-react";
 
 const COMPANY_CHECK_KEY = "company_prompt_shown";
@@ -46,7 +46,7 @@ function CompanyModal({ onClose, onGo }: { onClose: () => void; onGo: () => void
 }
 
 function CompanyGuard() {
-    const [, navigate] = useLocation();
+    const navigate = useNavigate();
     const [showModal, setShowModal] = useState(false);
     const checked = useRef(false);
 
@@ -90,13 +90,24 @@ function CompanyGuard() {
     return <CompanyModal onClose={() => setShowModal(false)} onGo={handleGo} />;
 }
 
-interface DashboardLayoutProps {
-    children: React.ReactNode;
+/** Route handle type – matches what we put on each Route in App.tsx */
+interface RouteHandle {
     title?: string;
 }
 
-export function DashboardLayout({ children, title }: DashboardLayoutProps) {
+/**
+ * DashboardLayout – persistent App Shell.
+ *
+ * Mounted ONCE at router level. Never remounts during navigation.
+ * All dashboard pages render inside <Outlet />.
+ * Title is read from the innermost matched route's `handle.title`.
+ */
+export function DashboardLayout() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
+
+    // Read the page title from the active route's handle
+    const matches = useMatches();
+    const title = (matches.at(-1)?.handle as RouteHandle | undefined)?.title;
 
     return (
         <ProtectedRoute>
@@ -121,10 +132,11 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
                 {/* Main area */}
                 <div className="flex-1 flex flex-col min-w-0 relative z-10">
                     <Topbar title={title} onMenuClick={() => setSidebarOpen(true)} />
-                    <main className="flex-1 p-4 md:p-6 overflow-y-auto">{children}</main>
+                    <main className="flex-1 p-4 md:p-6 overflow-y-auto">
+                        <Outlet />
+                    </main>
                 </div>
             </div>
         </ProtectedRoute>
     );
 }
-
