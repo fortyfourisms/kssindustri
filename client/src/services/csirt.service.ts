@@ -26,8 +26,13 @@ function normalizeList<T>(res: any): T[] {
 }
 
 function normalizeOne<T>(res: any): T {
-    if (res && res.data && !Array.isArray(res.data)) return res.data;
-    if (res && res.csirt) return res.csirt;
+    if (Array.isArray(res)) return res[0];
+    if (res && res.data) {
+        return Array.isArray(res.data) ? res.data[0] : res.data;
+    }
+    // Remove the `if (res && res.csirt) return res.csirt;` check because
+    // SE endpoint returns `csirt` as a nested relation property, causing
+    // the whole SE response to be incorrectly evaluated as a CSIRT object.
     return res;
 }
 

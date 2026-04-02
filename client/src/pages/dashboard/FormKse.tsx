@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "@/lib/api";
 import { csirtService } from "@/services/csirt.service";
+import { perusahaanService } from "@/services/perusahaan.service";
 import { useToast } from "@/hooks/use-toast";
 import { RequireCompanyProfile } from "@/components/RequireCompanyProfile";
 import KseQuestionCard from "@/components/assessment/KseQuestionCard";
@@ -11,7 +12,7 @@ import PaginationControl from "@/components/assessment/PaginationControl";
 import { kseCategories, getKategoriSE } from "@/data/kse-data";
 import {
     Monitor, ChevronRight, ArrowLeft, Save, CheckCircle2, Edit2,
-    BarChart3, Scale, Loader2, AlertCircle, FileText
+    BarChart3, Scale, Loader2, AlertCircle, FileText, Server
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -72,31 +73,26 @@ export default function FormKse() {
 
     const { data: user, isLoading: userLoading } = useQuery<any>({ queryKey: ["me"], queryFn: api.getMe });
 
-    // Edit mode: fetch specific SE by id from /api/se/{id}
+    // Fetch the company profile so we have full company details
+    const perusahaanId = user?.id_perusahaan || user?.perusahaan?.id;
+    const { data: pData } = useQuery<any>({
+        queryKey: ["perusahaan", perusahaanId],
+        queryFn: () => perusahaanService.getById(String(perusahaanId)),
+        enabled: !!perusahaanId,
+    });
+
+    // Edit mode only: fetch specific SE by id from /api/se/{id}
+    // Add mode never pre-fills from an existing record → existingSe stays null.
     const { data: seById } = useQuery<any>({
         queryKey: ["se", editId],
         queryFn: () => csirtService.getSeById(editId),
         enabled: !!user && !!editId,
     });
 
-    // New mode: fetch company's SE list just for company defaults (first record)
-    const { data: seListRaw } = useQuery<any>({
-        queryKey: ["se"],
-        queryFn: api.getKse,
-        enabled: !!user && !editId,
-    });
-
-    // Normalise: API returns { data: [...], total_count: N }
-    const seListNorm: any[] = Array.isArray(seListRaw?.data)
-        ? seListRaw.data
-        : Array.isArray(seListRaw)
-            ? seListRaw
-            : seListRaw && typeof seListRaw === 'object' && seListRaw.id
-                ? [seListRaw]
-                : [];
-
-    // The resolved SE record to pre-fill from
-    const existingSe = editId ? seById : (seListNorm[0] ?? null);
+    // The resolved SE record to pre-fill:
+    //   Edit mode → seById (fetched above)
+    //   Add mode  → null  (always blank)
+    const existingSe = editId ? (seById ?? null) : null;
 
     // ── Step state ───────────────────────────────────────────────────────────
     const [currentStep, setCurrentStep] = useState(1);
@@ -178,55 +174,83 @@ export default function FormKse() {
         return !(isLast && currentPage === totalPagesInCategory);
     }, [currentCategoryId, currentPage, totalPagesInCategory]);
 
-    // ── Init: load from localStorage + user profile + existing SE data ────────
+    // ── STEP A: Hard-reset all form state whenever the mode changes (Add ↔ Edit)
+    // This fires synchronously on every editId change, before data arrives,
+    // so stale state from a previous navigation is never shown.
+    useEffect(() => {
+        setAnswers({});
+        setIsSubmitted(false);
+        setCurrentStep(1);
+        setCurrentCategoryId(kseCategories[0].id);
+        setCurrentPage(1);
+        setFormErrors({});
+        // Snapshot the blank respondent shell with whatever user profile is ready.
+        // The data-init effect below will overwrite once API data arrives.
+        setRespondent({
+            nama_perusahaan: '',
+            jenis_usaha: '',
+            nama_se: '',
+            alamat: '',
+            email: '',
+            nomor_telepon: '',
+            tanggal_pengisian: new Date().toISOString().split('T')[0],
+            ip_se: '',
+            as_number_se: '',
+            pengelola_se: '',
+            fitur_se: '',
+        });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [editId]); // intentionally only editId — reset whenever mode flips
+
+    // ── STEP B: Populate form from API data once it is ready ─────────────────
+    // Add mode  → only user profile defaults (no SE pre-fill, NO localStorage restore)
+    // Edit mode → seById data + answer mapping, then jump to step 2
     useEffect(() => {
         if (!user) return;
-        // In edit mode, wait until seById is loaded
+        if (perusahaanId && !pData) return; // Wait for company profile data
+        // In Edit mode wait for seById to arrive before doing anything
         if (editId && !seById) return;
 
-        const p = user.perusahaan;
-        const se = existingSe;
+        // p refers to the full fetched company profile object
+        const p = pData || user.perusahaan || {};
+        const se = existingSe; // null in Add mode, seById object in Edit mode
 
+        // ── Build profile shell from user perusahaan (common to both modes) ──
         const initial: KseRespondentProfile = {
-            nama_perusahaan: se?.perusahaan?.nama_perusahaan || p?.nama_perusahaan || '',
-            jenis_usaha: se?.sub_sektor?.nama_sub_sektor || p?.sub_sektor?.nama_sub_sektor || p?.sub_sektor?.name || '',
-            nama_se: se?.nama_se || '',
+            nama_perusahaan: p?.nama_perusahaan || '',
+            jenis_usaha: p?.sub_sektor?.nama_sub_sektor || p?.sub_sektor?.name || '',
+            nama_se: '',
             alamat: p?.alamat || '',
             email: p?.email || user.email || '',
             nomor_telepon: p?.telepon || '',
             tanggal_pengisian: new Date().toISOString().split('T')[0],
-            ip_se: se?.ip_se || '',
-            as_number_se: se?.as_number_se || '',
-            pengelola_se: se?.pengelola_se || '',
-            fitur_se: se?.fitur_se || '',
-            seId: se?.id || '',
-            id_perusahaan: se?.id_perusahaan || p?.id || '',
-            id_sub_sektor: se?.id_sub_sektor || p?.sub_sektor?.id || '',
-            id_csirt: se?.id_csirt || '',
+            ip_se: '',
+            as_number_se: '',
+            pengelola_se: p?.nama_perusahaan || '', // Default otomatis ke nama instansi
+            fitur_se: '',
+            seId: '',
+            id_perusahaan: p?.id || '',
+            id_sub_sektor: p?.sub_sektor?.id || '',
+            id_csirt: '',
         };
 
-        // Only read localStorage when not in edit-by-id mode
-        if (!editId) {
-            try {
-                const stored = localStorage.getItem(`kse_respondent_${getSlug(p?.nama_perusahaan || 'default')}`);
-                if (stored) {
-                    const saved = JSON.parse(stored);
-                    Object.keys(saved).forEach(key => {
-                        const k = key as keyof KseRespondentProfile;
-                        if (!initial[k] && saved[k]) {
-                            initial[k] = saved[k];
-                        }
-                    });
-                    if (saved.nama_se) {
-                        setCurrentStep(2);
-                    }
-                }
-            } catch { }
-        }
+        if (editId && se) {
+            // ── EDIT MODE: overlay with SE-specific values ──────────────────
+            initial.nama_perusahaan = se.perusahaan?.nama_perusahaan || se.nama_perusahaan || initial.nama_perusahaan;
+            initial.jenis_usaha     = se.sub_sektor?.nama_sub_sektor || se.jenis_usaha     || initial.jenis_usaha;
+            initial.nama_se         = se.nama_se         || '';
+            initial.ip_se           = se.ip_se           || '';
+            initial.as_number_se    = se.as_number_se    || '';
+            initial.pengelola_se    = se.pengelola_se    || initial.pengelola_se; // Pakai DB atau kembalikan ke default nama instansi
+            initial.fitur_se        = se.fitur_se        || '';
+            initial.seId            = se.id              || '';
+            initial.id_perusahaan   = se.id_perusahaan   || initial.id_perusahaan;
+            initial.id_sub_sektor   = se.id_sub_sektor   || initial.id_sub_sektor;
+            initial.id_csirt        = se.id_csirt        || '';
 
-        setRespondent(initial);
+            setRespondent(initial);
 
-        if (se) {
+            // Map API answer fields → KseAnswer objects
             const apiAnswers: Record<string, KseAnswer> = {};
             let hasApiAnswers = false;
             Object.entries(QUESTION_TO_FIELD).forEach(([qNo, field]) => {
@@ -245,28 +269,21 @@ export default function FormKse() {
             });
 
             if (hasApiAnswers) {
-                setAnswers(prev => {
-                    if (JSON.stringify(prev) === JSON.stringify(apiAnswers)) return prev;
-                    return apiAnswers;
-                });
+                setAnswers(apiAnswers);
                 setIsSubmitted(true);
-                // In edit mode, skip to step 2 automatically
-                if (editId) setCurrentStep(2);
+                setCurrentStep(2); // jump straight to assessment tab
             }
         } else if (!editId) {
-            try {
-                const storedAnswers = localStorage.getItem(`kse_answers_${getSlug(p?.nama_perusahaan || 'default')}`);
-                if (storedAnswers) {
-                    const parsed = JSON.parse(storedAnswers);
-                    setAnswers(prev => {
-                        if (JSON.stringify(prev) === JSON.stringify(parsed.answers || {})) return prev;
-                        return parsed.answers || {};
-                    });
-                    setIsSubmitted(prev => prev !== (parsed.isSubmitted || false) ? (parsed.isSubmitted || false) : prev);
-                }
-            } catch { }
+            // ── ADD MODE: start blank, no localStorage pre-fill ─────────────
+            // We intentionally do NOT restore localStorage here so the user
+            // always gets a truly blank form.  localStorage is only used to
+            // persist in-progress answers that the user explicitly started.
+            setRespondent(initial);
+            setAnswers({});
+            setIsSubmitted(false);
+            setCurrentStep(1);
         }
-    }, [user, existingSe, editId, seById]);
+    }, [user, perusahaanId, pData, existingSe, editId, seById]);
 
     // ── Persist answers on change ────────────────────────────────────────────
     useEffect(() => {
@@ -285,6 +302,7 @@ export default function FormKse() {
     const validateRespondentForm = (): boolean => {
         const errors: Record<string, string> = {};
         if (!respondent.nama_se.trim()) errors.nama_se = 'Nama sistem elektronik wajib diisi';
+        if (!respondent.ip_se?.trim()) errors.ip_se = 'IP SE wajib diisi';
         setFormErrors(errors);
         return Object.keys(errors).length === 0;
     };
@@ -351,24 +369,27 @@ export default function FormKse() {
                 }
             });
 
-            const payload = {
+            const payload: any = {
                 ...penilaianPayload,
                 kategori_se: kategoriSE.kategori,
+                total_bobot: totalBobot,
                 nama_se: respondent.nama_se,
                 ip_se: respondent.ip_se || '',
                 as_number_se: respondent.as_number_se || '',
                 pengelola_se: respondent.pengelola_se || '',
                 fitur_se: respondent.fitur_se || '',
-                id_perusahaan: respondent.id_perusahaan || '',
-                id_sub_sektor: respondent.id_sub_sektor || '',
-                id_csirt: respondent.id_csirt || '',
             };
+
+            // Only attach UUID fields if they are not empty strings to prevent backend parsing crashes
+            if (respondent.id_perusahaan) payload.id_perusahaan = respondent.id_perusahaan;
+            if (respondent.id_sub_sektor) payload.id_sub_sektor = respondent.id_sub_sektor;
+            if (respondent.id_csirt) payload.id_csirt = respondent.id_csirt;
 
             if (isAllAnswered) {
                 if (respondent.seId) {
                     await csirtService.updateSe(respondent.seId, payload);
                 } else {
-                    const created = await csirtService.createSe(payload as any);
+                    const created = await csirtService.createSe(payload);
                     setRespondent(prev => ({ ...prev, seId: created.id }));
                     localStorage.setItem(PROFILE_KEY, JSON.stringify({ ...respondent, seId: created.id }));
                 }
@@ -380,7 +401,8 @@ export default function FormKse() {
             }
         } catch (e: any) {
             console.warn('KSE save failed:', e);
-            toast({ title: "Peringatan", description: "Data tersimpan secara lokal. Sinkronisasi ke server gagal.", variant: "destructive" });
+            const errMsg = e?.message || "Data tersimpan secara lokal. Sinkronisasi ke server gagal.";
+            toast({ title: "Gagal Menyimpan", description: errMsg, variant: "destructive" });
         } finally {
             setIsSaving(false);
         }
@@ -503,7 +525,44 @@ export default function FormKse() {
                                                     )}
                                                 </div>
 
-                                                <div className="md:col-span-2"><hr className="border-slate-100 my-1" /></div>
+                                                {/* ── DETAIL SISTEM ELEKTRONIK ── */}
+                                                <div className="md:col-span-2 mt-4 mb-1">
+                                                    <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                                                        <Server className="w-4 h-4" /> DETAIL SISTEM ELEKTRONIK
+                                                    </h3>
+                                                    <hr className="border-slate-100 mt-2" />
+                                                </div>
+
+                                                {/* IP SE */}
+                                                <div>
+                                                    <label className="block text-sm font-semibold text-slate-600 mb-1.5">IP SE <span className="text-red-500">*</span></label>
+                                                    <input type="text" placeholder="Contoh: 192.168.1.1" value={respondent.ip_se || ''} onChange={e => handleRespondentChange('ip_se', e.target.value)}
+                                                        className={`w-full px-4 py-2.5 rounded-xl border text-slate-900 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400 transition ${formErrors.ip_se ? 'border-red-300 bg-red-50/50' : 'border-slate-200 bg-white/80'}`} />
+                                                    {formErrors.ip_se && <p className="text-red-500 text-xs mt-1">{formErrors.ip_se}</p>}
+                                                </div>
+
+                                                {/* AS Number */}
+                                                <div>
+                                                    <label className="block text-sm font-semibold text-slate-600 mb-1.5">AS Number</label>
+                                                    <input type="text" placeholder="Contoh: AS12345" value={respondent.as_number_se || ''} onChange={e => handleRespondentChange('as_number_se', e.target.value)}
+                                                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white/80 text-slate-900 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400 transition" />
+                                                </div>
+
+                                                {/* Pengelola */}
+                                                <div>
+                                                    <label className="block text-sm font-semibold text-slate-600 mb-1.5">Pengelola</label>
+                                                    <input type="text" readOnly value={respondent.pengelola_se || ''}
+                                                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 text-sm cursor-not-allowed" />
+                                                </div>
+
+                                                {/* Fitur SE */}
+                                                <div>
+                                                    <label className="block text-sm font-semibold text-slate-600 mb-1.5">Fitur SE</label>
+                                                    <input type="text" placeholder="Contoh: Firewall, IDS" value={respondent.fitur_se || ''} onChange={e => handleRespondentChange('fitur_se', e.target.value)}
+                                                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white/80 text-slate-900 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400 transition" />
+                                                </div>
+
+                                                <div className="md:col-span-2"><hr className="border-slate-100 my-1 mt-3" /></div>
 
                                                 {/* Tanggal Pengisian */}
                                                 <div>
