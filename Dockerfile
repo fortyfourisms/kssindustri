@@ -1,5 +1,5 @@
 # ── Stage 1: Build ────────────────────────────────────────────
-FROM oven/bun:1.3.4-alpine AS build
+FROM oven/bun:canary-alpine AS build
 
 WORKDIR /app
 # Set ownership before switching user
@@ -23,7 +23,7 @@ ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
 RUN bun run build
 
 # ── Stage 2: Serve static files (no nginx) ───────────────────
-FROM oven/bun:1.3.4-alpine AS production
+FROM oven/bun:canary-alpine AS production
 
 WORKDIR /app
 # Set ownership before switching user
@@ -47,4 +47,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
 
 # -s = SPA mode (rewrites all routes to index.html)
 # -l = listen port
-CMD ["bunx", "serve", "-s", "dist", "-l", "3090"]
+CMD sh -c "echo \"window._env_ = { VITE_API_BASE_URL: '${VITE_API_BASE_URL}' };\" > dist/env-config.js && bunx serve -s dist -l 3090"

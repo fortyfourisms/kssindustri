@@ -2,7 +2,7 @@
 // Wraps native fetch with cookie-based auth (credentials: 'include').
 // No external HTTP library — zero dependencies.
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '';
+const BASE_URL = (window as any)._env_?.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE_URL || '';
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     const isFormData = init.body instanceof FormData;
