@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { queryClient } from "@/lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/sonner";
@@ -12,6 +12,9 @@ import Register from "@/pages/Register";
 import MfaVerify from "@/pages/MfaVerify";
 import NotFound from "@/pages/not-found";
 
+// Dashboard layout (App Shell – mounts once)
+import { DashboardLayout } from "@/layouts/DashboardLayout";
+
 // Dashboard pages
 import Dashboard from "@/pages/dashboard/Dashboard";
 import IKAS from "@/pages/dashboard/IKAS";
@@ -22,29 +25,32 @@ import CSIRT from "@/pages/dashboard/CSIRT";
 import SurveiProfil from "@/pages/dashboard/SurveiProfil";
 import EditProfil from "@/pages/dashboard/EditProfil";
 
-function Router() {
-  return (
-    <Switch>
-      {/* Public */}
-      <Route path="/" component={Home} />
-      <Route path="/login" component={Login} />
-      <Route path="/register" component={Register} />
-      <Route path="/mfa" component={MfaVerify} />
+// ── Data Router (required for useMatches / handle) ───────────────────────────
+const router = createBrowserRouter([
+  // Public routes
+  { path: "/",        element: <Home /> },
+  { path: "/login",   element: <Login /> },
+  { path: "/register",element: <Register /> },
+  { path: "/mfa",     element: <MfaVerify /> },
 
-      {/* Protected dashboard (each page wraps itself in DashboardLayout > ProtectedRoute) */}
-      <Route path="/dashboard" component={Dashboard} />
-      <Route path="/dashboard/ikas" component={IKAS} />
-      <Route path="/dashboard/form-ikas" component={FormIkas} />
-      <Route path="/dashboard/kse" component={KSE} />
-      <Route path="/dashboard/form-kse" component={FormKse} />
-      <Route path="/dashboard/csirt" component={CSIRT} />
-      <Route path="/dashboard/survei" component={SurveiProfil} />
-      <Route path="/dashboard/profil" component={EditProfil} />
+  // Dashboard App Shell – DashboardLayout mounts ONCE per session
+  {
+    element: <DashboardLayout />,
+    children: [
+      { path: "/dashboard",           element: <Dashboard />,    handle: { title: "Dashboard" } },
+      { path: "/dashboard/ikas",      element: <IKAS />,         handle: { title: "IKAS" } },
+      { path: "/dashboard/form-ikas", element: <FormIkas />,     handle: { title: "Input Data IKAS" } },
+      { path: "/dashboard/kse",       element: <KSE />,          handle: { title: "KSE" } },
+      { path: "/dashboard/form-kse",  element: <FormKse />,      handle: { title: "Form KSE" } },
+      { path: "/dashboard/csirt",     element: <CSIRT />,        handle: { title: "CSIRT" } },
+      { path: "/dashboard/survei",    element: <SurveiProfil />, handle: { title: "Survei Profil Risiko" } },
+      { path: "/dashboard/profil",    element: <EditProfil />,   handle: { title: "Profil" } },
+    ],
+  },
 
-      <Route component={NotFound} />
-    </Switch>
-  );
-}
+  // 404
+  { path: "*", element: <NotFound /> },
+]);
 
 function App() {
   return (
@@ -52,7 +58,7 @@ function App() {
       <TooltipProvider>
         <Toaster />
         <ShadcnToaster />
-        <Router />
+        <RouterProvider router={router} />
       </TooltipProvider>
     </QueryClientProvider>
   );

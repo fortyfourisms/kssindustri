@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
@@ -61,8 +60,7 @@ export default function SurveiProfil() {
     const categories = Array.from(new Set(SURVEI_QUESTIONS.map((q) => q.category)));
 
     return (
-        <DashboardLayout title="Survei Profil Risiko">
-            <RequireCompanyProfile>
+        <RequireCompanyProfile>
                 <div className="max-w-3xl mx-auto space-y-6">
                     {/* Header */}
                     <div className="bg-white/70 backdrop-blur-sm border border-white/60 rounded-2xl p-5 flex items-center gap-4">
@@ -168,6 +166,5 @@ export default function SurveiProfil() {
                     </button>
                 </div>
             </RequireCompanyProfile>
-        </DashboardLayout>
     );
 }

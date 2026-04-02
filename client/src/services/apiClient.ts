@@ -16,8 +16,12 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     });
 
     if (!res.ok) {
-        const err = await res.json().catch(() => ({ message: res.statusText }));
-        throw new Error((err as { message?: string }).message ?? `HTTP ${res.status}`);
+        const errData = await res.json().catch(() => null);
+        const message = errData?.message || errData?.error || res.statusText || `HTTP ${res.status}`;
+        const error = new Error(message) as any;
+        error.status = res.status;
+        error.response = { status: res.status, data: errData };
+        throw error;
     }
 
     // Some DELETE/POST responses may be empty

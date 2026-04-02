@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Link, useLocation } from "wouter";
+import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Eye, EyeOff, Loader2, ShieldCheck } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
@@ -20,7 +20,17 @@ export default function Login() {
     const [showPass, setShowPass] = useState(false);
     const { login, loading } = useAuth();
     const { toast } = useToast();
-    const [, navigate] = useLocation();
+    const navigate = useNavigate();
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+        if (!containerRef.current) return;
+        const rect = containerRef.current.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        containerRef.current.style.setProperty('--mouse-x', `${x}px`);
+        containerRef.current.style.setProperty('--mouse-y', `${y}px`);
+    };
 
     const {
         register,
@@ -52,24 +62,50 @@ export default function Login() {
     };
 
     return (
-        <div className="min-h-screen grid lg:grid-cols-2 relative selection:bg-blue-100 font-sans overflow-hidden">
-            {/* Mesh Gradient Background - Moved to Parent for Full Screen Coverage */}
-            <div className="absolute inset-0 z-0 bg-[#5046e5]">
-                {/* Deep Blue Core (Left) */}
-                <div className="absolute top-[20%] left-[-20%] w-[100%] h-[100%] bg-[#0000FF] rounded-full blur-[120px] opacity-90" />
+        <div
+            ref={containerRef}
+            onMouseMove={handleMouseMove}
+            className="min-h-screen grid lg:grid-cols-2 relative selection:bg-blue-100 font-sans overflow-hidden bg-[#5046e5]"
+        >
+            {/* Interactive Mouse-Following Gradient Background */}
+            <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+                {/* Dynamic Interactive Cursor Glows */}
+                <div
+                    className="absolute inset-0 z-10 transition-opacity duration-300 mix-blend-overlay"
+                    style={{
+                        background: `radial-gradient(800px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(255, 255, 255, 0.4), transparent 60%)`
+                    }}
+                />
+                <div
+                    className="absolute inset-0 z-10 transition-opacity duration-300 pointer-events-none"
+                    style={{
+                        background: `radial-gradient(400px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(255, 255, 255, 0.6), transparent 80%)`
+                    }}
+                />
 
-                {/* Bright Light Blue / White (Right Center) */}
-                <div className="absolute top-[10%] right-[-10%] w-[80%] h-[90%] bg-[#E0F2FE] rounded-full blur-[100px] opacity-80" />
-
-                {/* Purple / Lavender Accent (Top Right) */}
-                <div className="absolute top-[-10%] right-[-5%] w-[50%] h-[50%] bg-[#C084FC] rounded-full blur-[80px] opacity-60" />
-
-                {/* Soft Purple Glow (Bottom) */}
-                <div className="absolute bottom-[-20%] right-[10%] w-[70%] h-[60%] bg-[#818CF8] rounded-full blur-[110px] opacity-70" />
+                {/* Base Mesh Gradient (Animated Background Elements) */}
+                <style>
+                    {`
+                    @keyframes blob-float-1 {
+                        0%, 100% { transform: translate(0px, 0px) scale(1); }
+                        33% { transform: translate(40px, -60px) scale(1.1); }
+                        66% { transform: translate(-30px, 30px) scale(0.9); }
+                    }
+                    @keyframes blob-float-2 {
+                        0%, 100% { transform: translate(0px, 0px) scale(1); }
+                        33% { transform: translate(-40px, 50px) scale(1.15); }
+                        66% { transform: translate(30px, -40px) scale(0.85); }
+                    }
+                    `}
+                </style>
+                <div className="absolute top-[20%] left-[-20%] w-[100%] h-[100%] bg-[#0000FF] rounded-full blur-[120px] opacity-90" style={{ animation: 'blob-float-1 15s ease-in-out infinite' }} />
+                <div className="absolute top-[10%] right-[-10%] w-[80%] h-[90%] bg-[#E0F2FE] rounded-full blur-[100px] opacity-80" style={{ animation: 'blob-float-2 18s ease-in-out infinite' }} />
+                <div className="absolute top-[-10%] right-[-5%] w-[50%] h-[50%] bg-[#C084FC] rounded-full blur-[80px] opacity-60" style={{ animation: 'blob-float-1 22s ease-in-out infinite reverse' }} />
+                <div className="absolute bottom-[-20%] right-[10%] w-[70%] h-[60%] bg-[#818CF8] rounded-full blur-[110px] opacity-70" style={{ animation: 'blob-float-2 16s ease-in-out infinite reverse' }} />
 
                 {/* Noise/Texture Overlay */}
-                <div className="absolute inset-0 bg-[url('/noise.svg')] opacity-[0.03] mix-blend-overlay" />
-                <div className="absolute inset-0 bg-gradient-to-tr from-black/10 via-transparent to-white/10" />
+                <div className="absolute inset-0 bg-[url('/noise.svg')] opacity-[0.03] mix-blend-overlay z-20" />
+                <div className="absolute inset-0 bg-gradient-to-tr from-black/10 via-transparent to-white/10 z-20" />
             </div>
 
             {/* Left Side */}
@@ -78,8 +114,8 @@ export default function Login() {
                 {/* Content Container */}
                 <div className="relative z-10 flex flex-col h-full">
                     {/* Top Section: Logo */}
-                    <div className="mb-auto">
-                        <Link href="/">
+                    <div className="mb-auto w-fit">
+                        <Link to="/">
                             <div className="flex items-center gap-2 cursor-pointer group/logo w-fit">
                                 <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-2xl shadow-black/10 group-hover/logo:scale-110 transition-all duration-500">
                                     <img src={Logo} alt="Logo" className="w-6 h-6 object-contain" />
@@ -92,15 +128,15 @@ export default function Login() {
                     <div className="mt-auto max-w-lg text-white">
                         <div className="bg-white/10 backdrop-blur-md border border-white/20 p-6 rounded-2xl mb-8">
                             <p className="text-white/90 text-sm leading-relaxed italic">
-                                "Cybersecurity is not just about protecting your devices. It's about protecting yourself."
+                                "Cybersecurity is not just about protecting your devices. It's about protecting yourself." - Anonymous
                             </p>
                         </div>
-                        <h2 className="text-5xl xl:text-6xl font-black leading-[1.1] tracking-tight mb-4">
+                        {/* <h2 className="text-5xl xl:text-6xl font-black leading-[1.1] tracking-tight mb-4">
                             Uncompromised<br />Security
                         </h2>
                         <p className="text-white/80 font-medium tracking-wide text-lg">
                             Secure authentication for your dashboard access.
-                        </p>
+                        </p> */}
                     </div>
                 </div>
             </div>
@@ -115,7 +151,7 @@ export default function Login() {
                 >
                     {/* Mobile Logo */}
                     <div className="mb-10 lg:hidden flex justify-center">
-                        <Link href="/">
+                        <Link to="/">
                             <div className="flex items-center gap-2 cursor-pointer group">
                                 <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-600/20 group-hover:scale-105 transition-transform">
                                     <ShieldCheck className="w-6 h-6 text-white" />
@@ -173,7 +209,7 @@ export default function Login() {
                                     Remember me
                                 </span>
                             </label>
-                            <Link href="#" className="text-slate-500 hover:text-slate-900 transition-colors tracking-wide">
+                            <Link to="#" className="text-slate-500 hover:text-slate-900 transition-colors tracking-wide">
                                 Forgot Password?
                             </Link>
                         </div>
@@ -197,7 +233,7 @@ export default function Login() {
                     <div className="mt-8 text-center pt-6 border-t border-slate-100">
                         <p className="text-slate-500 text-sm font-medium">
                             Don't have an account?{" "}
-                            <Link href="/register" className="text-slate-900 font-bold hover:text-blue-600 transition-colors inline-flex items-center gap-1 ml-1">
+                            <Link to="/register" className="text-slate-900 font-bold hover:text-blue-600 transition-colors inline-flex items-center gap-1 ml-1">
                                 Sign Up <span aria-hidden="true">&rarr;</span>
                             </Link>
                         </p>

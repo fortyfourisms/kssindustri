@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useLocation } from "wouter";
+import { NavLink, useLocation } from "react-router-dom";
 import {
     Shield,
     Monitor,
@@ -29,7 +29,7 @@ interface SidebarProps {
 
 export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
     const [collapsed, setCollapsed] = useState(false);
-    const [location] = useLocation();
+    const location = useLocation();
     const logout = useLogout();
 
     const NavContent = ({ forMobile = false }: { forMobile?: boolean }) => (
@@ -61,12 +61,12 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
             {/* Nav */}
             <nav className="flex-1 px-2 py-4 space-y-1 overflow-y-auto overflow-x-hidden">
                 {navItems.map((item) => {
-                    const active = location === item.href || (item.href !== "/dashboard" && location.startsWith(item.href));
+                    const active = location.pathname === item.href || (item.href !== "/dashboard" && location.pathname.startsWith(item.href));
                     const Icon = item.icon;
                     return (
-                        <Link
+                        <NavLink
                             key={item.href}
-                            href={item.href}
+                            to={item.href}
                             onClick={forMobile ? onClose : undefined}
                             title={!forMobile && collapsed ? item.label : ""}
                             className={cn(
@@ -85,7 +85,7 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
                                     {item.label}
                                 </div>
                             )}
-                        </Link>
+                        </NavLink>
                     );
                 })}
             </nav>

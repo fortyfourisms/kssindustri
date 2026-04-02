@@ -7,7 +7,7 @@ import { authService } from "@/services/auth.service";
 import { useToast } from "@/hooks/use-toast";
 import { OTPInput, SlotProps } from "input-otp";
 import { cn } from "@/lib/utils";
-import { useLocation, Link } from "wouter";
+import { useNavigate, Link } from "react-router-dom";
 
 // ─── OTP Slot ────────────────────────────────────────────────────────────────
 
@@ -15,7 +15,7 @@ function OtpSlot({ char, hasFakeCaret, isActive }: SlotProps) {
     return (
         <div
             className={cn(
-                "w-12 h-14 flex items-center justify-center rounded-xl border-2 text-2xl font-bold transition-all",
+                "relative w-12 h-14 flex items-center justify-center rounded-xl border-2 text-2xl font-bold transition-all",
                 isActive
                     ? "border-blue-500 bg-blue-50 shadow-md shadow-blue-200"
                     : char
@@ -23,7 +23,12 @@ function OtpSlot({ char, hasFakeCaret, isActive }: SlotProps) {
                         : "border-slate-200 bg-slate-50/50 text-slate-400"
             )}
         >
-            {char ?? (hasFakeCaret ? <span className="animate-caret-blink border-r-2 border-blue-500 h-6" /> : null)}
+            {char}
+            {hasFakeCaret && (
+                <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                    <div className="h-6 w-[2px] animate-caret-blink bg-blue-500" />
+                </div>
+            )}
         </div>
     );
 }
@@ -40,7 +45,7 @@ function OtpSlot({ char, hasFakeCaret, isActive }: SlotProps) {
  * sessionStorage used as fallback for page reload edge cases.
  */
 export default function MfaVerify() {
-    const [, navigate] = useLocation();
+    const navigate = useNavigate();
     const { toast } = useToast();
 
     // Read mode from URL query — same as Vue's route.query.mode
@@ -134,11 +139,16 @@ export default function MfaVerify() {
             }
             navigate("/dashboard");
         } catch (err: unknown) {
-            const status = (err as any)?.status ?? (err as any)?.response?.status;
-            if (status === 401) {
-                setVerifyError("Kode verifikasi tidak valid.");
+            const axiosError = err as any;
+            const apiMsg = axiosError?.response?.data?.message || axiosError?.response?.data?.error;
+            const status = axiosError?.status ?? axiosError?.response?.status;
+
+            if (status === 400 || status === 401 || status === 403) {
+                setVerifyError("Kode verifikasi salah atau kedaluwarsa. Silakan coba lagi.");
+            } else if (apiMsg) {
+                setVerifyError(apiMsg);
             } else {
-                setVerifyError(err instanceof Error ? err.message : "Terjadi kesalahan. Silakan coba lagi.");
+                setVerifyError("Terjadi kesalahan sistem. Silakan coba lagi beberapa saat lagi.");
             }
             setOtpValue("");
         } finally {
@@ -270,6 +280,7 @@ export default function MfaVerify() {
                                 </p>
 
                                 <OTPInput
+                                    autoFocus
                                     value={otpValue}
                                     onChange={(v) => { setOtpValue(v); setVerifyError(""); }}
                                     onComplete={handleComplete}
@@ -324,7 +335,7 @@ export default function MfaVerify() {
                             {/* Back to Login */}
                             <div className="text-center mt-4">
                                 <Link
-                                    href="/login"
+                                    to="/login"
                                     onClick={() => clearMfaState()}
                                     className="flex items-center justify-center gap-1 text-xs text-slate-400 hover:text-slate-600 transition"
                                 >

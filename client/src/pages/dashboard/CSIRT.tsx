@@ -1,5 +1,4 @@
 import { useState, useMemo } from "react";
-import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
@@ -501,8 +500,7 @@ export default function CSIRT() {
 
     // ── Render ───────────────────────────────────────────────────────────────
     return (
-        <DashboardLayout title="CSIRT">
-            <RequireCompanyProfile>
+        <RequireCompanyProfile>
                 <div className="max-w-7xl mx-auto space-y-6">
                     <div className="flex items-center justify-between mb-2">
                         <h1 className="text-2xl font-bold font-display text-slate-900">CSIRT</h1>
@@ -763,6 +761,5 @@ export default function CSIRT() {
                     )}
                 </AnimatePresence>
             </RequireCompanyProfile>
-        </DashboardLayout>
     );
 }

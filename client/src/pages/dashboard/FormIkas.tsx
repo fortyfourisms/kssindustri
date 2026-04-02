@@ -1,10 +1,9 @@
 import { useState, useEffect } from "react";
-import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { RequireCompanyProfile } from "@/components/RequireCompanyProfile";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useLocation } from "wouter";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { FileText, Save, ArrowRight, ArrowLeft, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -50,7 +49,7 @@ const INPUT_CLS = "w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-whit
 const LABEL_CLS = "block text-sm font-semibold text-slate-700 mb-1.5";
 
 export default function FormIkas() {
-    const [, setLocation] = useLocation();
+    const navigate = useNavigate();
     const { toast } = useToast();
     const [step, setStep] = useState(1);
     const saveRespondentProfile = useAssessmentStore(state => state.saveRespondentProfile);
@@ -91,8 +90,7 @@ export default function FormIkas() {
     };
 
     return (
-        <DashboardLayout title="Input Data IKAS">
-            <RequireCompanyProfile>
+        <RequireCompanyProfile>
                 <div className="max-w-7xl mx-auto space-y-6 pb-12">
 
                     {/* Header Info */}
@@ -218,7 +216,7 @@ export default function FormIkas() {
                             </div>
 
                             <div className="flex flex-col-reverse sm:flex-row justify-between items-stretch sm:items-center gap-3 mt-8 pt-5 border-t border-slate-100">
-                                <button type="button" onClick={() => setLocation('/dashboard/ikas')} className="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm shadow-sm hover:bg-slate-50 transition-colors flex items-center gap-2">
+                                <button type="button" onClick={() => navigate('/dashboard/ikas')} className="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm shadow-sm hover:bg-slate-50 transition-colors flex items-center gap-2">
                                     <ArrowLeft className="w-4 h-4" /> Kembali
                                 </button>
                                 <button type="submit" className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 text-white font-bold text-sm shadow-md shadow-blue-500/25 hover:shadow-blue-500/40 transition-all flex items-center gap-2">
@@ -235,7 +233,7 @@ export default function FormIkas() {
                             className="bg-white/70 backdrop-blur-sm border border-slate-200/60 rounded-2xl shadow-sm p-4 md:p-6"
                         >
                             <AssessmentView
-                                onBack={() => setLocation('/dashboard/ikas')}
+                                onBack={() => navigate('/dashboard/ikas')}
                                 onEdit={() => setStep(1)}
                                 embedded={true}
                             />
@@ -244,7 +242,6 @@ export default function FormIkas() {
 
                 </div>
             </RequireCompanyProfile>
-        </DashboardLayout>
     );
 }
 

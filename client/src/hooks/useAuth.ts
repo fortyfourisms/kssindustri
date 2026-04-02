@@ -9,7 +9,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { useLocation } from "wouter";
+import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/stores/auth.store";
 import { useProfileStore } from "@/stores/profile.store";
 import type { LoginPayload, RegisterPayload } from "@/types/auth.types";
@@ -30,7 +30,7 @@ export function useUser() {
 }
 
 export function useLogin() {
-    const [, navigate] = useLocation();
+    const navigate = useNavigate();
     const qc = useQueryClient();
     return useMutation({
         mutationFn: async (data: { email: string; password: string }) => {
@@ -44,7 +44,7 @@ export function useLogin() {
 }
 
 export function useRegister() {
-    const [, navigate] = useLocation();
+    const navigate = useNavigate();
     return useMutation({
         mutationFn: async (data: {
             name: string;
@@ -61,7 +61,7 @@ export function useRegister() {
 }
 
 export function useMfaVerify() {
-    const [, navigate] = useLocation();
+    const navigate = useNavigate();
     const qc = useQueryClient();
     return useMutation({
         mutationFn: async (token: string) => {
@@ -75,7 +75,7 @@ export function useMfaVerify() {
 }
 
 export function useLogout() {
-    const [, navigate] = useLocation();
+    const navigate = useNavigate();
     const qc = useQueryClient();
     return useMutation({
         mutationFn: async () => {
