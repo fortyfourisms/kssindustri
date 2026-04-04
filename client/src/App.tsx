@@ -24,27 +24,29 @@ import FormKse from "@/pages/dashboard/FormKse";
 import CSIRT from "@/pages/dashboard/CSIRT";
 import SurveiProfil from "@/pages/dashboard/SurveiProfil";
 import EditProfil from "@/pages/dashboard/EditProfil";
+import LMS from "@/pages/dashboard/LMS";
 
 // ── Data Router (required for useMatches / handle) ───────────────────────────
 const router = createBrowserRouter([
   // Public routes
-  { path: "/",        element: <Home /> },
-  { path: "/login",   element: <Login /> },
-  { path: "/register",element: <Register /> },
-  { path: "/mfa",     element: <MfaVerify /> },
+  { path: "/", element: <Home /> },
+  { path: "/login", element: <Login /> },
+  { path: "/register", element: <Register /> },
+  { path: "/mfa", element: <MfaVerify /> },
 
   // Dashboard App Shell – DashboardLayout mounts ONCE per session
   {
     element: <DashboardLayout />,
     children: [
-      { path: "/dashboard",           element: <Dashboard />,    handle: { title: "Dashboard" } },
-      { path: "/dashboard/ikas",      element: <IKAS />,         handle: { title: "IKAS" } },
-      { path: "/dashboard/form-ikas", element: <FormIkas />,     handle: { title: "Input Data IKAS" } },
-      { path: "/dashboard/kse",       element: <KSE />,          handle: { title: "KSE" } },
-      { path: "/dashboard/form-kse",  element: <FormKse />,      handle: { title: "Form KSE" } },
-      { path: "/dashboard/csirt",     element: <CSIRT />,        handle: { title: "CSIRT" } },
-      { path: "/dashboard/survei",    element: <SurveiProfil />, handle: { title: "Survei Profil Risiko" } },
-      { path: "/dashboard/profil",    element: <EditProfil />,   handle: { title: "Profil" } },
+      { path: "/dashboard", element: <Dashboard />, handle: { title: "Dashboard" } },
+      { path: "/dashboard/ikas", element: <IKAS />, handle: { title: "IKAS" } },
+      { path: "/dashboard/form-ikas", element: <FormIkas />, handle: { title: "Input Data IKAS" } },
+      { path: "/dashboard/kse", element: <KSE />, handle: { title: "KSE" } },
+      { path: "/dashboard/form-kse", element: <FormKse />, handle: { title: "Form KSE" } },
+      { path: "/dashboard/csirt", element: <CSIRT />, handle: { title: "CSIRT" } },
+      { path: "/dashboard/survei", element: <SurveiProfil />, handle: { title: "Survei Profil Risiko" } },
+      { path: "/dashboard/profil", element: <EditProfil />, handle: { title: "Profil" } },
+      { path: "/dashboard/materi", element: <LMS />, handle: { title: "Materi Pembelajaran" } },
     ],
   },
 

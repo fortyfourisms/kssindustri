@@ -5,6 +5,7 @@ import {
     Monitor,
     Users,
     ClipboardList,
+    BookOpen,
     LayoutDashboard,
     ChevronLeft,
     ChevronRight,
@@ -20,6 +21,7 @@ const navItems = [
     { label: "KSE", href: "/dashboard/kse", icon: Monitor, description: "Kategorisasi Sistem Elektronik" },
     { label: "CSIRT", href: "/dashboard/csirt", icon: Users, description: "CSIRT" },
     { label: "Survei Profil Risiko", href: "/dashboard/survei", icon: ClipboardList },
+    { label: "Materi", href: "/dashboard/materi", icon: BookOpen, description: "Materi Pembelajaran" },
 ];
 
 interface SidebarProps {
