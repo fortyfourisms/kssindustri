@@ -1,5 +1,6 @@
 import { Shield, Calendar, GraduationCap, ChevronRight } from "lucide-react";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 
 const courseData = [
     {
@@ -77,6 +78,8 @@ const courseData = [
 ];
 
 export default function LMS() {
+    const navigate = useNavigate();
+
     return (
         <div className="max-w-7xl mx-auto pb-12 space-y-6">
             <div className="flex items-center justify-between mb-2">
@@ -100,6 +103,7 @@ export default function LMS() {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.4, delay: i * 0.05 }}
+                        onClick={() => navigate(`/dashboard/materi/${course.id}`)}
                         className="group flex flex-col h-full bg-white border border-slate-200 hover:border-blue-200 rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer"
                     >
                         {/* Top Decorative Section */}
