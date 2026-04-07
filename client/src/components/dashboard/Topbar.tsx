@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { ChevronDown, UserCircle, User, Menu } from "lucide-react";
+import { ChevronDown, UserCircle, User, Menu, Settings } from "lucide-react";
 import { useUser } from "@/hooks/useAuth";
 import { cn, getMediaUrl } from "@/lib/utils";
 
@@ -93,7 +93,15 @@ export function Topbar({ title, onMenuClick }: TopbarProps) {
                             className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition w-full"
                         >
                             <UserCircle className="w-4 h-4" />
-                            Edit Profil
+                            Profil
+                        </Link>
+                        <Link
+                            to="/dashboard/pengaturan"
+                            onClick={() => setOpen(false)}
+                            className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition w-full"
+                        >
+                            <Settings className="w-4 h-4" />
+                            Pengaturan Akun
                         </Link>
                     </div>
                 )}

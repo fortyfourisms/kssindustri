@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/services/apiClient";
 import { perusahaanService } from "@/services/perusahaan.service";
@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, Save, UserCircle, Lock, Mail, User, Building2, MapPin, Phone, Globe, Image as ImageIcon, MoreVertical, Briefcase } from "lucide-react";
+import { Loader2, Save, UserCircle, Lock, Mail, User, Building2, MapPin, Phone, Globe, Image as ImageIcon, MoreVertical, Briefcase, Edit2, X, Camera } from "lucide-react";
 import { motion } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -20,21 +20,10 @@ import { useSearchParams } from "react-router-dom";
 import { getMediaUrl } from "@/lib/utils";
 
 const ProfileSchema = z.object({
-    username: z.string().min(2, "Username minimal 2 karakter"),
+    display_name: z.string().min(2, "Nama pengguna minimal 2 karakter"),
     email: z.string().email("Email tidak valid"),
     jabatan: z.string().optional().nullable(),
 });
-
-const PasswordSchema = z
-    .object({
-        currentPassword: z.string().min(1, "Password lama wajib diisi"),
-        newPassword: z.string().min(8, "Password baru minimal 8 karakter"),
-        confirmPassword: z.string(),
-    })
-    .refine((v) => v.newPassword === v.confirmPassword, {
-        message: "Password baru tidak cocok",
-        path: ["confirmPassword"],
-    });
 
 const PerusahaanSchema = z.object({
     nama_perusahaan: z.string().min(1, "Nama perusahaan wajib diisi"),
@@ -47,7 +36,6 @@ const PerusahaanSchema = z.object({
 });
 
 type ProfileForm = z.infer<typeof ProfileSchema>;
-type PasswordForm = z.infer<typeof PasswordSchema>;
 type PerusahaanForm = z.infer<typeof PerusahaanSchema>;
 
 const INPUT_CLS = "w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white/80 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400 transition";
@@ -62,6 +50,8 @@ export default function EditProfil() {
     const { toast } = useToast();
     const qc = useQueryClient();
     const [searchParams] = useSearchParams();
+    const [isEditingPengguna, setIsEditingPengguna] = useState(false);
+    const [isEditingPerusahaan, setIsEditingPerusahaan] = useState(false);
     const initialTab = searchParams.get("tab") === "perusahaan" ? "perusahaan" : "pengguna";
 
     const { data: user, isLoading: isUserLoading } = useUser();
@@ -77,13 +67,12 @@ export default function EditProfil() {
     const { data: subSektors } = useQuery({ queryKey: ["subSektor"], queryFn: () => apiClient.get<any[]>("/api/sub_sektor") });
 
     const profileForm = useForm<ProfileForm>({ resolver: zodResolver(ProfileSchema) });
-    const passwordForm = useForm<PasswordForm>({ resolver: zodResolver(PasswordSchema) });
     const perusahaanForm = useForm<PerusahaanForm>({ resolver: zodResolver(PerusahaanSchema) });
 
     useEffect(() => {
         if (user) {
             profileForm.reset({
-                username: user.username,
+                display_name: user.display_name || user.username || "",
                 email: user.email,
                 jabatan: user.jabatan_name || user.id_jabatan || user.jabatan || "",
             });
@@ -106,20 +95,15 @@ export default function EditProfil() {
     }, [perusahaan, user?.perusahaan, perusahaanForm]);
 
     const profileMutation = useMutation({
-        mutationFn: (d: ProfileForm) => apiClient.put<any>("/api/profile", d),
+        mutationFn: (d: ProfileForm) => {
+            const userId = user?.id || user?.id_user;
+            if (!userId) throw new Error("ID user tidak ditemukan");
+            return apiClient.put<any>(`/api/users/${userId}`, d);
+        },
         onSuccess: (updated) => {
             qc.setQueryData(["me"], updated);
             toast({ title: "Profil diperbarui" });
-        },
-        onError: (e: any) => toast({ title: "Gagal", description: e.message, variant: "destructive" }),
-    });
-
-    const passwordMutation = useMutation({
-        mutationFn: (d: PasswordForm) =>
-            apiClient.put<any>("/api/profile", { currentPassword: d.currentPassword, newPassword: d.newPassword }),
-        onSuccess: () => {
-            passwordForm.reset();
-            toast({ title: "Password diperbarui" });
+            setIsEditingPengguna(false);
         },
         onError: (e: any) => toast({ title: "Gagal", description: e.message, variant: "destructive" }),
     });
@@ -127,27 +111,35 @@ export default function EditProfil() {
     const perusahaanMutation = useMutation({
         mutationFn: (d: PerusahaanForm) => {
             if (!perusahaanId) throw new Error("ID perusahaan tidak ditemukan");
-            // Strip `photo` (handled separately via file upload) and convert empty id_sub_sektor to null
-            const { photo: _photo, ...rest } = d;
-            const payload = {
-                ...rest,
-                id_sub_sektor: rest.id_sub_sektor || null,
-            };
-            return perusahaanService.update(String(perusahaanId), payload as any);
+            const formData = new FormData();
+            formData.append("nama_perusahaan", d.nama_perusahaan || "");
+            formData.append("alamat", d.alamat || "");
+            formData.append("email", d.email || "");
+            formData.append("telepon", d.telepon || "");
+            formData.append("website", d.website || "");
+            if (d.id_sub_sektor) {
+                formData.append("id_sub_sektor", d.id_sub_sektor);
+            }
+            return apiClient.putForm<any>(`/api/perusahaan/${perusahaanId}`, formData);
         },
         onSuccess: () => {
             qc.invalidateQueries({ queryKey: ["perusahaan", perusahaanId] });
             qc.invalidateQueries({ queryKey: ["me"] });
             toast({ title: "Profil perusahaan diperbarui" });
+            setIsEditingPerusahaan(false);
         },
         onError: (e: any) => toast({ title: "Gagal", description: e.message, variant: "destructive" }),
     });
 
     const uploadProfileImageMutation = useMutation({
-        mutationFn: (formData: FormData) => apiClient.putForm<any>("/api/profile", formData),
+        mutationFn: (formData: FormData) => {
+            const userId = user?.id || user?.id_user;
+            if (!userId) throw new Error("ID user tidak ditemukan");
+            return apiClient.putForm<any>(`/api/users/${userId}`, formData);
+        },
         onSuccess: (updated) => {
             qc.setQueryData(["me"], updated);
-            toast({ title: "Foto profil berhasil diperbarui" });
+            toast({ title: "Foto profil/banner berhasil diperbarui" });
         },
         onError: (e: any) => toast({ title: "Gagal mengunggah foto", description: e.message, variant: "destructive" }),
     });
@@ -155,12 +147,12 @@ export default function EditProfil() {
     const uploadPerusahaanImageMutation = useMutation({
         mutationFn: (formData: FormData) => {
             if (!perusahaanId) throw new Error("ID perusahaan tidak ditemukan");
-            return perusahaanService.update(String(perusahaanId), formData);
+            return apiClient.putForm<any>(`/api/perusahaan/${perusahaanId}`, formData);
         },
         onSuccess: () => {
             qc.invalidateQueries({ queryKey: ["perusahaan", perusahaanId] });
             qc.invalidateQueries({ queryKey: ["me"] });
-            toast({ title: "Foto perusahaan berhasil diperbarui" });
+            toast({ title: "Foto/banner perusahaan berhasil diperbarui" });
         },
         onError: (e: any) => toast({ title: "Gagal mengunggah foto", description: e.message, variant: "destructive" }),
     });
@@ -178,7 +170,7 @@ export default function EditProfil() {
             formData.append("banner", file);
             uploadProfileImageMutation.mutate(formData);
         } else if (type === 'perusahaan_banner') {
-            formData.append("banner", file);
+            formData.append("photo", file);
             uploadPerusahaanImageMutation.mutate(formData);
         }
     };
@@ -190,7 +182,7 @@ export default function EditProfil() {
     }
 
     return (
-        <div className="max-w-2xl mx-auto space-y-6">
+        <div className="max-w-4xl mx-auto space-y-6">
                 <Tabs defaultValue={initialTab} className="w-full">
                     <TabsList className="grid w-full grid-cols-2 mb-6">
                         <TabsTrigger value="pengguna">Profil Pengguna</TabsTrigger>
@@ -206,27 +198,36 @@ export default function EditProfil() {
                         >
                             {/* Banner */}
                             <div
-                                className={`h-32 w-full bg-cover bg-center ${!user?.banner ? 'bg-gradient-to-r from-orange-100 to-rose-100' : ''}`}
+                                className={`h-32 w-full bg-cover bg-center relative group overflow-hidden ${!user?.banner ? 'bg-gradient-to-r from-orange-100 to-rose-100' : ''}`}
                                 style={{ backgroundImage: user?.banner ? `url(${getMediaUrl(user.banner)})` : undefined }}
-                            />
-
-                            {/* 3 Dots Menu */}
-                            <div className="absolute right-4 top-4 z-20">
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <button className="p-2 text-slate-800 bg-white/50 backdrop-blur hover:bg-white rounded-full transition-colors shadow-sm">
-                                            <MoreVertical className="w-5 h-5" />
+                            >
+                                {isEditingPengguna && (
+                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                        <button onClick={() => userBannerInputRef.current?.click()} className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 backdrop-blur text-white text-sm font-medium rounded-lg transition-all">
+                                            <ImageIcon className="w-4 h-4" /> Ganti Banner
                                         </button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end" className="z-[100]">
-                                        <DropdownMenuItem onClick={() => userPhotoInputRef.current?.click()}>
-                                            Ganti Foto Profil
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem onClick={() => userBannerInputRef.current?.click()}>
-                                            Ganti Banner
-                                        </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="absolute right-4 top-4 z-20">
+                                {!isEditingPengguna ? (
+                                    <button 
+                                        onClick={() => setIsEditingPengguna(true)}
+                                        className="flex items-center gap-2 px-4 py-2 bg-white/90 backdrop-blur hover:bg-white text-slate-700 text-sm font-semibold rounded-full shadow-sm transition-all"
+                                    >
+                                        <Edit2 className="w-4 h-4" />
+                                        Edit Data
+                                    </button>
+                                ) : (
+                                    <button 
+                                        onClick={() => setIsEditingPengguna(false)}
+                                        className="flex items-center gap-2 px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 text-sm font-semibold rounded-full shadow-sm transition-all"
+                                    >
+                                        <X className="w-4 h-4" />
+                                        Batal
+                                    </button>
+                                )}
 
                                 <input
                                     type="file"
@@ -251,8 +252,8 @@ export default function EditProfil() {
                             {/* Info Area */}
                             <div className="px-6 pb-6 relative">
                                 {/* Profile Picture */}
-                                <div className="absolute -top-12 left-6">
-                                    <div className="w-24 h-24 rounded-full border-4 border-white bg-slate-100 overflow-hidden flex items-center justify-center shadow-sm">
+                                <div className="absolute -top-12 left-6 group">
+                                    <div className="w-24 h-24 rounded-full border-4 border-white bg-slate-100 overflow-hidden flex items-center justify-center shadow-sm relative">
                                         {user?.foto_profile ? (
                                             <img
                                                 src={getMediaUrl(user.foto_profile)}
@@ -264,10 +265,17 @@ export default function EditProfil() {
                                                 {user?.username ? getInitials(user.username) : <User className="w-10 h-10" />}
                                             </div>
                                         )}
+                                        {isEditingPengguna && (
+                                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                <button onClick={() => userPhotoInputRef.current?.click()} className="p-2 text-white hover:scale-110 transition-transform">
+                                                    <Camera className="w-6 h-6" />
+                                                </button>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                                 <div className="pt-14">
-                                    <h2 className="font-bold text-slate-900 text-2xl">{user?.username || "Username"}</h2>
+                                    <h2 className="font-bold text-slate-900 text-2xl">{user?.display_name || user?.username || "Nama Pengguna"}</h2>
                                     <div className="flex flex-col gap-1.5 mt-1.5">
                                         <div className="flex flex-wrap items-center gap-x-2 text-sm">
                                             <span className="font-medium text-slate-600">{user?.email}</span>
@@ -291,26 +299,72 @@ export default function EditProfil() {
                             </div>
                         </motion.div>
 
-                        {/* Profile form */}
-                        <motion.div
-                            initial={{ opacity: 0, y: 16 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.08 }}
-                            className="bg-white/70 backdrop-blur-sm border border-white/60 rounded-2xl p-6"
-                        >
+                        {/* Menampilkan Data Akun (Read Only) */}
+                        {!isEditingPengguna && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 16 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.08 }}
+                                className="bg-white/70 backdrop-blur-sm border border-white/60 rounded-2xl p-6 shadow-sm"
+                            >
+                                <div className="flex items-center gap-2 mb-6 pb-4 border-b border-slate-100">
+                                    <h3 className="font-bold text-slate-900 text-lg">Informasi Akun</h3>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex-shrink-0 w-11 h-11 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center">
+                                            <User className="w-5 h-5 text-blue-600" />
+                                        </div>
+                                        <div className="min-w-0">
+                                            <p className="text-sm text-slate-500 mb-0.5">Nama Pengguna</p>
+                                            <p className="font-medium text-slate-900 truncate">{user?.display_name || "-"}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex-shrink-0 w-11 h-11 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center">
+                                            <Mail className="w-5 h-5 text-blue-600" />
+                                        </div>
+                                        <div className="min-w-0">
+                                            <p className="text-sm text-slate-500 mb-0.5">Email</p>
+                                            <p className="font-medium text-slate-900 truncate">{user?.email || "-"}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex-shrink-0 w-11 h-11 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center">
+                                            <Briefcase className="w-5 h-5 text-blue-600" />
+                                        </div>
+                                        <div className="min-w-0">
+                                            <p className="text-sm text-slate-500 mb-0.5">Jabatan</p>
+                                            <p className="font-medium text-slate-900 truncate">{user?.jabatan_name || user?.jabatan || "-"}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        )}
+
+                        {/* Edit Forms */}
+                        {isEditingPengguna && (
+                            <div className="space-y-6">
+                                {/* Profile form */}
+                                <motion.div
+                                    initial={{ opacity: 0, y: 16 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 0.08 }}
+                                    className="bg-white/70 backdrop-blur-sm border border-white/60 rounded-2xl p-6 shadow-sm"
+                                >
                             <div className="flex items-center gap-2 mb-5">
                                 <UserCircle className="w-5 h-5 text-blue-600" />
                                 <h3 className="font-bold text-slate-900">Informasi Akun</h3>
                             </div>
                             <form onSubmit={profileForm.handleSubmit((d) => profileMutation.mutate(d))} className="space-y-4">
                                 <div>
-                                    <label className={LABEL_CLS}>Username</label>
+                                    <label className={LABEL_CLS}>Nama Pengguna</label>
                                     <div className="relative">
                                         <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                                        <input {...profileForm.register("username")} className={`${INPUT_CLS} pl-10`} />
+                                        <input {...profileForm.register("display_name")} className={`${INPUT_CLS} pl-10`} />
                                     </div>
-                                    {profileForm.formState.errors.username && (
-                                        <p className="text-red-500 text-xs mt-1">{profileForm.formState.errors.username.message}</p>
+                                    {profileForm.formState.errors.display_name && (
+                                        <p className="text-red-500 text-xs mt-1">{profileForm.formState.errors.display_name.message}</p>
                                     )}
                                 </div>
                                 <div>
@@ -343,50 +397,8 @@ export default function EditProfil() {
                                 </button>
                             </form>
                         </motion.div>
-
-                        {/* Password form */}
-                        <motion.div
-                            initial={{ opacity: 0, y: 16 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.16 }}
-                            className="bg-white/70 backdrop-blur-sm border border-white/60 rounded-2xl p-6"
-                        >
-                            <div className="flex items-center gap-2 mb-5">
-                                <Lock className="w-5 h-5 text-slate-600" />
-                                <h3 className="font-bold text-slate-900">Ganti Password</h3>
                             </div>
-                            <form onSubmit={passwordForm.handleSubmit((d) => passwordMutation.mutate(d))} className="space-y-4">
-                                <div>
-                                    <label className={LABEL_CLS}>Password Lama</label>
-                                    <input {...passwordForm.register("currentPassword")} type="password" placeholder="••••••••" className={INPUT_CLS} />
-                                    {passwordForm.formState.errors.currentPassword && (
-                                        <p className="text-red-500 text-xs mt-1">{passwordForm.formState.errors.currentPassword.message}</p>
-                                    )}
-                                </div>
-                                <div>
-                                    <label className={LABEL_CLS}>Password Baru</label>
-                                    <input {...passwordForm.register("newPassword")} type="password" placeholder="Minimal 8 karakter" className={INPUT_CLS} />
-                                    {passwordForm.formState.errors.newPassword && (
-                                        <p className="text-red-500 text-xs mt-1">{passwordForm.formState.errors.newPassword.message}</p>
-                                    )}
-                                </div>
-                                <div>
-                                    <label className={LABEL_CLS}>Konfirmasi Password Baru</label>
-                                    <input {...passwordForm.register("confirmPassword")} type="password" placeholder="Ulangi password baru" className={INPUT_CLS} />
-                                    {passwordForm.formState.errors.confirmPassword && (
-                                        <p className="text-red-500 text-xs mt-1">{passwordForm.formState.errors.confirmPassword.message}</p>
-                                    )}
-                                </div>
-                                <button
-                                    type="submit"
-                                    disabled={passwordMutation.isPending}
-                                    className="w-full py-3 rounded-xl border-2 border-slate-200 text-slate-700 font-bold text-sm hover:border-blue-300 hover:text-blue-700 hover:bg-blue-50 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-                                >
-                                    {passwordMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lock className="w-4 h-4" />}
-                                    Ganti Password
-                                </button>
-                            </form>
-                        </motion.div>
+                        )}
                     </TabsContent>
 
                     <TabsContent value="perusahaan" className="space-y-6">
@@ -397,24 +409,37 @@ export default function EditProfil() {
                         >
                             {/* Banner / Foto Perusahaan */}
                             <div
-                                className={`h-40 w-full bg-cover bg-center ${!perusahaan?.photo ? 'bg-gradient-to-r from-blue-100 to-indigo-100' : ''}`}
+                                className={`h-40 w-full bg-cover bg-center relative group overflow-hidden ${!perusahaan?.photo ? 'bg-gradient-to-r from-blue-100 to-indigo-100' : ''}`}
                                 style={{ backgroundImage: perusahaan?.photo ? `url(${getMediaUrl(perusahaan.photo)})` : undefined }}
-                            />
-
-                            {/* 3 Dots Menu */}
-                            <div className="absolute right-4 top-4 z-20">
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <button className="p-2 text-slate-800 bg-white/50 backdrop-blur hover:bg-white rounded-full transition-colors shadow-sm">
-                                            <MoreVertical className="w-5 h-5" />
+                            >
+                                {isEditingPerusahaan && (
+                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                        <button onClick={() => perusahaanBannerInputRef.current?.click()} className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 backdrop-blur text-white text-sm font-medium rounded-lg transition-all">
+                                            <ImageIcon className="w-4 h-4" /> Ganti Foto/Banner Perusahaan
                                         </button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end" className="z-[100]">
-                                        <DropdownMenuItem onClick={() => perusahaanBannerInputRef.current?.click()}>
-                                            Ganti Banner Perusahaan
-                                        </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="absolute right-4 top-4 z-20">
+                                {!isEditingPerusahaan ? (
+                                    <button 
+                                        onClick={() => setIsEditingPerusahaan(true)}
+                                        className="flex items-center gap-2 px-4 py-2 bg-white/90 backdrop-blur hover:bg-white text-slate-700 text-sm font-semibold rounded-full shadow-sm transition-all"
+                                    >
+                                        <Edit2 className="w-4 h-4" />
+                                        Edit Data
+                                    </button>
+                                ) : (
+                                    <button 
+                                        onClick={() => setIsEditingPerusahaan(false)}
+                                        className="flex items-center gap-2 px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 text-sm font-semibold rounded-full shadow-sm transition-all"
+                                    >
+                                        <X className="w-4 h-4" />
+                                        Batal
+                                    </button>
+                                )}
+
                                 <input
                                     type="file"
                                     ref={perusahaanBannerInputRef}
@@ -431,20 +456,34 @@ export default function EditProfil() {
                                 <div className="pt-6">
                                     <h2 className="font-bold text-slate-900 text-2xl">{perusahaan?.nama_perusahaan || "Nama Perusahaan"}</h2>
 
-                                    <div className="flex flex-col gap-1.5 mt-1.5">
-                                        <div className="flex flex-wrap items-center gap-x-2 text-sm">
+                                    <div className="flex flex-col gap-2 mt-3">
+                                        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
                                             {perusahaan?.email && (
-                                                <span className="font-medium text-slate-600">{perusahaan.email}</span>
+                                                <div className="flex items-center gap-1.5 text-slate-700">
+                                                    <Mail className="w-4 h-4 text-slate-400" />
+                                                    <span className="font-medium">{perusahaan.email}</span>
+                                                </div>
                                             )}
 
                                             {perusahaan?.telepon && (
-                                                <>
-                                                    {perusahaan?.email && <span className="text-slate-300">•</span>}
-                                                    <div className="flex items-center gap-1.5 text-slate-700">
-                                                        <Phone className="w-3.5 h-3.5 text-slate-400" />
-                                                        <span className="font-medium">{perusahaan.telepon}</span>
-                                                    </div>
-                                                </>
+                                                <div className="flex items-center gap-1.5 text-slate-700">
+                                                    <Phone className="w-4 h-4 text-slate-400" />
+                                                    <span className="font-medium">{perusahaan.telepon}</span>
+                                                </div>
+                                            )}
+                                            
+                                            {perusahaan?.website && (
+                                                <div className="flex items-center gap-1.5 text-slate-700">
+                                                    <Globe className="w-4 h-4 text-slate-400" />
+                                                    <a href={perusahaan.website.startsWith('http') ? perusahaan.website : `https://${perusahaan.website}`} target="_blank" rel="noreferrer" className="font-medium hover:text-blue-600 hover:underline">{perusahaan.website}</a>
+                                                </div>
+                                            )}
+                                            
+                                            {(perusahaan?.sub_sektor?.nama_sub_sektor || subSektors?.find((s:any) => s.id === perusahaan?.id_sub_sektor)?.nama_sub_sektor) && (
+                                                <div className="flex items-center gap-1.5 text-slate-700">
+                                                    <Briefcase className="w-4 h-4 text-slate-400" />
+                                                    <span className="font-medium text-blue-600">{perusahaan?.sub_sektor?.nama_sub_sektor || subSektors?.find((s:any) => s.id === perusahaan?.id_sub_sektor)?.nama_sub_sektor}</span>
+                                                </div>
                                             )}
                                         </div>
                                     </div>
@@ -458,11 +497,82 @@ export default function EditProfil() {
                             </div>
                         </motion.div>
 
+                        {/* Menampilkan Data Perusahaan (Read Only) */}
+                        {!isEditingPerusahaan && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 16 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.1 }}
+                                className="bg-white/70 backdrop-blur-sm border border-white/60 rounded-2xl p-6 shadow-sm"
+                            >
+                                <div className="mb-6 pb-4 border-b border-slate-100">
+                                    <h3 className="font-bold text-slate-900 text-lg">Informasi Perusahaan</h3>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-8">
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex-shrink-0 w-11 h-11 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center">
+                                            <Building2 className="w-5 h-5 text-blue-600" />
+                                        </div>
+                                        <div className="min-w-0">
+                                            <p className="text-sm text-slate-500 mb-0.5">Nama Perusahaan</p>
+                                            <p className="font-medium text-slate-900 truncate">{perusahaan?.nama_perusahaan || "-"}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex-shrink-0 w-11 h-11 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center">
+                                            <MapPin className="w-5 h-5 text-blue-600" />
+                                        </div>
+                                        <div className="min-w-0">
+                                            <p className="text-sm text-slate-500 mb-0.5">Alamat</p>
+                                            <p className="font-medium text-slate-900 truncate">{perusahaan?.alamat || "-"}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex-shrink-0 w-11 h-11 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center">
+                                            <Mail className="w-5 h-5 text-blue-600" />
+                                        </div>
+                                        <div className="min-w-0">
+                                            <p className="text-sm text-slate-500 mb-0.5">Email</p>
+                                            <p className="font-medium text-slate-900 truncate">{perusahaan?.email || "-"}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex-shrink-0 w-11 h-11 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center">
+                                            <Phone className="w-5 h-5 text-blue-600" />
+                                        </div>
+                                        <div className="min-w-0">
+                                            <p className="text-sm text-slate-500 mb-0.5">Telepon</p>
+                                            <p className="font-medium text-slate-900 truncate">{perusahaan?.telepon || "-"}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex-shrink-0 w-11 h-11 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center">
+                                            <Globe className="w-5 h-5 text-blue-600" />
+                                        </div>
+                                        <div className="min-w-0">
+                                            <p className="text-sm text-slate-500 mb-0.5">Website</p>
+                                            <p className="font-medium text-slate-900 truncate">{perusahaan?.website || "-"}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex-shrink-0 w-11 h-11 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center">
+                                            <Briefcase className="w-5 h-5 text-blue-600" />
+                                        </div>
+                                        <div className="min-w-0">
+                                            <p className="text-sm text-slate-500 mb-0.5">Sektor</p>
+                                            <p className="font-medium text-slate-900 truncate">{perusahaan?.sub_sektor?.nama_sub_sektor || subSektors?.find((s:any) => s.id === perusahaan?.id_sub_sektor)?.nama_sub_sektor || "-"}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        )}
+
+                        {isEditingPerusahaan && (
                         <motion.div
                             initial={{ opacity: 0, y: 16 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: 0.1 }}
-                            className="bg-white/70 backdrop-blur-sm border border-white/60 rounded-2xl p-6"
+                            className="bg-white/70 backdrop-blur-sm border border-white/60 rounded-2xl p-6 shadow-sm"
                         >
                             <div className="flex items-center gap-2 mb-5">
                                 <Building2 className="w-5 h-5 text-blue-600" />
@@ -540,6 +650,7 @@ export default function EditProfil() {
                                 </button>
                             </form>
                         </motion.div>
+                        )}
                     </TabsContent>
                 </Tabs>
             </div>
