@@ -1,5 +1,7 @@
+import React, { useRef, MouseEvent, ReactNode } from "react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { useNavigate } from "react-router-dom";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -32,7 +34,56 @@ const GridLine = ({ orientation }: { orientation: 'horizontal' | 'vertical' }) =
   )} />
 );
 
+const FeatureCard = ({ children, className, variants, inverted = false }: { children: ReactNode, className?: string, variants?: any, inverted?: boolean }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const handleMouseMove = (e: MouseEvent<HTMLDivElement>) => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    containerRef.current.style.setProperty('--mouse-x', `${x}px`);
+    containerRef.current.style.setProperty('--mouse-y', `${y}px`);
+  };
+
+  return (
+    <motion.div
+      ref={containerRef}
+      variants={variants}
+      onMouseMove={handleMouseMove}
+      className={cn(
+        "relative overflow-hidden group cursor-pointer border-r border-b border-slate-200/60 transition-all duration-500",
+        inverted ? "bg-slate-900 hover:bg-white" : "hover:bg-primary",
+        className
+      )}
+    >
+
+      {/* Dynamic Cursor Glow Layer */}
+      <div 
+        className="absolute inset-0 z-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none mix-blend-overlay"
+        style={{
+            background: inverted
+                ? `radial-gradient(600px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(255, 255, 255, 0.1), transparent 60%)`
+                : `radial-gradient(800px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(255, 255, 255, 0.4), transparent 60%)`
+        }}
+      />
+      <div 
+        className="absolute inset-0 z-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
+        style={{
+            background: inverted
+                ? `radial-gradient(400px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(255, 255, 255, 0.05), transparent 80%)`
+                : `radial-gradient(400px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(255, 255, 255, 0.6), transparent 80%)`
+        }}
+      />
+      
+      {children}
+    </motion.div>
+  );
+};
+
 export function Features() {
+  const navigate = useNavigate();
+
   return (
     <section id="features" className="py-16 md:py-32 bg-white relative overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
@@ -48,11 +99,11 @@ export function Features() {
           {/* Top Row */}
           <div className="grid grid-cols-1 md:grid-cols-3">
             {/* Feature 1: IKAS */}
-            <motion.div
+            <FeatureCard
               variants={itemVariants}
-              className="md:col-span-1 p-8 border-r border-b border-slate-200/60 transition-all duration-500 hover:bg-primary group cursor-pointer relative overflow-hidden"
+              className="md:col-span-1 p-8"
             >
-              <div className="relative z-10 flex flex-col h-full">
+              <div className="relative z-10 flex flex-col h-full pointer-events-none">
                 <span className="text-xs font-semibold text-primary uppercase tracking-widest mb-6 block group-hover:text-white transition-colors">Survei</span>
                 <h3 className="text-xl font-bold text-slate-900 mb-4 group-hover:text-white transition-colors">
                   Pemetaan Profil Risiko Siber
@@ -64,14 +115,14 @@ export function Features() {
                   PELAJARI LEBIH LANJUT <span className="ml-2 group-hover:translate-x-1 transition-transform">→</span>
                 </div>
               </div>
-            </motion.div>
+            </FeatureCard>
 
             {/* Feature 2: KSE (Large) */}
-            <motion.div
+            <FeatureCard
               variants={itemVariants}
-              className="md:col-span-2 p-8 border-r border-b border-slate-200/60 relative overflow-hidden bg-slate-50/30 hover:bg-primary transition-all duration-500 group cursor-pointer"
+              className="md:col-span-2 p-8 bg-slate-50/30"
             >
-              <div className="relative z-10 max-w-sm">
+              <div className="relative z-10 max-w-sm pointer-events-none">
                 <span className="text-xs font-semibold text-primary uppercase tracking-widest mb-6 block group-hover:text-white transition-colors">KSE</span>
                 <h3 className="text-2xl font-bold text-slate-900 mb-4 group-hover:text-white transition-colors">
                   Kategorisasi Sistem Elektronik
@@ -92,17 +143,17 @@ export function Features() {
                   <circle cx="200" cy="60" r="4" fill="currentColor" className="text-green-500 group-hover:text-white" />
                 </svg>
               </div>
-            </motion.div>
+            </FeatureCard>
           </div>
 
           {/* Middle Row: Large Graphic Feature */}
           <div className="grid grid-cols-1 md:grid-cols-3">
             {/* Visual Decorative Element */}
-            <motion.div
+            <FeatureCard
               variants={itemVariants}
-              className="md:col-span-1 border-r border-b border-slate-200/60 flex items-center justify-center p-8 bg-white overflow-hidden relative group hover:bg-primary transition-all duration-500 cursor-pointer"
+              className="md:col-span-1 flex items-center justify-center p-8 bg-white"
             >
-              <svg width="100%" height="100%" viewBox="0 0 200 200" className="text-slate-200 group-hover:text-white/40 transition-colors duration-700">
+              <svg width="100%" height="100%" viewBox="0 0 200 200" className="text-slate-200 group-hover:text-white/40 transition-colors duration-700 pointer-events-none relative z-10">
                 {[...Array(8)].map((_, i) => (
                   <circle
                     key={i}
@@ -125,13 +176,14 @@ export function Features() {
                   transition={{ duration: 4, repeat: Infinity }}
                 />
               </svg>
-            </motion.div>
+            </FeatureCard>
 
             {/* Feature: Main Statement / Results */}
-            <motion.div
+            <FeatureCard
               variants={itemVariants}
-              className="md:col-span-2 p-6 md:p-12 border-r border-b border-slate-200/60 bg-white group hover:bg-primary transition-all duration-500 cursor-pointer">
-              <div className="relative z-10">
+              className="md:col-span-2 p-6 md:p-12 bg-white pointer-events-auto"
+            >
+              <div className="relative z-10 pointer-events-none">
                 <span className="text-xs font-semibold text-primary uppercase tracking-widest mb-6 block group-hover:text-white transition-colors">IKAS</span>
                 <h3 className="text-4xl md:text-5xl font-bold text-slate-900 mb-6 tracking-tight leading-tight group-hover:text-white transition-colors">
                   Instrumen Penilaian<br />Kematangan Keamanan Siber
@@ -140,27 +192,27 @@ export function Features() {
                   Evaluasi mandiri untuk mengukur tingkat kematangan keamanan siber organisasi sesuai standar nasional.
                 </p>
               </div>
-              <div className="flex flex-wrap gap-4 text-sm font-semibold text-slate-400 group-hover:text-white/60">
+              <div className="flex flex-wrap gap-4 text-sm font-semibold text-slate-400 group-hover:text-white/60 relative z-20">
                 <span className="hover:text-primary group-hover:hover:text-white cursor-pointer transition-colors">Visualisasi Data ›</span>
                 <span className="hover:text-primary group-hover:hover:text-white cursor-pointer transition-colors">Auto-Reporting ›</span>
                 <span className="hover:text-primary group-hover:hover:text-white cursor-pointer transition-colors">Compliance Mapping ›</span>
               </div>
-            </motion.div>
+            </FeatureCard>
           </div>
 
           {/* Bottom Row */}
           <div className="grid grid-cols-1 md:grid-cols-3">
             {/* Feature 4: CSIRT (Wide) */}
-            <motion.div
+            <FeatureCard
               variants={itemVariants}
-              className="md:col-span-2 p-6 md:p-12 border-r border-b border-slate-200/60 relative overflow-hidden group hover:bg-primary transition-all duration-500 cursor-pointer"
+              className="md:col-span-2 p-6 md:p-12 bg-white"
             >
-              <div className="relative z-10 max-w-md">
+              <div className="relative z-10 max-w-md pointer-events-none">
                 <h3 className="text-3xl font-bold text-slate-900 mb-4 group-hover:text-white transition-colors">CSIRT Services</h3>
                 <p className="text-slate-500 text-base leading-relaxed mb-6 group-hover:text-white/80 transition-colors">
                   Infrastruktur untuk koordinasi tim tanggap insiden siber dalam menangani ancaman secara efektif dan sistematis.
                 </p>
-                <div className="inline-flex items-center gap-2 text-primary font-bold text-sm cursor-pointer border-b-2 border-primary/20 hover:border-primary group-hover:text-white group-hover:border-white transition-all pb-1">
+                <div className="inline-flex items-center gap-2 text-primary font-bold text-sm border-b-2 border-primary/20 group-hover:text-white group-hover:border-white transition-all pb-1 pointer-events-auto cursor-pointer hover:border-primary">
                   Dedicated response team <span className="text-lg group-hover:translate-x-1 transition-transform">›</span>
                 </div>
               </div>
@@ -176,27 +228,31 @@ export function Features() {
                   </line>
                 </svg>
               </div>
-            </motion.div>
+            </FeatureCard>
 
             {/* Extra Decorative / Contact */}
-            <motion.div
+            <FeatureCard
               variants={itemVariants}
-              className="md:col-span-1 p-8 border-r border-b border-slate-200/60 bg-slate-900 flex flex-col justify-center text-white relative overflow-hidden group hover:bg-white transition-all duration-500 cursor-pointer"
+              inverted
+              className="md:col-span-1 p-8 flex flex-col justify-center text-white"
             >
               <div className="absolute inset-0 opacity-20 pointer-events-none transition-opacity duration-500 group-hover:opacity-10">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-primary blur-3xl rounded-full translate-x-1/2 -translate-y-1/2" />
                 <div className="absolute bottom-0 left-0 w-24 h-24 bg-blue-500 blur-3xl rounded-full -translate-x-1/2 translate-y-1/2" />
               </div>
-              <div className="relative z-10">
-                <h4 className="text-xl font-bold mb-4 group-hover:text-slate-900 transition-colors">Keamanan Tinggi</h4>
+              <div className="relative z-10 pointer-events-none">
+                <h4 className="text-xl font-bold mb-4 group-hover:text-slate-900 transition-colors">Kelas &amp; Materi Keamanan Siber</h4>
                 <p className="text-slate-400 text-sm mb-6 group-hover:text-slate-500 transition-colors">
-                  Platform kami mematuhi standar SOC 2, HIPAA, dan GDPR untuk memastikan data Anda aman.
+                  Tingkatkan literasi dan kompetensi SDM melalui berbagai modul pembelajaran interaktif terkait keamanan siber.
                 </p>
-                <button className="w-full py-3 bg-white text-slate-900 rounded-lg text-sm font-bold hover:bg-slate-100 group-hover:bg-slate-900 group-hover:text-white transition-all duration-500">
-                  Check Compliance
+                <button 
+                  onClick={() => navigate("/register")}
+                  className="w-full py-3 bg-white text-slate-900 rounded-lg text-sm font-bold pointer-events-auto hover:bg-slate-100 group-hover:bg-slate-900 group-hover:text-white transition-all duration-500"
+                >
+                  Lihat Materi
                 </button>
               </div>
-            </motion.div>
+            </FeatureCard>
           </div>
         </motion.div>
       </div>

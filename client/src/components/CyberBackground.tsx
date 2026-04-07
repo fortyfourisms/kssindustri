@@ -111,6 +111,7 @@ export const CyberBackground: React.FC = () => {
         const horizonMesh = new THREE.Mesh(gridGeometry, gridMaterial);
         horizonMesh.rotation.x = -Math.PI / 2.2;
         horizonMesh.position.y = -8;
+        horizonMesh.scale.x = 2.0; // Melebarkan objek secara horizontal
         scene.add(horizonMesh);
 
         // --- Holographic Icons (Cyber Shield inside Grid) ---
@@ -169,9 +170,9 @@ export const CyberBackground: React.FC = () => {
         for (let i = 0; i < particleCount; i++) {
             const i3 = i * 3;
             // -- State 0: Hero Positions --
-            const rx = (Math.random() - 0.5) * gridSize;
+            const rx = (Math.random() - 0.5) * gridSize * 2.0; // Kalikan dengan scale.x
             const ry = (Math.random() - 0.5) * (gridSize * 0.6);
-            const xDist = Math.abs(rx);
+            const xDist = Math.abs(rx / 2.0); // Normalisasi kembali untuk kalkulasi kurva Z agar tidak tembus pandang
             const yDist = ry + (gridSize * 0.3);
             const rz = -(Math.pow(xDist, 1.8) * 0.05) - (Math.pow(yDist, 1.5) * 0.05);
             const angle = -Math.PI / 2.2;

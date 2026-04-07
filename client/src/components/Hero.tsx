@@ -1,7 +1,9 @@
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 
 export function Hero() {
+  const navigate = useNavigate();
   const [displayText, setDisplayText] = useState("");
   const fullText = "#JagaRuangSiber";
   const [isDeleting, setIsDeleting] = useState(false);
@@ -79,7 +81,10 @@ export function Hero() {
             transition={{ duration: 0.8, delay: 0.3 }}
             className="flex flex-wrap justify-center gap-6"
           >
-            <button className="px-10 py-4 rounded-full bg-slate-900 text-white font-bold hover:bg-black transition-all shadow-lg shadow-slate-200 hover:scale-105 active:scale-95">
+            <button 
+              onClick={() => navigate("/register")}
+              className="px-10 py-4 rounded-full bg-slate-900 text-white font-bold hover:bg-black transition-all shadow-lg shadow-slate-200 hover:scale-105 active:scale-95"
+            >
               Mulai Sekarang
             </button>
           </motion.div>

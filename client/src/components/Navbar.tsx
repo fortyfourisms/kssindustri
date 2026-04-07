@@ -6,12 +6,14 @@ import { useNavigate } from "react-router-dom";
 
 export function Navbar() {
   const [scrolled, setScrolled] = useState(false);
+  const [isAtBottom, setIsAtBottom] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 20);
+      setIsAtBottom(window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 100);
     };
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
@@ -36,13 +38,25 @@ export function Navbar() {
     { name: "FAQ", href: "#faq" },
   ];
 
+  const handleScrollTo = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    e.preventDefault();
+    if (href === "#") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+    const element = document.querySelector(href);
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
   return (
     <motion.header
       initial={{ y: -100 }}
       animate={{ y: 0 }}
       transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
       className={`fixed top-0 left-0 right-0 z-50 flex justify-center transition-all duration-500 ${scrolled || isOpen ? "pt-4" : "pt-6"
-        }`}
+        } ${isAtBottom ? "-translate-y-full opacity-0 pointer-events-none" : "translate-y-0 opacity-100"}`}
     >
       <div
         className={`w-full max-w-7xl mx-4 sm:mx-6 lg:mx-8 transition-all duration-500 flex items-center justify-between z-[60] ${scrolled || isOpen
@@ -68,6 +82,7 @@ export function Navbar() {
             <a
               key={link.name}
               href={link.href}
+              onClick={(e) => handleScrollTo(e, link.href)}
               className={`px-6 py-2 rounded-full text-sm transition-all font-medium ${link.name === "Home"
                 ? "font-bold text-foreground"
                 : "text-slate-500 hover:text-slate-900"
@@ -122,7 +137,10 @@ export function Navbar() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.05 }}
-                  onClick={() => setIsOpen(false)}
+                  onClick={(e) => {
+                    handleScrollTo(e, link.href);
+                    setIsOpen(false);
+                  }}
                   className="text-2xl font-bold text-slate-800 hover:text-blue-600 transition-colors py-2"
                 >
                   {link.name}
