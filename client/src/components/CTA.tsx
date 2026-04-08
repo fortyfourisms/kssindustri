@@ -1,7 +1,10 @@
 import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 export function CTA() {
+    const navigate = useNavigate();
+
     return (
         <section className="py-32 px-4 relative overflow-hidden">
             <div className="max-w-5xl mx-auto text-center relative z-10">
@@ -22,8 +25,11 @@ export function CTA() {
                     </p>
 
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-8">
-                        <button className="group flex items-center gap-2 px-8 py-3.5 rounded-full bg-white text-black font-medium hover:bg-slate-100 transition-all duration-300">
-                            Dapatkan Demo
+                        <button 
+                            onClick={() => navigate("/register")}
+                            className="group flex items-center gap-2 px-8 py-3.5 rounded-full bg-white text-black font-medium hover:bg-slate-100 transition-all duration-300"
+                        >
+                            Daftar Sekarang
                             <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
                         </button>
                     </div>

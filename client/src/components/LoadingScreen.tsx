@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Shield, Cpu, Globe, Terminal } from 'lucide-react';
+import { Cpu, Globe, Terminal } from 'lucide-react';
+import kssiLogo from '@/assets/KSSI.svg';
 
 interface LoadingScreenProps {
     onLoadingComplete?: () => void;
@@ -8,18 +9,7 @@ interface LoadingScreenProps {
 
 export const LoadingScreen: React.FC<LoadingScreenProps> = ({ onLoadingComplete }) => {
     const [progress, setProgress] = useState(0);
-    const [status, setStatus] = useState('INITIALIZING CORE...');
     const [showContent, setShowContent] = useState(true);
-
-    const statuses = [
-        'INITIALIZING CORE...',
-        'ESTABLISHING SECURE CONNECTION...',
-        'LOADING SECURITY PROTOCOLS...',
-        'SCANNING FOR VULNERABILITIES...',
-        'SYNCING DATABASE...',
-        'DECRYPTING ASSETS...',
-        'SYSTEM READY.'
-    ];
 
     useEffect(() => {
         const timer = setInterval(() => {
@@ -40,13 +30,7 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({ onLoadingComplete 
         return () => clearInterval(timer);
     }, [onLoadingComplete]);
 
-    useEffect(() => {
-        const statusIndex = Math.min(
-            Math.floor((progress / 100) * statuses.length),
-            statuses.length - 1
-        );
-        setStatus(statuses[statusIndex]);
-    }, [progress]);
+
 
     return (
         <AnimatePresence>
@@ -63,33 +47,43 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({ onLoadingComplete 
                         <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_center,_rgba(0,170,255,0.08)_0%,_transparent_70%)]" />
                     </div>
 
-                    {/* Glowing Ring */}
-                    <motion.div
-                        animate={{
-                            rotate: 360,
-                            scale: [1, 1.05, 1],
-                        }}
-                        transition={{
-                            rotate: { duration: 10, repeat: Infinity, ease: "linear" },
-                            scale: { duration: 2, repeat: Infinity, ease: "easeInOut" }
-                        }}
-                        className="relative w-48 h-48 rounded-full border border-[#00aaff]/30 flex items-center justify-center shadow-[0_0_50px_rgba(0,170,255,0.1)]"
-                    >
-                        <motion.div
-                            animate={{ rotate: -360 }}
-                            transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
-                            className="absolute inset-2 rounded-full border-t-2 border-l-2 border-[#0088cc]/50"
-                        />
+                    {/* Logo with Scaling Animation and Linear Gradient Glow */}
+                    <div className="relative flex items-center justify-center mb-4">
 
-                        <Shield className="w-20 h-20 text-[#0066cc] drop-shadow-[0_0_8px_rgba(0,102,204,0.4)]" />
-                    </motion.div>
+
+                        {/* Logo statis dengan efek Shimmer Skeleton Modern */}
+                        <div className="relative z-10 w-36 h-auto drop-shadow-xl">
+                            <img
+                                src={kssiLogo}
+                                alt="KSSI Logo"
+                                className="w-full h-auto"
+                            />
+                            {/* Shimmer Overlay dengan Mask SVG yang sama */}
+                            <div
+                                className="absolute inset-0 pointer-events-none"
+                                style={{
+                                    maskImage: `url(${kssiLogo})`,
+                                    WebkitMaskImage: `url(${kssiLogo})`,
+                                    maskSize: 'contain',
+                                    WebkitMaskSize: 'contain',
+                                    maskRepeat: 'no-repeat',
+                                    WebkitMaskRepeat: 'no-repeat',
+                                    maskPosition: 'center',
+                                    WebkitMaskPosition: 'center',
+                                }}
+                            >
+                                <motion.div
+                                    animate={{ x: ["-100%", "150%"] }}
+                                    transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}
+                                    className="w-[150%] h-full bg-gradient-to-r from-transparent via-white/80 to-transparent -skew-x-12"
+                                />
+                            </div>
+                        </div>
+                    </div>
 
                     {/* Progress Section */}
                     <div className="mt-12 w-64 text-center">
-                        <div className="flex justify-between items-end mb-2">
-                            <span className="text-[10px] font-mono text-[#0066cc]/70 tracking-widest uppercase">
-                                {status}
-                            </span>
+                        <div className="flex justify-end items-end mb-2">
                             <span className="text-[12px] font-mono text-[#0066cc]">
                                 {Math.round(progress)}%
                             </span>

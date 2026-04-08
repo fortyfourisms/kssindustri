@@ -1,6 +1,19 @@
+import React from "react";
 import { Twitter, Mail, Instagram } from "lucide-react";
 
 export function Footer() {
+  const handleScrollTo = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    e.preventDefault();
+    if (href === "#" || href === "#home") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+    const element = document.querySelector(href);
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
   return (
     <section className="relative w-full py-10 md:py-20 px-4 md:px-10 overflow-hidden bg-transparent">
       <div className="max-w-7xl mx-auto relative z-10">
@@ -12,6 +25,7 @@ export function Footer() {
                 <a
                   key={item}
                   href={`#${item.toLowerCase()}`}
+                  onClick={(e) => handleScrollTo(e, `#${item.toLowerCase()}`)}
                   className="text-slate-900 font-bold text-lg hover:text-blue-600 transition-colors"
                 >
                   {item}
