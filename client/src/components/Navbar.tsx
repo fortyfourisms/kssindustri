@@ -4,18 +4,45 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
+const navLinks = [
+  { name: "Home", href: "#" },
+  { name: "About", href: "#about" },
+  { name: "Features", href: "#features" },
+  { name: "FAQ", href: "#faq" },
+];
+
 export function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [isAtBottom, setIsAtBottom] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState("Home");
   const navigate = useNavigate();
 
   useEffect(() => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 20);
       setIsAtBottom(window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 100);
+
+      let currentActive = "Home";
+      for (const link of navLinks) {
+        if (link.href === "#") continue;
+        const element = document.querySelector(link.href);
+        if (element) {
+          const rect = element.getBoundingClientRect();
+          if (rect.top <= 200) {
+            currentActive = link.name;
+          }
+        }
+      }
+      
+      if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 10) {
+        currentActive = navLinks[navLinks.length - 1].name;
+      }
+
+      setActiveSection(currentActive);
     };
     window.addEventListener("scroll", handleScroll);
+    handleScroll();
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
@@ -31,12 +58,7 @@ export function Navbar() {
     };
   }, [isOpen]);
 
-  const navLinks = [
-    { name: "Home", href: "#" },
-    { name: "About", href: "#about" },
-    { name: "Features", href: "#features" },
-    { name: "FAQ", href: "#faq" },
-  ];
+
 
   const handleScrollTo = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
     e.preventDefault();
@@ -73,7 +95,7 @@ export function Navbar() {
 
         {/* Desktop Navigation Pill */}
         <nav
-          className={`hidden md:flex items-center transition-all duration-500 shrink-0 ${scrolled
+          className={`hidden md:flex items-center transition-all duration-500 shrink-0 gap-1 ${scrolled
             ? "bg-transparent border-none shadow-none ring-0 px-0 py-0"
             : "bg-white/10 backdrop-blur-xl saturate-[1.8] border border-white/20 rounded-full px-1.5 py-1.5 shadow-2xl shadow-black/5 ring-1 ring-white/20"
             }`}
@@ -83,9 +105,9 @@ export function Navbar() {
               key={link.name}
               href={link.href}
               onClick={(e) => handleScrollTo(e, link.href)}
-              className={`px-6 py-2 rounded-full text-sm transition-all font-medium ${link.name === "Home"
-                ? "font-bold text-foreground"
-                : "text-slate-500 hover:text-slate-900"
+              className={`px-5 py-2 rounded-full text-sm transition-all font-medium ${activeSection === link.name
+                ? "bg-slate-100 text-blue-600 shadow-sm ring-1 ring-slate-200/50 font-bold"
+                : "text-slate-500 hover:text-slate-900 hover:bg-slate-50/50"
                 }`}
             >
               {link.name}
@@ -141,7 +163,10 @@ export function Navbar() {
                     handleScrollTo(e, link.href);
                     setIsOpen(false);
                   }}
-                  className="text-2xl font-bold text-slate-800 hover:text-blue-600 transition-colors py-2"
+                  className={`text-2xl font-bold transition-colors py-2 px-6 rounded-2xl w-full text-center ${activeSection === link.name
+                    ? "bg-blue-50 text-blue-600"
+                    : "text-slate-800 hover:text-blue-600 hover:bg-slate-50"
+                  }`}
                 >
                   {link.name}
                 </motion.a>

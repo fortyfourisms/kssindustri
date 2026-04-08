@@ -50,7 +50,7 @@ export function Footer() {
               {/* Description */}
               <div className="flex justify-center">
                 <p className="text-slate-600 text-sm md:text-base leading-relaxed max-w-sm font-medium">
-                  Platform resmi Direktorat Keamanan Siber dan Kriptografi Industri, mendukung transformasi digital yang aman dan terpercaya.
+                  Platform resmi Direktorat Keamanan Siber dan Sandi Industri, mendukung transformasi digital yang aman dan terpercaya.
                 </p>
               </div>
 
