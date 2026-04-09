@@ -87,7 +87,6 @@ interface AuthState {
     mfaToken: string | null;     // MFA step — in memory + sessionStorage backup
 
     // ── Derived getters ───────────────────────────────────────────────────────
-    isAdmin: () => boolean;
     isMfaSetupRequired: () => boolean;
     isMfaVerifyRequired: () => boolean;
     formattedJoinDate: () => string;
@@ -143,7 +142,6 @@ export const useAuthStore = create<AuthState>()(
         mfaToken: null,
 
         // ── Derived (call as functions) ─────────────────────────────────────────
-        isAdmin: () => get().currentUser?.role === 'admin',
         isMfaSetupRequired: () => !!get().setupToken,
         isMfaVerifyRequired: () => !!get().mfaToken,
         formattedJoinDate: () => {
