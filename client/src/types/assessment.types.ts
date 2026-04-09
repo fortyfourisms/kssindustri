@@ -68,23 +68,30 @@ export interface AssessmentProgress {
 // ─── Respondent Profile ───────────────────────────────────────────────────────
 
 export interface RespondentProfile {
-    instansi: string;
-    namaSistem: string;
-    jenisSistem: 'IT' | 'OT' | 'IT & OT';
-    sektor: string;
-    alamat: string;
-    email: string;
-    nomorTelepon: string;
-    namaResponden: string;
-    jabatanResponden: string;
-    tahunPengukuran: string;
-    targetLevel: 1 | 2 | 3 | 4 | 5;
-    targetNilai: string;
-    acuanManajemenRisiko: string;
-    acuanKeamananSiber: string;
-    tanggalPengisian: string;
-    createdAt: number;
-    updatedAt: number;
+    instansi?: string;
+    namaSistem?: string;
+    jenisSistem?: 'IT' | 'OT' | 'IT & OT';
+    sektor?: string;
+    alamat?: string;
+    email?: string;
+    nomorTelepon?: string;
+    namaResponden?: string;
+    jabatanResponden?: string;
+    tahunPengukuran?: string;
+    targetLevel?: 1 | 2 | 3 | 4 | 5;
+    targetNilai?: string;
+    acuanManajemenRisiko?: string;
+    acuanKeamananSiber?: string;
+    tanggalPengisian?: string;
+    createdAt?: number;
+    updatedAt?: number;
+    
+    responden?: string;
+    tanggal?: string;
+    target_nilai?: number;
+    telepon?: string;
+    updated_at?: string;
+    nama_perusahaan?: string;
 }
 
 // ─── Results ──────────────────────────────────────────────────────────────────
