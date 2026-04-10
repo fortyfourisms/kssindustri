@@ -5,6 +5,7 @@ import QuestionCard from '@/components/assessment/QuestionCard';
 import ProgressBar from '@/components/assessment/ProgressBar';
 import PaginationControl from '@/components/assessment/PaginationControl';
 import { useToast } from '@/hooks/use-toast';
+import { apiClient } from '@/services/apiClient';
 
 interface AssessmentViewProps {
   onBack: () => void;
@@ -114,29 +115,59 @@ export default function AssessmentView({
 
   const canGoNext = !isLastPage;
 
-  const handleSaveAction = () => {
+  const handleSaveAction = async () => {
     const allAnswered = store.answeredQuestions() === store.totalQuestions();
+    const profile = store.respondentProfile();
+    const existingId = store.existingIkasId;
 
-    if (allAnswered) {
+    // Build responses map: { questionId: answerIndex }
+    const answersMap = store.answers();
+    const responses: Record<string, number> = {};
+    Object.values(answersMap).forEach((ans) => {
+      responses[ans.questionId] = ans.index;
+    });
+
+    // Build payload including respondent fields
+    const payload = {
+      responses,
+      responden: profile?.responden,
+      tanggal: profile?.tanggal,
+      target_nilai: profile?.target_nilai,
+      telepon: profile?.telepon,
+      email: profile?.email,
+      alamat: profile?.alamat,
+      nama_perusahaan: profile?.nama_perusahaan,
+    };
+
+    try {
+      if (existingId) {
+        // Data sudah ada → UPDATE
+        await apiClient.put<any>(`/api/maturity/ikas/${existingId}`, payload);
+      } else {
+        // Data belum ada → CREATE
+        await apiClient.post<any>('/api/maturity/ikas', payload);
+      }
       store.completeAssessment();
       toast({
         title: 'Berhasil',
-        description: 'Assessment berhasil disimpan',
-        variant: 'default', // Assuming default is success-like or we have a success variant
+        description: allAnswered
+          ? existingId ? 'Data assessment berhasil diperbarui' : 'Assessment berhasil disimpan'
+          : 'Data berhasil disimpan sementara',
+        variant: 'default',
       });
       setTimeout(() => {
         onBack();
       }, 1500);
-    } else {
+    } catch (err: any) {
+      const msg = err?.message || 'Gagal menyimpan data ke server';
       toast({
-        title: 'Info',
-        description: 'Data berhasil disimpan sementara',
+        title: 'Gagal Menyimpan',
+        description: msg,
+        variant: 'destructive',
       });
-      setTimeout(() => {
-        onBack();
-      }, 1500);
     }
   };
+
 
   const handleEditData = () => {
     store.unlockAssessment();
@@ -192,9 +223,8 @@ export default function AssessmentView({
       <div className="flex flex-col md:flex-row gap-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
         {/* Sidebar */}
         <div
-          className={`${
-            sidebarCollapsed ? 'md:w-16' : 'md:w-1/4'
-          } transition-all duration-300 flex-shrink-0`}
+          className={`${sidebarCollapsed ? 'md:w-16' : 'md:w-1/4'
+            } transition-all duration-300 flex-shrink-0`}
         >
           <div className="sticky top-[100px] max-h-[calc(100vh-120px)] overflow-y-auto no-scrollbar pb-8">
             <div className="flex justify-between items-center mb-6 px-2">
@@ -225,11 +255,10 @@ export default function AssessmentView({
                 {!embedded ? (
                   !store.isLocked() ? (
                     <button
-                      className={`w-full py-3 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${
-                        allQuestionsAnswered
-                          ? 'bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90 shadow-[0_4px_14px_0_rgba(0,0,0,0.1)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.15)]'
-                          : 'bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300'
-                      }`}
+                      className={`w-full py-3 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${allQuestionsAnswered
+                        ? 'bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90 shadow-[0_4px_14px_0_rgba(0,0,0,0.1)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.15)]'
+                        : 'bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300'
+                        }`}
                       onClick={handleSaveAction}
                     >
                       <i className="ri-save-line text-lg"></i>
@@ -247,14 +276,13 @@ export default function AssessmentView({
                     </button>
                   )
                 ) : ( // embedded logic
-                   !store.isLocked() ? (
+                  !store.isLocked() ? (
                     <>
                       <button
-                        className={`w-full py-3 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all mb-3 ${
-                          allQuestionsAnswered
-                            ? 'bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90 shadow-md'
-                            : 'bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300'
-                        }`}
+                        className={`w-full py-3 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all mb-3 ${allQuestionsAnswered
+                          ? 'bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90 shadow-md'
+                          : 'bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300'
+                          }`}
                         onClick={handleSaveAction}
                       >
                         <i className="ri-save-line text-lg"></i>
@@ -306,9 +334,8 @@ export default function AssessmentView({
                 {assessmentData.domains.map((domain) => (
                   <div key={domain.id} className="mb-2">
                     <button
-                      className={`w-full text-left px-3 py-2 rounded-lg flex items-center transition-all ${
-                        isCurrentDomain(domain.id) ? 'bg-slate-100 dark:bg-slate-800' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'
-                      }`}
+                      className={`w-full text-left px-3 py-2 rounded-lg flex items-center transition-all ${isCurrentDomain(domain.id) ? 'bg-slate-100 dark:bg-slate-800' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                        }`}
                       onClick={() => {
                         if (!isCurrentDomain(domain.id)) {
                           jumpToSubCategory(
@@ -326,9 +353,8 @@ export default function AssessmentView({
 
                     {/* Accordion Body */}
                     <div
-                      className={`overflow-hidden transition-all duration-300 ${
-                        isCurrentDomain(domain.id) ? 'max-h-[2000px] opacity-100 mt-2' : 'max-h-0 opacity-0'
-                      }`}
+                      className={`overflow-hidden transition-all duration-300 ${isCurrentDomain(domain.id) ? 'max-h-[2000px] opacity-100 mt-2' : 'max-h-0 opacity-0'
+                        }`}
                     >
                       <div className="pl-3 border-l-2 border-slate-100 dark:border-slate-800 ml-3 flex flex-col gap-4">
                         {domain.categories.map((category) => (
@@ -360,17 +386,16 @@ export default function AssessmentView({
                                     )
                                   }
                                   className={`text-left px-3 py-2 rounded-lg text-sm transition-all flex justify-between items-center group
-                                    ${
-                                      isActive
-                                        ? 'bg-white dark:bg-slate-900 shadow-sm border border-slate-200 dark:border-slate-700 font-semibold'
-                                        : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500'
+                                    ${isActive
+                                      ? 'bg-white dark:bg-slate-900 shadow-sm border border-slate-200 dark:border-slate-700 font-semibold'
+                                      : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500'
                                     }
                                   `}
                                 >
                                   <span className={`truncate mr-2 ${isActive ? 'text-slate-900 dark:text-white' : 'group-hover:text-slate-700 dark:group-hover:text-slate-300'}`}>
                                     {subCategory.name}
                                   </span>
-                                  
+
                                   {isSubCompleted ? (
                                     <i className="ri-check-line text-emerald-500 font-bold"></i>
                                   ) : (
@@ -394,9 +419,8 @@ export default function AssessmentView({
 
         {/* Main Content */}
         <div
-          className={`${
-            sidebarCollapsed ? 'md:w-11/12' : 'md:w-3/4'
-          } transition-all duration-300 mt-0 sm:mt-8`}
+          className={`${sidebarCollapsed ? 'md:w-11/12' : 'md:w-3/4'
+            } transition-all duration-300 mt-0 sm:mt-8`}
         >
           <div className="w-full mx-auto">
             {/* Action Buttons for Top */}
@@ -421,7 +445,7 @@ export default function AssessmentView({
                       Assessment Selesai
                     </h6>
                     <p className="text-sm m-0 opacity-90 leading-relaxed">
-                      Data ini telah dikunci. Anda dapat mengubah kembali dengan 
+                      Data ini telah dikunci. Anda dapat mengubah kembali dengan
                       menekan tombol "Edit Responses" pada sidebar.
                     </p>
                   </div>

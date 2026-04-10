@@ -100,7 +100,6 @@ export function useAuth() {
     return {
         user: store.currentUser,
         isAuthenticated: store.authenticated,
-        isAdmin: store.isAdmin(),
         loading: store.loading,
         error: store.error,
 

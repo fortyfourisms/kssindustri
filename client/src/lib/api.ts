@@ -7,6 +7,7 @@ import { apiClient } from "@/services/apiClient";
 import { authService } from "@/services/auth.service";
 import { csirtService } from "@/services/csirt.service";
 import { perusahaanService } from "@/services/perusahaan.service";
+import { ikasService } from "@/services/ikas.service";
 
 export const api = {
     // ── Auth (delegates to authService) ──────────────────────────────────────
@@ -46,11 +47,17 @@ export const api = {
     // ── Sub Sektor ───────────────────────────────────────────────────────────
     getSubSektor: () => apiClient.get<any[]>("/api/sub_sektor"),
 
-    // ── IKAS ─────────────────────────────────────────────────────────────────
-    getIkas: () => apiClient.get<any>("/api/ikas"),
-    getIkasById: (id: string) => apiClient.get<any>(`/api/maturity/ikas/${id}`),
-    saveIkas: (responses: Record<string, string>) =>
-        apiClient.post<any>("/api/ikas", { responses }),
+    // ── IKAS (delegates to ikasService) ──────────────────────────────────────
+    /** GET /api/maturity/ikas/{id} — for user-facing views (scoped to their own ID) */
+    getIkasById: (id: string) => ikasService.getById(id),
+    /** GET /api/maturity/ikas — full list for admin / year-over-year charts */
+    getIkasList: () => ikasService.getAll(),
+    saveIkas: (id: string, responses: Record<string, string>) =>
+        apiClient.post<any>(`/api/maturity/ikas/${id}`, { responses }),
+    updateIkas: (id: string, payload: Record<string, any>) =>
+        ikasService.update(id, payload),
+    /** Upload Excel file to import IKAS data (multipart/form-data) */
+    importIkasExcel: (file: File) => ikasService.importExcel(file),
 
     // ── KSE ──────────────────────────────────────────────────────────────────
     getKse: () => apiClient.get<any>("/api/se"),

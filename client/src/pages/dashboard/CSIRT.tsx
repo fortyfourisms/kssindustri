@@ -164,8 +164,24 @@ function CreateSdmModal({ csirtId, onSave, onClose, loading }: {
     onClose: () => void;
     loading: boolean;
 }) {
-    const [form, setForm] = useState({ nama_personel: "", jabatan_csirt: "", jabatan_perusahaan: "", skill: "", sertifikasi: "" });
-    const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); onSave({ id_csirt: csirtId, ...form }); };
+    const [form, setForm] = useState({ nama_personel: "", jabatan_csirt: "", jabatan_perusahaan: "", skill: "" });
+    const [sertifikasiList, setSertifikasiList] = useState<string[]>([]);
+    const [sertInput, setSertInput] = useState("");
+
+    const handleAddSert = (e: React.KeyboardEvent | React.MouseEvent) => {
+        if ('key' in e && (e as React.KeyboardEvent).key !== 'Enter') return;
+        e.preventDefault();
+        if (sertInput.trim() && !sertifikasiList.includes(sertInput.trim())) {
+            setSertifikasiList([...sertifikasiList, sertInput.trim()]);
+            setSertInput("");
+        }
+    };
+
+    const removeSert = (idx: number) => {
+        setSertifikasiList(sertifikasiList.filter((_, i) => i !== idx));
+    };
+
+    const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); onSave({ id_csirt: csirtId, ...form, sertifikasi: sertifikasiList.join(", ") }); };
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
@@ -183,9 +199,33 @@ function CreateSdmModal({ csirtId, onSave, onClose, loading }: {
                         <div><label className={LABEL_CLS}>Jabatan CSIRT</label><input required value={form.jabatan_csirt} onChange={(e) => setForm({ ...form, jabatan_csirt: e.target.value })} className={INPUT_CLS} placeholder="Contoh: Ketua" /></div>
                         <div><label className={LABEL_CLS}>Jabatan Perusahaan</label><input required value={form.jabatan_perusahaan} onChange={(e) => setForm({ ...form, jabatan_perusahaan: e.target.value })} className={INPUT_CLS} placeholder="Contoh: Manajer IT" /></div>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
                         <div><label className={LABEL_CLS}>Keahlian / Skill</label><input required value={form.skill} onChange={(e) => setForm({ ...form, skill: e.target.value })} className={INPUT_CLS} placeholder="Contoh: Network Security" /></div>
-                        <div><label className={LABEL_CLS}>Sertifikasi</label><input required value={form.sertifikasi} onChange={(e) => setForm({ ...form, sertifikasi: e.target.value })} className={INPUT_CLS} placeholder="Contoh: CISSP" /></div>
+                        <div>
+                            <label className={LABEL_CLS}>Sertifikasi</label>
+                            <div className="flex gap-2">
+                                <input 
+                                    value={sertInput} 
+                                    onChange={(e) => setSertInput(e.target.value)} 
+                                    onKeyDown={handleAddSert}
+                                    className={INPUT_CLS} 
+                                    placeholder={sertifikasiList.length > 0 ? "Tambah sertifikasi" : "Contoh: CISSP"} 
+                                />
+                                <button type="button" onClick={handleAddSert} disabled={!sertInput.trim()} className="p-2.5 bg-slate-100 hover:bg-slate-200 disabled:hover:bg-slate-100 text-slate-700 rounded-xl transition flex items-center justify-center shrink-0 disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Tambah Sertifikasi">
+                                    <Plus className="w-5 h-5" />
+                                </button>
+                            </div>
+                            {sertifikasiList.length > 0 && (
+                                <div className="flex flex-wrap gap-2 mt-3">
+                                    {sertifikasiList.map((s, idx) => (
+                                        <div key={idx} className="flex items-center gap-1.5 bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg border border-blue-100 text-xs font-bold">
+                                            <span>{s}</span>
+                                            <button type="button" onClick={() => removeSert(idx)} className="text-blue-400 hover:text-blue-600"><X className="w-3.5 h-3.5" /></button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                     </div>
                     <div className="flex gap-3 pt-4">
                         <button type="button" onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 transition">Batal</button>
@@ -213,9 +253,26 @@ function EditSdmModal({ initial, csirtId, onSave, onClose, loading }: {
         jabatan_csirt: initial.jabatan_csirt || "",
         jabatan_perusahaan: initial.jabatan_perusahaan || "",
         skill: initial.skill || "",
-        sertifikasi: initial.sertifikasi || "",
     });
-    const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); onSave({ id_csirt: csirtId, ...form }); };
+    const [sertifikasiList, setSertifikasiList] = useState<string[]>(
+        initial.sertifikasi ? initial.sertifikasi.split(',').map(s => s.trim()).filter(Boolean) : []
+    );
+    const [sertInput, setSertInput] = useState("");
+
+    const handleAddSert = (e: React.KeyboardEvent | React.MouseEvent) => {
+        if ('key' in e && (e as React.KeyboardEvent).key !== 'Enter') return;
+        e.preventDefault();
+        if (sertInput.trim() && !sertifikasiList.includes(sertInput.trim())) {
+            setSertifikasiList([...sertifikasiList, sertInput.trim()]);
+            setSertInput("");
+        }
+    };
+
+    const removeSert = (idx: number) => {
+        setSertifikasiList(sertifikasiList.filter((_, i) => i !== idx));
+    };
+
+    const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); onSave({ id_csirt: csirtId, ...form, sertifikasi: sertifikasiList.join(", ") }); };
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
@@ -233,100 +290,34 @@ function EditSdmModal({ initial, csirtId, onSave, onClose, loading }: {
                         <div><label className={LABEL_CLS}>Jabatan CSIRT</label><input required value={form.jabatan_csirt} onChange={(e) => setForm({ ...form, jabatan_csirt: e.target.value })} className={INPUT_CLS} placeholder="Contoh: Ketua" /></div>
                         <div><label className={LABEL_CLS}>Jabatan Perusahaan</label><input required value={form.jabatan_perusahaan} onChange={(e) => setForm({ ...form, jabatan_perusahaan: e.target.value })} className={INPUT_CLS} placeholder="Contoh: Manajer IT" /></div>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
                         <div><label className={LABEL_CLS}>Keahlian / Skill</label><input required value={form.skill} onChange={(e) => setForm({ ...form, skill: e.target.value })} className={INPUT_CLS} placeholder="Contoh: Network Security" /></div>
-                        <div><label className={LABEL_CLS}>Sertifikasi</label><input required value={form.sertifikasi} onChange={(e) => setForm({ ...form, sertifikasi: e.target.value })} className={INPUT_CLS} placeholder="Contoh: CISSP" /></div>
+                        <div>
+                            <label className={LABEL_CLS}>Sertifikasi</label>
+                            <div className="flex gap-2">
+                                <input 
+                                    value={sertInput} 
+                                    onChange={(e) => setSertInput(e.target.value)} 
+                                    onKeyDown={handleAddSert}
+                                    className={INPUT_CLS} 
+                                    placeholder={sertifikasiList.length > 0 ? "Tambah sertifikasi" : "Contoh: CISSP"} 
+                                />
+                                <button type="button" onClick={handleAddSert} disabled={!sertInput.trim()} className="p-2.5 bg-slate-100 hover:bg-slate-200 disabled:hover:bg-slate-100 text-slate-700 rounded-xl transition flex items-center justify-center shrink-0 disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Tambah Sertifikasi">
+                                    <Plus className="w-5 h-5" />
+                                </button>
+                            </div>
+                            {sertifikasiList.length > 0 && (
+                                <div className="flex flex-wrap gap-2 mt-3">
+                                    {sertifikasiList.map((s, idx) => (
+                                        <div key={idx} className="flex items-center gap-1.5 bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg border border-blue-100 text-xs font-bold">
+                                            <span>{s}</span>
+                                            <button type="button" onClick={() => removeSert(idx)} className="text-blue-400 hover:text-blue-600"><X className="w-3.5 h-3.5" /></button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                     </div>
-                    <div className="flex gap-3 pt-4">
-                        <button type="button" onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 transition">Batal</button>
-                        <button type="submit" disabled={loading} className="flex-1 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm shadow-lg shadow-amber-500/25 disabled:opacity-50 flex items-center justify-center gap-2 transition">
-                            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                            Simpan Perubahan
-                        </button>
-                    </div>
-                </form>
-            </motion.div>
-        </div>
-    );
-}
-
-// ─── Modal: SE Create ─────────────────────────────────────────────────────────
-function CreateSeModal({ csirtId, onSave, onClose, loading }: {
-    csirtId: string;
-    onSave: (payload: any) => void;
-    onClose: () => void;
-    loading: boolean;
-}) {
-    const [form, setForm] = useState({ nama_se: "", ip_se: "", as_number_se: "", pengelola_se: "", fitur_se: "", kategori_se: "" });
-    const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); onSave({ id_csirt: csirtId, ...form }); };
-
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6">
-                <div className="flex items-center justify-between mb-6">
-                    <h3 className="font-black text-slate-900 font-display text-xl">Tambah SE</h3>
-                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition p-1 bg-slate-100 rounded-lg hover:bg-slate-200"><X className="w-5 h-5" /></button>
-                </div>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    <div><label className={LABEL_CLS}>Nama SE</label><input required value={form.nama_se} onChange={(e) => setForm({ ...form, nama_se: e.target.value })} className={INPUT_CLS} placeholder="Nama sistem elektronik" /></div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div><label className={LABEL_CLS}>IP SE</label><input required value={form.ip_se} onChange={(e) => setForm({ ...form, ip_se: e.target.value })} className={INPUT_CLS} placeholder="192.168.x.x" /></div>
-                        <div><label className={LABEL_CLS}>AS Number</label><input required value={form.as_number_se} onChange={(e) => setForm({ ...form, as_number_se: e.target.value })} className={INPUT_CLS} placeholder="AS12345" /></div>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div><label className={LABEL_CLS}>Pengelola</label><input required value={form.pengelola_se} onChange={(e) => setForm({ ...form, pengelola_se: e.target.value })} className={INPUT_CLS} placeholder="Nama pengelola" /></div>
-                        <div><label className={LABEL_CLS}>Kategori</label><input value={form.kategori_se} onChange={(e) => setForm({ ...form, kategori_se: e.target.value })} className={INPUT_CLS} placeholder="Contoh: Kritis" /></div>
-                    </div>
-                    <div><label className={LABEL_CLS}>Fitur SE</label><input required value={form.fitur_se} onChange={(e) => setForm({ ...form, fitur_se: e.target.value })} className={INPUT_CLS} placeholder="Deskripsi fitur sistem" /></div>
-                    <div className="flex gap-3 pt-4">
-                        <button type="button" onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 transition">Batal</button>
-                        <button type="submit" disabled={loading} className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-lg shadow-blue-500/25 disabled:opacity-50 flex items-center justify-center gap-2 transition">
-                            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                            Tambah SE
-                        </button>
-                    </div>
-                </form>
-            </motion.div>
-        </div>
-    );
-}
-
-// ─── Modal: SE Edit ───────────────────────────────────────────────────────────
-function EditSeModal({ initial, csirtId, onSave, onClose, loading }: {
-    initial: SeCsirt;
-    csirtId: string;
-    onSave: (payload: any) => void;
-    onClose: () => void;
-    loading: boolean;
-}) {
-    const [form, setForm] = useState({
-        nama_se: initial.nama_se || "",
-        ip_se: initial.ip_se || "",
-        as_number_se: initial.as_number_se || "",
-        pengelola_se: initial.pengelola_se || "",
-        fitur_se: initial.fitur_se || "",
-        kategori_se: initial.kategori_se || "",
-    });
-    const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); onSave({ id_csirt: csirtId, ...form }); };
-
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6">
-                <div className="flex items-center justify-between mb-6">
-                    <h3 className="font-black text-slate-900 font-display text-xl">Edit SE</h3>
-                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition p-1 bg-slate-100 rounded-lg hover:bg-slate-200"><X className="w-5 h-5" /></button>
-                </div>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    <div><label className={LABEL_CLS}>Nama SE</label><input required value={form.nama_se} onChange={(e) => setForm({ ...form, nama_se: e.target.value })} className={INPUT_CLS} placeholder="Nama sistem elektronik" /></div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div><label className={LABEL_CLS}>IP SE</label><input required value={form.ip_se} onChange={(e) => setForm({ ...form, ip_se: e.target.value })} className={INPUT_CLS} placeholder="192.168.x.x" /></div>
-                        <div><label className={LABEL_CLS}>AS Number</label><input required value={form.as_number_se} onChange={(e) => setForm({ ...form, as_number_se: e.target.value })} className={INPUT_CLS} placeholder="AS12345" /></div>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div><label className={LABEL_CLS}>Pengelola</label><input required value={form.pengelola_se} onChange={(e) => setForm({ ...form, pengelola_se: e.target.value })} className={INPUT_CLS} placeholder="Nama pengelola" /></div>
-                        <div><label className={LABEL_CLS}>Kategori</label><input value={form.kategori_se} onChange={(e) => setForm({ ...form, kategori_se: e.target.value })} className={INPUT_CLS} placeholder="Contoh: Kritis" /></div>
-                    </div>
-                    <div><label className={LABEL_CLS}>Fitur SE</label><input required value={form.fitur_se} onChange={(e) => setForm({ ...form, fitur_se: e.target.value })} className={INPUT_CLS} placeholder="Deskripsi fitur sistem" /></div>
                     <div className="flex gap-3 pt-4">
                         <button type="button" onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 transition">Batal</button>
                         <button type="submit" disabled={loading} className="flex-1 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm shadow-lg shadow-amber-500/25 disabled:opacity-50 flex items-center justify-center gap-2 transition">
@@ -385,8 +376,6 @@ export default function CSIRT() {
     const [editing, setEditing] = useState<any>(null);
     const [showSdmModal, setShowSdmModal] = useState(false);
     const [editingSdm, setEditingSdm] = useState<SdmCsirt | null>(null);
-    const [showSeModal, setShowSeModal] = useState(false);
-    const [editingSe, setEditingSe] = useState<SeCsirt | null>(null);
     const [viewingSe, setViewingSe] = useState<SeCsirt | null>(null);
 
     // ── Queries ─────────────────────────────────────────────────────────────
@@ -442,24 +431,6 @@ export default function CSIRT() {
         onError: (e: any) => toast({ title: "Gagal menghapus SDM", description: e.message, variant: "destructive" }),
     });
 
-    // ── SE Mutations ────────────────────────────────────────────────────────
-    const createSeMutation = useMutation({
-        mutationFn: (payload: any) => csirtService.createSe(payload),
-        onSuccess: () => { qc.invalidateQueries({ queryKey: ["se", activeCsirtId] }); setShowSeModal(false); toast({ title: "SE ditambahkan" }); },
-        onError: (e: any) => toast({ title: "Gagal menambah SE", description: e.message, variant: "destructive" }),
-    });
-
-    const updateSeMutation = useMutation({
-        mutationFn: ({ id, payload }: { id: number; payload: any }) => csirtService.updateSe(id, payload),
-        onSuccess: () => { qc.invalidateQueries({ queryKey: ["se", activeCsirtId] }); setShowSeModal(false); setEditingSe(null); toast({ title: "SE diperbarui" }); },
-        onError: (e: any) => toast({ title: "Gagal memperbarui SE", description: e.message, variant: "destructive" }),
-    });
-
-    const deleteSeMutation = useMutation({
-        mutationFn: (id: number) => csirtService.deleteSe(id),
-        onSuccess: () => { qc.invalidateQueries({ queryKey: ["se", activeCsirtId] }); toast({ title: "SE dihapus" }); },
-        onError: (e: any) => toast({ title: "Gagal menghapus SE", description: e.message, variant: "destructive" }),
-    });
 
     // ── Handlers ────────────────────────────────────────────────────────────
     const handleCreate = (formPayload: FormData) => {
@@ -482,21 +453,11 @@ export default function CSIRT() {
         }
     };
 
-    const handleSeSave = (payload: any) => {
-        if (editingSe) {
-            updateSeMutation.mutate({ id: editingSe.id, payload });
-        } else {
-            createSeMutation.mutate(payload);
-        }
-    };
 
     const handleDeleteSdm = (sdm: SdmCsirt) => {
         if (confirm(`Hapus SDM "${sdm.nama_personel}"?`)) deleteSdmMutation.mutate(sdm.id);
     };
 
-    const handleDeleteSe = (se: SeCsirt) => {
-        if (confirm(`Hapus SE "${se.nama_se}"?`)) deleteSeMutation.mutate(se.id);
-    };
 
     // ── Render ───────────────────────────────────────────────────────────────
     return (
@@ -665,7 +626,19 @@ export default function CSIRT() {
                                                     <td className="px-6 py-4 font-medium text-slate-700">{sdm.jabatan_csirt}</td>
                                                     <td className="px-6 py-4 text-slate-500">{sdm.jabatan_perusahaan}</td>
                                                     <td className="px-6 py-4 text-slate-500">{sdm.skill}</td>
-                                                    <td className="px-6 py-4"><span className="bg-blue-50 border border-blue-100 text-blue-600 px-3 py-1 rounded-lg text-xs font-bold tracking-wide">{sdm.sertifikasi}</span></td>
+                                                    <td className="px-6 py-4 whitespace-normal min-w-[200px]">
+                                                        <div className="flex flex-wrap gap-1.5 mt-1">
+                                                            {sdm.sertifikasi ? sdm.sertifikasi.split(',').map((s: string, idx: number) => {
+                                                                const trimmed = s.trim();
+                                                                if (!trimmed) return null;
+                                                                return (
+                                                                    <span key={idx} className="bg-blue-50 border border-blue-100 text-blue-600 px-2.5 py-1 rounded-md text-xs font-bold tracking-wide">
+                                                                        {trimmed}
+                                                                    </span>
+                                                                );
+                                                            }) : <span className="text-slate-400">-</span>}
+                                                        </div>
+                                                    </td>
                                                     <td className="px-6 py-4">
                                                         <div className="flex items-center justify-center gap-2">
                                                             <button onClick={() => { setEditingSdm(sdm); setShowSdmModal(true); }} className="p-2 text-emerald-500 bg-emerald-50 rounded-lg hover:bg-emerald-100 transition-colors"><Pencil className="w-4 h-4" /></button>
@@ -686,9 +659,6 @@ export default function CSIRT() {
                             <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
                                 <div className="px-6 py-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                     <h3 className="font-bold text-slate-800 text-lg">Tabel Daftar SE-CSIRT</h3>
-                                    <button onClick={() => { setEditingSe(null); setShowSeModal(true); }} className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold text-sm shadow-md shadow-blue-500/25 hover:shadow-blue-500/40 hover:scale-[1.01] active:scale-[0.99] transition-all whitespace-nowrap">
-                                        <Plus className="w-4 h-4" /> Tambah SE
-                                    </button>
                                 </div>
                                 <div className="overflow-x-auto">
                                     <table className="w-full text-left text-sm text-slate-600 whitespace-nowrap">
@@ -719,8 +689,6 @@ export default function CSIRT() {
                                                     <td className="px-6 py-4">
                                                         <div className="flex items-center justify-center gap-2">
                                                             <button onClick={() => setViewingSe(se)} className="p-2 text-blue-500 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"><Eye className="w-4 h-4" /></button>
-                                                            <button onClick={() => { setEditingSe(se); setShowSeModal(true); }} className="p-2 text-emerald-500 bg-emerald-50 rounded-lg hover:bg-emerald-100 transition-colors"><Pencil className="w-4 h-4" /></button>
-                                                            <button onClick={() => handleDeleteSe(se)} disabled={deleteSeMutation.isPending} className="p-2 text-red-500 bg-red-50 rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50"><Trash2 className="w-4 h-4" /></button>
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -750,12 +718,7 @@ export default function CSIRT() {
                     {showSdmModal && editingSdm && activeCsirtId && (
                         <EditSdmModal initial={editingSdm} csirtId={activeCsirtId} onSave={handleSdmSave} onClose={() => { setShowSdmModal(false); setEditingSdm(null); }} loading={updateSdmMutation.isPending} />
                     )}
-                    {showSeModal && !editingSe && activeCsirtId && (
-                        <CreateSeModal csirtId={activeCsirtId} onSave={handleSeSave} onClose={() => setShowSeModal(false)} loading={createSeMutation.isPending} />
-                    )}
-                    {showSeModal && editingSe && activeCsirtId && (
-                        <EditSeModal initial={editingSe} csirtId={activeCsirtId} onSave={handleSeSave} onClose={() => { setShowSeModal(false); setEditingSe(null); }} loading={updateSeMutation.isPending} />
-                    )}
+
                     {viewingSe && (
                         <SeDetailModal se={viewingSe} onClose={() => setViewingSe(null)} />
                     )}

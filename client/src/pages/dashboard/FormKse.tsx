@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "@/lib/api";
 import { csirtService } from "@/services/csirt.service";
@@ -29,7 +29,8 @@ interface KseRespondentProfile {
     alamat: string;
     email: string;
     nomor_telepon: string;
-    tanggal_pengisian: string;
+    created_at?: string;
+    updated_at?: string;
     ip_se: string;
     as_number_se: string;
     pengelola_se: string;
@@ -70,6 +71,7 @@ export default function FormKse() {
     const [searchParams] = useSearchParams();
     const editId = searchParams.get('id') || '';
     const { toast } = useToast();
+    const queryClient = useQueryClient();
 
     const { data: user, isLoading: userLoading } = useQuery<any>({ queryKey: ["me"], queryFn: api.getMe });
 
@@ -89,6 +91,24 @@ export default function FormKse() {
         enabled: !!user && !!editId,
     });
 
+    // Fetch the company's own CSIRT record to get id_csirt for new SE records
+    const { data: csirtData } = useQuery<any>({
+        queryKey: ["csirt-by-perusahaan", perusahaanId],
+        queryFn: () => csirtService.getMembers(),
+        enabled: !!perusahaanId,
+        select: (res: any) => {
+            // Normalize to array then find the CSIRT belonging to this company
+            const list: any[] = Array.isArray(res?.data) ? res.data
+                : Array.isArray(res) ? res
+                : res?.csirt ? (Array.isArray(res.csirt) ? res.csirt : [res.csirt])
+                : [];
+            return list.find((c: any) => String(c.id_perusahaan) === String(perusahaanId)) || list[0] || null;
+        },
+    });
+
+    // Resolved CSIRT id (prefer edit-mode SE's csirt, fallback to company csirt)
+    const resolvedCsirtId = csirtData?.id ?? '';
+
     // The resolved SE record to pre-fill:
     //   Edit mode → seById (fetched above)
     //   Add mode  → null  (always blank)
@@ -105,7 +125,8 @@ export default function FormKse() {
         alamat: '',
         email: '',
         nomor_telepon: '',
-        tanggal_pengisian: new Date().toISOString().split('T')[0],
+        created_at: undefined,
+        updated_at: undefined,
         ip_se: '',
         as_number_se: '',
         pengelola_se: '',
@@ -193,7 +214,8 @@ export default function FormKse() {
             alamat: '',
             email: '',
             nomor_telepon: '',
-            tanggal_pengisian: new Date().toISOString().split('T')[0],
+            created_at: undefined,
+            updated_at: undefined,
             ip_se: '',
             as_number_se: '',
             pengelola_se: '',
@@ -223,7 +245,8 @@ export default function FormKse() {
             alamat: p?.alamat || '',
             email: p?.email || user.email || '',
             nomor_telepon: p?.telepon || '',
-            tanggal_pengisian: new Date().toISOString().split('T')[0],
+            created_at: undefined,
+            updated_at: undefined,
             ip_se: '',
             as_number_se: '',
             pengelola_se: p?.nama_perusahaan || '', // Default otomatis ke nama instansi
@@ -241,12 +264,14 @@ export default function FormKse() {
             initial.nama_se         = se.nama_se         || '';
             initial.ip_se           = se.ip_se           || '';
             initial.as_number_se    = se.as_number_se    || '';
-            initial.pengelola_se    = se.pengelola_se    || initial.pengelola_se; // Pakai DB atau kembalikan ke default nama instansi
+            initial.pengelola_se    = se.pengelola_se    || initial.pengelola_se;
             initial.fitur_se        = se.fitur_se        || '';
             initial.seId            = se.id              || '';
             initial.id_perusahaan   = se.id_perusahaan   || initial.id_perusahaan;
             initial.id_sub_sektor   = se.id_sub_sektor   || initial.id_sub_sektor;
-            initial.id_csirt        = se.id_csirt        || '';
+            initial.id_csirt        = se.id_csirt        || resolvedCsirtId;
+            initial.created_at      = se.created_at      || undefined;
+            initial.updated_at      = se.updated_at      || undefined;
 
             setRespondent(initial);
 
@@ -274,16 +299,13 @@ export default function FormKse() {
                 setCurrentStep(2); // jump straight to assessment tab
             }
         } else if (!editId) {
-            // ── ADD MODE: start blank, no localStorage pre-fill ─────────────
-            // We intentionally do NOT restore localStorage here so the user
-            // always gets a truly blank form.  localStorage is only used to
-            // persist in-progress answers that the user explicitly started.
-            setRespondent(initial);
+            // ── ADD MODE: start blank but auto-fill id_csirt from company CSIRT ───
+            setRespondent({ ...initial, id_csirt: resolvedCsirtId });
             setAnswers({});
             setIsSubmitted(false);
             setCurrentStep(1);
         }
-    }, [user, perusahaanId, pData, existingSe, editId, seById]);
+    }, [user, perusahaanId, pData, existingSe, editId, seById, resolvedCsirtId]);
 
     // ── Persist answers on change ────────────────────────────────────────────
     useEffect(() => {
@@ -380,19 +402,26 @@ export default function FormKse() {
                 fitur_se: respondent.fitur_se || '',
             };
 
-            // Only attach UUID fields if they are not empty strings to prevent backend parsing crashes
+            // id_perusahaan & id_sub_sektor: only send if present
             if (respondent.id_perusahaan) payload.id_perusahaan = respondent.id_perusahaan;
             if (respondent.id_sub_sektor) payload.id_sub_sektor = respondent.id_sub_sektor;
-            if (respondent.id_csirt) payload.id_csirt = respondent.id_csirt;
+            // id_csirt is REQUIRED by the backend FK constraint — always include it
+            const csirtId = respondent.id_csirt || resolvedCsirtId;
+            if (csirtId) payload.id_csirt = csirtId;
 
             if (isAllAnswered) {
                 if (respondent.seId) {
                     await csirtService.updateSe(respondent.seId, payload);
+                    // Invalidate cache so the next edit always loads fresh data from DB
+                    await queryClient.invalidateQueries({ queryKey: ["se", String(respondent.seId)] });
+                    await queryClient.invalidateQueries({ queryKey: ["se", editId] });
                 } else {
                     const created = await csirtService.createSe(payload);
                     setRespondent(prev => ({ ...prev, seId: created.id }));
                     localStorage.setItem(PROFILE_KEY, JSON.stringify({ ...respondent, seId: created.id }));
                 }
+                // Invalidate the SE list so the score table on /dashboard/kse shows updated values
+                await queryClient.invalidateQueries({ queryKey: ["se"] });
                 setIsSubmitted(true);
                 toast({ title: "Berhasil!", description: "Assessment berhasil diselesaikan dan disimpan." });
                 setTimeout(() => navigate('/dashboard/kse'), 1200);
@@ -562,21 +591,7 @@ export default function FormKse() {
                                                         className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white/80 text-slate-900 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400 transition" />
                                                 </div>
 
-                                                <div className="md:col-span-2"><hr className="border-slate-100 my-1 mt-3" /></div>
 
-                                                {/* Tanggal Pengisian */}
-                                                <div>
-                                                    <label className="block text-sm font-semibold text-slate-600 mb-1.5">
-                                                        Tanggal Pengisian <span className="text-red-500">*</span>
-                                                    </label>
-                                                    <input
-                                                        type="date"
-                                                        value={respondent.tanggal_pengisian}
-                                                        onChange={e => handleRespondentChange('tanggal_pengisian', e.target.value)}
-                                                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white/80 text-slate-900 text-sm
-                                                            focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400 transition"
-                                                    />
-                                                </div>
                                             </div>
 
                                             {/* Actions */}

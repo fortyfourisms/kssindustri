@@ -33,6 +33,7 @@ interface AssessmentState {
     answersMap: Record<string, AnswerMap>;
     progressMap: Record<string, AssessmentProgress>;
     initialized: boolean;
+    existingIkasId: string | null;
 
     // ── Derived ──────────────────────────────────────────────────────────────
     respondentProfile: () => RespondentProfile | null;
@@ -55,6 +56,7 @@ interface AssessmentState {
 
     // ── Actions ───────────────────────────────────────────────────────────────
     setCurrentStakeholder: (slug: string) => void;
+    setExistingIkasId: (id: string | null) => void;
     initialize: () => void;
     saveRespondentProfile: (profile: RespondentProfile) => void;
     saveAnswer: (questionId: string, index: number) => void;
@@ -76,6 +78,7 @@ export const useAssessmentStore = create<AssessmentState>()(
             answersMap: {},
             progressMap: {},
             initialized: false,
+            existingIkasId: null,
 
             // ── Derived ────────────────────────────────────────────────────────────
             respondentProfile: () => {
@@ -166,6 +169,8 @@ export const useAssessmentStore = create<AssessmentState>()(
                     },
                 }));
             },
+
+            setExistingIkasId: (id) => set({ existingIkasId: id }),
 
             initialize: () => {
                 if (get().initialized) return;
@@ -264,11 +269,11 @@ export const useAssessmentStore = create<AssessmentState>()(
             goToNextPage: () => {
                 const p = get().progress();
                 const s = get().getCurrentSubCategory();
-                
+
                 if (!s) return;
-                
+
                 const totalPages = get().totalPagesInSubCategory();
-                
+
                 if (p.currentPage < totalPages) {
                     get().updateProgress(p.currentDomainId, p.currentCategoryId, p.currentSubCategoryId, p.currentPage + 1);
                 } else {
@@ -277,7 +282,7 @@ export const useAssessmentStore = create<AssessmentState>()(
                     // This implements a simple jump to next sub-category
                     const d = assessmentData.domains.find((d: any) => d.id === p.currentDomainId);
                     const c = d?.categories.find((c: any) => c.id === p.currentCategoryId);
-                    
+
                     if (d && c) {
                         const sIdx = c.subCategories.findIndex((sub: any) => sub.id === p.currentSubCategoryId);
                         if (sIdx < c.subCategories.length - 1) {
@@ -306,7 +311,7 @@ export const useAssessmentStore = create<AssessmentState>()(
                     // Navigate to previous subcategory
                     const d = assessmentData.domains.find((d: any) => d.id === p.currentDomainId);
                     const c = d?.categories.find((c: any) => c.id === p.currentCategoryId);
-                    
+
                     if (d && c) {
                         const sIdx = c.subCategories.findIndex((sub: any) => sub.id === p.currentSubCategoryId);
                         if (sIdx > 0) {

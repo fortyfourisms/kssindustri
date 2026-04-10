@@ -1,5 +1,5 @@
 export interface DomainDeteksi {
-    id: string;
+    id: number;
     kategori_tingkat_kematangan_domain: string;
     nilai_deteksi: number;
     nilai_subdomain1: number;
@@ -8,7 +8,7 @@ export interface DomainDeteksi {
 }
 
 export interface DomainGulih {
-    id: string;
+    id: number;
     kategori_tingkat_kematangan_domain: string;
     nilai_gulih: number;
     nilai_subdomain1: number;
@@ -18,7 +18,7 @@ export interface DomainGulih {
 }
 
 export interface DomainIdentifikasi {
-    id: string;
+    id: number;
     kategori_tingkat_kematangan_domain: string;
     nilai_identifikasi: number;
     nilai_subdomain1: number;
@@ -29,7 +29,7 @@ export interface DomainIdentifikasi {
 }
 
 export interface DomainProteksi {
-    id: string;
+    id: number;
     kategori_tingkat_kematangan_domain: string;
     nilai_proteksi: number;
     nilai_subdomain1: number;
@@ -46,17 +46,32 @@ export interface PerusahaanInfo {
 }
 
 export interface IkasData {
+    id: string;
+    created_at: string;
+    updated_at: string;
+    tanggal: string;
+    responden: string;
+    jabatan: string;
+    telepon: string;
+    target_nilai: number;
+    nilai_kematangan: number;
+    kategori_kematangan_keamanan_siber: string;
+    perusahaan: PerusahaanInfo;
+    identifikasi: DomainIdentifikasi;
+    proteksi: DomainProteksi;
     deteksi: DomainDeteksi;
     gulih: DomainGulih;
-    id: string;
-    identifikasi: DomainIdentifikasi;
-    jabatan: string;
-    kategori_kematangan_keamanan_siber: string;
-    nilai_kematangan: number;
-    perusahaan: PerusahaanInfo;
-    proteksi: DomainProteksi;
+}
+
+/** Payload untuk membuat atau mengupdate IKAS */
+export interface CreateIkasPayload {
     responden: string;
+    jabatan: string;
+    telepon: string;
     tanggal: string;
     target_nilai: number;
-    telepon: string;
+    [key: string]: any;
 }
+
+export type UpdateIkasPayload = Partial<CreateIkasPayload> & Record<string, any>;
+
