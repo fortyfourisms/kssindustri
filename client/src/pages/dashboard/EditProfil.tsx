@@ -7,8 +7,10 @@ import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, Save, UserCircle, Lock, Mail, User, Building2, MapPin, Phone, Globe, Image as ImageIcon, MoreVertical, Briefcase, Edit2, X, Camera } from "lucide-react";
-import { motion } from "framer-motion";
+import { Loader2, Save, UserCircle, Lock, Mail, User, Building2, MapPin, Phone, Globe, Image as ImageIcon, MoreVertical, Briefcase, Edit2, X, Camera, Plus, Trash2 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { picService } from "@/services/pic.service";
+import { PICPerusahaan } from "@/types/pic.types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
     DropdownMenu,
@@ -46,6 +48,64 @@ function getInitials(name: string) {
     return name.trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
 }
 
+// ─── Modal: Tambah/Edit PIC ──────────────────────────────────────────────────
+function PicModal({ 
+    initialData, 
+    idPerusahaan, 
+    onClose, 
+    onSave, 
+    loading 
+}: { 
+    initialData?: PICPerusahaan; 
+    idPerusahaan: string; 
+    onClose: () => void; 
+    onSave: (data: any) => void; 
+    loading: boolean;
+}) {
+    const [form, setForm] = useState({
+        nama: initialData?.nama || "",
+        email: initialData?.email || "",
+        telepon: initialData?.telepon || ""
+    });
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        onSave({ ...form, id_perusahaan: idPerusahaan });
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden p-6">
+                <div className="flex items-center justify-between mb-6">
+                    <h3 className="font-black text-slate-900 text-xl">{initialData ? "Edit PIC" : "Tambah PIC"}</h3>
+                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition p-1 bg-slate-100 rounded-lg"><X className="w-5 h-5" /></button>
+                </div>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <div>
+                        <label className={LABEL_CLS}>Nama Lengkap</label>
+                        <input required value={form.nama} onChange={(e) => setForm({ ...form, nama: e.target.value })} className={INPUT_CLS} placeholder="Nama PIC" />
+                    </div>
+                    <div>
+                        <label className={LABEL_CLS}>Email</label>
+                        <input required type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className={INPUT_CLS} placeholder="email@domain.com" />
+                    </div>
+                    <div>
+                        <label className={LABEL_CLS}>Telepon</label>
+                        <input required value={form.telepon} onChange={(e) => setForm({ ...form, telepon: e.target.value })} className={INPUT_CLS} placeholder="Nomor Telepon" />
+                    </div>
+                    <div className="flex gap-3 pt-4">
+                        <button type="button" onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 transition">Batal</button>
+                        <button type="submit" disabled={loading} className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-lg shadow-blue-500/25 disabled:opacity-50 flex items-center justify-center gap-2">
+                            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                            Simpan
+                        </button>
+                    </div>
+                </form>
+            </motion.div>
+        </div>
+    );
+}
+
 export default function EditProfil() {
     const { toast } = useToast();
     const qc = useQueryClient();
@@ -65,6 +125,48 @@ export default function EditProfil() {
     });
 
     const { data: subSektors } = useQuery({ queryKey: ["subSektor"], queryFn: () => apiClient.get<any[]>("/api/sub_sektor") });
+
+    // PIC Queries & Mutations
+    const [showPicModal, setShowPicModal] = useState(false);
+    const [editingPic, setEditingPic] = useState<PICPerusahaan | undefined>();
+
+    const { data: pics = [], isLoading: isLoadingPics } = useQuery({
+        queryKey: ["pics", perusahaanId],
+        queryFn: () => picService.getByPerusahaanId(String(perusahaanId)),
+        enabled: !!perusahaanId,
+    });
+
+    const createPicMutation = useMutation({
+        mutationFn: picService.create,
+        onSuccess: () => { qc.invalidateQueries({ queryKey: ["pics"] }); setShowPicModal(false); toast({ title: "PIC berhasil ditambahkan" }); },
+        onError: (e: any) => toast({ title: "Gagal", description: e.message, variant: "destructive" }),
+    });
+
+    const updatePicMutation = useMutation({
+        mutationFn: ({ id, data }: { id: string; data: any }) => picService.update(id, data),
+        onSuccess: () => { qc.invalidateQueries({ queryKey: ["pics"] }); setShowPicModal(false); setEditingPic(undefined); toast({ title: "PIC berhasil diperbarui" }); },
+        onError: (e: any) => toast({ title: "Gagal", description: e.message, variant: "destructive" }),
+    });
+
+    const deletePicMutation = useMutation({
+        mutationFn: picService.delete,
+        onSuccess: () => { qc.invalidateQueries({ queryKey: ["pics"] }); toast({ title: "PIC berhasil dihapus" }); },
+        onError: (e: any) => toast({ title: "Gagal", description: e.message, variant: "destructive" }),
+    });
+
+    const handleSavePic = (data: any) => {
+        if (editingPic) {
+            updatePicMutation.mutate({ id: editingPic.id, data });
+        } else {
+            createPicMutation.mutate(data);
+        }
+    };
+
+    const handleDeletePic = (id: string, nama: string) => {
+        if (confirm(`Hapus PIC ${nama}?`)) {
+            deletePicMutation.mutate(id);
+        }
+    };
 
     const profileForm = useForm<ProfileForm>({ resolver: zodResolver(ProfileSchema) });
     const perusahaanForm = useForm<PerusahaanForm>({ resolver: zodResolver(PerusahaanSchema) });
@@ -572,7 +674,7 @@ export default function EditProfil() {
                             initial={{ opacity: 0, y: 16 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: 0.1 }}
-                            className="bg-white/70 backdrop-blur-sm border border-white/60 rounded-2xl p-6 shadow-sm"
+                            className="bg-white/70 backdrop-blur-sm border border-white/60 rounded-2xl p-6 shadow-sm mb-6"
                         >
                             <div className="flex items-center gap-2 mb-5">
                                 <Building2 className="w-5 h-5 text-blue-600" />
@@ -651,8 +753,82 @@ export default function EditProfil() {
                             </form>
                         </motion.div>
                         )}
+
+                        {/* PIC Section */}
+                        <motion.div
+                            initial={{ opacity: 0, y: 16 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.15 }}
+                            className="bg-white/70 backdrop-blur-sm border border-white/60 rounded-2xl overflow-hidden shadow-sm mt-6"
+                        >
+                            <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                <h3 className="font-bold text-slate-900 text-lg">Daftar PIC (Person in Charge)</h3>
+                                {isEditingPerusahaan && (
+                                    <button
+                                        onClick={() => { setEditingPic(undefined); setShowPicModal(true); }}
+                                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl shadow-sm transition-all"
+                                        disabled={!perusahaanId}
+                                    >
+                                        <Plus className="w-4 h-4" />
+                                        Tambah PIC
+                                    </button>
+                                )}
+                            </div>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-left text-sm text-slate-600 whitespace-nowrap">
+                                        <thead className="bg-slate-50 text-xs uppercase font-extrabold text-slate-500 tracking-wider border-b border-slate-100">
+                                            <tr>
+                                                <th className="px-6 py-4">Nama</th>
+                                                <th className="px-6 py-4">Email</th>
+                                                <th className="px-6 py-4">Telepon</th>
+                                                {isEditingPerusahaan && <th className="px-6 py-4 text-center">Aksi</th>}
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100">
+                                            {isLoadingPics ? (
+                                                <tr><td colSpan={isEditingPerusahaan ? 4 : 3} className="px-6 py-8 text-center text-slate-400"><Loader2 className="w-5 h-5 animate-spin mx-auto" /></td></tr>
+                                            ) : pics.length === 0 ? (
+                                                <tr><td colSpan={isEditingPerusahaan ? 4 : 3} className="px-6 py-8 text-center text-slate-400 font-medium">Belum ada data PIC</td></tr>
+                                            ) : (
+                                                pics.map((p) => (
+                                                    <tr key={p.id} className="hover:bg-slate-50/50 transition-colors">
+                                                        <td className="px-6 py-4 font-bold text-slate-800">{p.nama}</td>
+                                                        <td className="px-6 py-4">{p.email}</td>
+                                                        <td className="px-6 py-4">{p.telepon}</td>
+                                                        {isEditingPerusahaan && (
+                                                            <td className="px-6 py-4">
+                                                                <div className="flex items-center justify-center gap-2">
+                                                                    <button onClick={() => { setEditingPic(p); setShowPicModal(true); }} className="p-2 text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors tooltip" title="Edit">
+                                                                        <Edit2 className="w-4 h-4" />
+                                                                    </button>
+                                                                    <button onClick={() => handleDeletePic(p.id, p.nama)} className="p-2 text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors tooltip" title="Hapus">
+                                                                        <Trash2 className="w-4 h-4" />
+                                                                    </button>
+                                                                </div>
+                                                            </td>
+                                                        )}
+                                                    </tr>
+                                                ))
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </motion.div>
                     </TabsContent>
                 </Tabs>
+
+                {/* Modals placed outside of regular layout */}
+                <AnimatePresence>
+                    {showPicModal && perusahaanId && (
+                        <PicModal 
+                            idPerusahaan={String(perusahaanId)} 
+                            initialData={editingPic} 
+                            onClose={() => { setShowPicModal(false); setEditingPic(undefined); }} 
+                            onSave={handleSavePic} 
+                            loading={createPicMutation.isPending || updatePicMutation.isPending} 
+                        />
+                    )}
+                </AnimatePresence>
             </div>
     );
 }

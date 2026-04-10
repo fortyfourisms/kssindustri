@@ -38,7 +38,7 @@ export default function FormIkas() {
     const initializeStore = useAssessmentStore(state => state.initialize);
 
     const { data: meData } = useUser();
-    const perusahaanId = meData?.id_perusahaan || meData?.perusahaan?.id;
+    const perusahaanId = meData?.id_perusahaan;
     const { data: perusahaan } = useQuery({
         queryKey: ["perusahaan", perusahaanId],
         queryFn: () => perusahaanService.getById(String(perusahaanId)),
@@ -48,7 +48,7 @@ export default function FormIkas() {
 
     // Fetch existing IKAS by company ID to detect if a record already exists
     const { data: ikasList } = useQuery({
-        queryKey: ["ikasList", perusahaanId],
+        queryKey: ["ikas", perusahaanId],
         queryFn: () => api.getIkasById(String(perusahaanId)),
         enabled: !!perusahaanId,
         staleTime: 1000 * 60 * 2,

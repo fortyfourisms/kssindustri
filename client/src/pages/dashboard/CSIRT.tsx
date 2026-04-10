@@ -364,12 +364,55 @@ function SeDetailModal({ se, onClose }: { se: SeCsirt; onClose: () => void }) {
 }
 
 // ─── Modal: Download Document ──────────────────────────────────────────────────
-function DownloadDocModal({ fileUrl, fileName, onClose }: { fileUrl: string; fileName: string; onClose: () => void }) {
+function DownloadDocModal({ fileUrl, fileName, csirtName, onClose }: { fileUrl: string; fileName: string; csirtName?: string; onClose: () => void }) {
+    const { toast } = useToast();
+    const [isDownloading, setIsDownloading] = useState(false);
+
+    const handleDownload = async () => {
+        setIsDownloading(true);
+        try {
+            const response = await fetch(fileUrl);
+            if (!response.ok) throw new Error("Network response was not ok");
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            
+            const link = document.createElement("a");
+            link.href = url;
+            
+            const safeCsirtName = (csirtName || "CSIRT").replace(/[^a-zA-Z0-9]/g, '_');
+            let finalName = fileName;
+            if (fileName === "PGP Public Key") finalName = `public_key_${safeCsirtName}.asc`;
+            else if (fileName === "RFC 2350") finalName = `rfc2350_${safeCsirtName}.pdf`;
+            
+            link.setAttribute("download", finalName);
+            document.body.appendChild(link);
+            link.click();
+            link.parentNode?.removeChild(link);
+            window.URL.revokeObjectURL(url);
+            onClose();
+        } catch (error) {
+            console.error("Download failed:", error);
+            toast({ title: "Gagal Mengunduh", description: "Browser memblokir unduhan lintas domain. File akan dibuka di tab baru.", variant: "destructive" });
+            const fallbackLink = document.createElement("a");
+            fallbackLink.href = fileUrl;
+            fallbackLink.target = "_blank";
+            const safeCsirtName = (csirtName || "CSIRT").replace(/[^a-zA-Z0-9]/g, '_');
+            if (fileName === "PGP Public Key") fallbackLink.download = `public_key_${safeCsirtName}.asc`;
+            else if (fileName === "RFC 2350") fallbackLink.download = `rfc2350_${safeCsirtName}.pdf`;
+            document.body.appendChild(fallbackLink);
+            fallbackLink.click();
+            fallbackLink.parentNode?.removeChild(fallbackLink);
+            onClose();
+        } finally {
+            setIsDownloading(false);
+        }
+    };
+
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white rounded-3xl shadow-2xl w-full max-w-sm max-h-[90vh] overflow-y-auto p-6 text-center">
                 <div className="flex justify-end mb-2">
-                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition p-1 bg-slate-100 rounded-lg hover:bg-slate-200"><X className="w-5 h-5" /></button>
+                    <button onClick={onClose} disabled={isDownloading} className="text-slate-400 hover:text-slate-600 transition p-1 bg-slate-100 rounded-lg hover:bg-slate-200"><X className="w-5 h-5" /></button>
                 </div>
                 <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Download className="w-8 h-8" />
@@ -377,10 +420,10 @@ function DownloadDocModal({ fileUrl, fileName, onClose }: { fileUrl: string; fil
                 <h3 className="font-black text-slate-900 font-display text-lg mb-2">Unduh Dokumen</h3>
                 <p className="text-sm text-slate-500 mb-6">Anda akan mengunduh dokumen <strong>{fileName}</strong>. Lanjutkan?</p>
                 <div className="flex gap-3">
-                    <button type="button" onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 transition">Batal</button>
-                    <a href={fileUrl} download target="_blank" rel="noreferrer" onClick={onClose} className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2 transition">
-                        Unduh
-                    </a>
+                    <button type="button" onClick={onClose} disabled={isDownloading} className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 transition disabled:opacity-50">Batal</button>
+                    <button onClick={handleDownload} disabled={isDownloading} className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2 transition disabled:opacity-50">
+                        {isDownloading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Unduh"}
+                    </button>
                 </div>
             </motion.div>
         </div>
@@ -401,7 +444,7 @@ export default function CSIRT() {
     const [showSdmModal, setShowSdmModal] = useState(false);
     const [editingSdm, setEditingSdm] = useState<SdmCsirt | null>(null);
     const [viewingSe, setViewingSe] = useState<SeCsirt | null>(null);
-    const [downloadDoc, setDownloadDoc] = useState<{ url: string; name: string } | null>(null);
+    const [downloadDoc, setDownloadDoc] = useState<{ url: string; name: string; csirtName?: string } | null>(null);
 
     // ── Queries ─────────────────────────────────────────────────────────────
     const { data: user } = useUser();
@@ -603,13 +646,13 @@ export default function CSIRT() {
                                             <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Dokumen Pendukung</h4>
                                             <div className="flex gap-3">
                                                 {csirt.file_rfc2350 ? (
-                                                    <button onClick={() => setDownloadDoc({ url: getMediaUrl(csirt.file_rfc2350), name: "RFC 2350" })} className="flex-1 bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-200 rounded-xl p-3 flex items-center gap-3 transition-colors group text-left">
+                                                    <button onClick={() => setDownloadDoc({ url: getMediaUrl(csirt.file_rfc2350), name: "RFC 2350", csirtName: csirt.nama_csirt })} className="flex-1 bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-200 rounded-xl p-3 flex items-center gap-3 transition-colors group text-left">
                                                         <LinkIcon className="w-5 h-5 text-slate-400 group-hover:text-blue-500 transition-colors" />
                                                         <span className="font-semibold text-slate-700 text-xs group-hover:text-blue-600 transition-colors">RFC 2350</span>
                                                     </button>
                                                 ) : <span className="flex-1 text-xs text-slate-400 p-3 italic">RFC 2350 belum diunggah</span>}
                                                 {csirt.file_public_key_pgp ? (
-                                                    <button onClick={() => setDownloadDoc({ url: getMediaUrl(csirt.file_public_key_pgp), name: "PGP Public Key" })} className="flex-1 bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-200 rounded-xl p-3 flex items-center gap-3 transition-colors group text-left">
+                                                    <button onClick={() => setDownloadDoc({ url: getMediaUrl(csirt.file_public_key_pgp), name: "PGP Public Key", csirtName: csirt.nama_csirt })} className="flex-1 bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-200 rounded-xl p-3 flex items-center gap-3 transition-colors group text-left">
                                                         <LinkIcon className="w-5 h-5 text-slate-400 group-hover:text-blue-500 transition-colors" />
                                                         <span className="font-semibold text-slate-700 text-xs group-hover:text-blue-600 transition-colors">PGP Public Key</span>
                                                     </button>
@@ -748,7 +791,7 @@ export default function CSIRT() {
                         <SeDetailModal se={viewingSe} onClose={() => setViewingSe(null)} />
                     )}
                     {downloadDoc && (
-                        <DownloadDocModal fileUrl={downloadDoc.url} fileName={downloadDoc.name} onClose={() => setDownloadDoc(null)} />
+                        <DownloadDocModal fileUrl={downloadDoc.url} fileName={downloadDoc.name} csirtName={downloadDoc.csirtName} onClose={() => setDownloadDoc(null)} />
                     )}
                 </AnimatePresence>
             </RequireCompanyProfile>
