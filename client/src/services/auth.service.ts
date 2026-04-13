@@ -43,6 +43,24 @@ class AuthService {
     }
 
     /**
+     * Refresh access token via POST /api/refresh.
+     * Backend akan membaca refresh token dari HTTP-only cookie dan menerbitkan
+     * access token baru. Menggunakan raw fetch (bukan apiClient) agar tidak
+     * memicu interceptor 401 dan menyebabkan infinite loop.
+     * Melempar error jika refresh token sudah expired atau tidak valid.
+     */
+    async refresh(): Promise<void> {
+        const BASE_URL = (window as any)._env_?.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE_URL || '';
+        const res = await fetch(`${BASE_URL}/api/refresh`, {
+            method: 'POST',
+            credentials: 'include',
+        });
+        if (!res.ok) {
+            throw new Error(`Token refresh failed: ${res.status}`);
+        }
+    }
+
+    /**
      * Verify session: GET /api/me.
      * Cookie is sent automatically. Returns current user if valid.
      */
