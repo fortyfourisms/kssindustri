@@ -1,16 +1,24 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 
+const BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function getMediaUrl(path: string | undefined | null) {
+export function getMediaUrl(path?: string | null) {
   if (!path) return "";
-  // Absolute URL or already-rooted path — return as-is
-  if (path.startsWith("http") || path.startsWith("/")) return path;
-  // Path already includes 'uploads/' prefix (e.g. "uploads/csirt_photo/uuid.png")
-  if (path.startsWith("uploads/")) return `/${path}`;
-  // Bare filename / UUID → serve via /uploads proxy
-  return `/uploads/${path}`;
+  // sudah absolute URL
+  if (path.startsWith("http")) return path;
+  // sudah diawali /uploads
+  if (path.startsWith("/uploads/")) {
+    return `${BASE_URL}${path}`;
+  }
+  // sudah ada prefix uploads/
+  if (path.startsWith("uploads/")) {
+    return `${BASE_URL}/${path}`;
+  }
+  // filename saja
+  return `${BASE_URL}/uploads/${path}`;
 }
