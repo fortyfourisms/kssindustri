@@ -39,8 +39,15 @@ export const perusahaanService = {
     },
 
     /** GET /api/perusahaan/{id} — Ambil perusahaan berdasarkan ID */
-    async getById(id: string): Promise<Perusahaan> {
-        return apiClient.get<Perusahaan>(`/api/perusahaan/${id}`);
+    async getById(id: string): Promise<Perusahaan | null> {
+        try {
+            return await apiClient.get<Perusahaan>(`/api/perusahaan/${id}`);
+        } catch (error: any) {
+            if (error?.status === 404 || error?.response?.status === 404) {
+                return null;
+            }
+            throw error;
+        }
     },
 
     /** PUT /api/perusahaan/{id} — Update perusahaan */

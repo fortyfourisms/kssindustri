@@ -1,23 +1,23 @@
 import { useAuthStore } from "@/stores/auth.store";
 
 /**
- * Boots the app by fetching user session silently.
- * Menggunakan "credentials: include" otomatis dari layanan rehydrateFromServer.
- * Jika koneksi fail (gagal), itu akan set authenticated menjadi false (silent handle).
+ * Boots the app dengan silent session restore yang efisien.
+ *
+ * Urutan:
+ *   1. POST /api/refresh \u2014 cek apakah refresh token cookie masih valid.
+ *   2. Jika berhasil \u2192 GET /api/me \u2192 hydrate Zustand store.
+ *   3. Jika gagal (guest / token expired) \u2192 set unauthenticated, lanjut (silent).
+ *
+ * Keuntungan vs pendekatan lama (langsung GET /api/me):
+ *   - Guest tidak membuang round-trip ke /api/me yang pasti 401.
+ *   - /api/me hanya dipanggil jika kita yakin ada session yang valid.
+ *   - Landing page tetap bisa diakses tanpa login.
  */
 export async function bootstrapApp(): Promise<void> {
-    try {
-        // Ambil store auth secara langsung, ini adalah singleton pattern yang bisa
-        // dijalankan di luar react cycle
-        const currentStore = useAuthStore.getState();
-        
-        // rehydrateFromServer() sudah menghandle auth logic
-        // dan silent intercept ke /api/auth/me
-        await currentStore.rehydrateFromServer();
+    // Ambil store auth secara langsung \u2014 singleton, aman dipanggil di luar React cycle.
+    const store = useAuthStore.getState();
 
-        // Bisa ditambah logic init lain dsini jika perlu (config, metrics, etc)
-    } catch (e) {
-        // Silent error, wajar kalau belum login (guest allowed)
-        console.warn("[bootstrapApp] Session check fail or first visitor.");
-    }
+    // bootstrapSession() tidak pernah throw \u2014 error ditangani secara internal.
+    await store.bootstrapSession();
 }
+

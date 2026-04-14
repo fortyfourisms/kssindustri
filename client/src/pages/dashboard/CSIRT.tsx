@@ -21,6 +21,7 @@ function CreateCsirtModal({ onSubmit, onClose, loading, idPerusahaan }: any) {
     const [photoCsirt, setPhotoCsirt] = useState<File | null>(null);
     const [fileRfc, setFileRfc] = useState<File | null>(null);
     const [filePgp, setFilePgp] = useState<File | null>(null);
+    const [fileStr, setFileStr] = useState<File | null>(null);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -32,6 +33,7 @@ function CreateCsirtModal({ onSubmit, onClose, loading, idPerusahaan }: any) {
         if (photoCsirt) fd.append("photo_csirt", photoCsirt);
         if (fileRfc) fd.append("file_rfc2350", fileRfc);
         if (filePgp) fd.append("file_public_key_pgp", filePgp);
+        if (fileStr) fd.append("file_str", fileStr);
         onSubmit(fd);
     };
 
@@ -70,6 +72,10 @@ function CreateCsirtModal({ onSubmit, onClose, loading, idPerusahaan }: any) {
                             <label className={LABEL_CLS}>PGP Public Key <span className="text-xs font-normal text-slate-400">(.asc, Opsional)</span></label>
                             <input type="file" accept=".asc" onChange={(e) => setFilePgp(e.target.files?.[0] || null)} className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition border border-slate-200 bg-white" />
                         </div>
+                        <div>
+                            <label className={LABEL_CLS}>STR <span className="text-xs font-normal text-slate-400">(.pdf, Opsional)</span></label>
+                            <input type="file" accept=".pdf" onChange={(e) => setFileStr(e.target.files?.[0] || null)} className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition border border-slate-200 bg-white" />
+                        </div>
                     </div>
                     <div className="flex gap-3 pt-6">
                         <button type="button" onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 transition">Batal</button>
@@ -94,6 +100,7 @@ function EditCsirtModal({ initial, onSubmit, onClose, loading, idPerusahaan }: a
     const [photoCsirt, setPhotoCsirt] = useState<File | null>(null);
     const [fileRfc, setFileRfc] = useState<File | null>(null);
     const [filePgp, setFilePgp] = useState<File | null>(null);
+    const [fileStr, setFileStr] = useState<File | null>(null);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -105,6 +112,7 @@ function EditCsirtModal({ initial, onSubmit, onClose, loading, idPerusahaan }: a
         if (photoCsirt) fd.append("photo_csirt", photoCsirt);
         if (fileRfc) fd.append("file_rfc2350", fileRfc);
         if (filePgp) fd.append("file_public_key_pgp", filePgp);
+        if (fileStr) fd.append("file_str", fileStr);
         onSubmit(fd);
     };
 
@@ -142,6 +150,10 @@ function EditCsirtModal({ initial, onSubmit, onClose, loading, idPerusahaan }: a
                         <div>
                             <label className={LABEL_CLS}>PGP Public Key <span className="text-xs font-normal text-slate-400">(.asc, Opsional)</span></label>
                             <input type="file" accept=".asc" onChange={(e) => setFilePgp(e.target.files?.[0] || null)} className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition border border-slate-200 bg-white" />
+                        </div>
+                        <div>
+                            <label className={LABEL_CLS}>STR <span className="text-xs font-normal text-slate-400">(.pdf, Opsional)</span></label>
+                            <input type="file" accept=".pdf" onChange={(e) => setFileStr(e.target.files?.[0] || null)} className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition border border-slate-200 bg-white" />
                         </div>
                     </div>
                     <div className="flex gap-3 pt-6">
@@ -204,12 +216,12 @@ function CreateSdmModal({ csirtId, onSave, onClose, loading }: {
                         <div>
                             <label className={LABEL_CLS}>Sertifikasi</label>
                             <div className="flex gap-2">
-                                <input 
-                                    value={sertInput} 
-                                    onChange={(e) => setSertInput(e.target.value)} 
+                                <input
+                                    value={sertInput}
+                                    onChange={(e) => setSertInput(e.target.value)}
                                     onKeyDown={handleAddSert}
-                                    className={INPUT_CLS} 
-                                    placeholder={sertifikasiList.length > 0 ? "Tambah sertifikasi" : "Contoh: CISSP"} 
+                                    className={INPUT_CLS}
+                                    placeholder={sertifikasiList.length > 0 ? "Tambah sertifikasi" : "Contoh: CISSP"}
                                 />
                                 <button type="button" onClick={handleAddSert} disabled={!sertInput.trim()} className="p-2.5 bg-slate-100 hover:bg-slate-200 disabled:hover:bg-slate-100 text-slate-700 rounded-xl transition flex items-center justify-center shrink-0 disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Tambah Sertifikasi">
                                     <Plus className="w-5 h-5" />
@@ -295,12 +307,12 @@ function EditSdmModal({ initial, csirtId, onSave, onClose, loading }: {
                         <div>
                             <label className={LABEL_CLS}>Sertifikasi</label>
                             <div className="flex gap-2">
-                                <input 
-                                    value={sertInput} 
-                                    onChange={(e) => setSertInput(e.target.value)} 
+                                <input
+                                    value={sertInput}
+                                    onChange={(e) => setSertInput(e.target.value)}
                                     onKeyDown={handleAddSert}
-                                    className={INPUT_CLS} 
-                                    placeholder={sertifikasiList.length > 0 ? "Tambah sertifikasi" : "Contoh: CISSP"} 
+                                    className={INPUT_CLS}
+                                    placeholder={sertifikasiList.length > 0 ? "Tambah sertifikasi" : "Contoh: CISSP"}
                                 />
                                 <button type="button" onClick={handleAddSert} disabled={!sertInput.trim()} className="p-2.5 bg-slate-100 hover:bg-slate-200 disabled:hover:bg-slate-100 text-slate-700 rounded-xl transition flex items-center justify-center shrink-0 disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Tambah Sertifikasi">
                                     <Plus className="w-5 h-5" />
@@ -375,15 +387,16 @@ function DownloadDocModal({ fileUrl, fileName, csirtName, onClose }: { fileUrl: 
             if (!response.ok) throw new Error("Network response was not ok");
             const blob = await response.blob();
             const url = window.URL.createObjectURL(blob);
-            
+
             const link = document.createElement("a");
             link.href = url;
-            
+
             const safeCsirtName = (csirtName || "CSIRT").replace(/[^a-zA-Z0-9]/g, '_');
             let finalName = fileName;
             if (fileName === "PGP Public Key") finalName = `public_key_${safeCsirtName}.asc`;
             else if (fileName === "RFC 2350") finalName = `rfc2350_${safeCsirtName}.pdf`;
-            
+            else if (fileName === "Surat Tanda Registrasi") finalName = `str_${safeCsirtName}.pdf`;
+
             link.setAttribute("download", finalName);
             document.body.appendChild(link);
             link.click();
@@ -399,6 +412,7 @@ function DownloadDocModal({ fileUrl, fileName, csirtName, onClose }: { fileUrl: 
             const safeCsirtName = (csirtName || "CSIRT").replace(/[^a-zA-Z0-9]/g, '_');
             if (fileName === "PGP Public Key") fallbackLink.download = `public_key_${safeCsirtName}.asc`;
             else if (fileName === "RFC 2350") fallbackLink.download = `rfc2350_${safeCsirtName}.pdf`;
+            else if (fileName === "Surat Tanda Registrasi") fallbackLink.download = `str_${safeCsirtName}.pdf`;
             document.body.appendChild(fallbackLink);
             fallbackLink.click();
             fallbackLink.parentNode?.removeChild(fallbackLink);
@@ -530,270 +544,276 @@ export default function CSIRT() {
     // ── Render ───────────────────────────────────────────────────────────────
     return (
         <RequireCompanyProfile>
-                <div className="max-w-7xl mx-auto space-y-6">
-                    <div className="flex items-center justify-between mb-2">
-                        <h1 className="text-2xl font-bold font-display text-slate-900">CSIRT</h1>
-                        <div className="flex items-center gap-2 text-sm text-slate-500">
-                            <span className="font-medium text-blue-600 hover:underline cursor-pointer">Dashboards</span>
-                            <ChevronRight className="w-3.5 h-3.5" />
-                            <span className="font-semibold text-slate-900">CSIRT</span>
-                        </div>
+            <div className="max-w-7xl mx-auto space-y-6">
+                <div className="flex items-center justify-between mb-2">
+                    <h1 className="text-2xl font-bold font-display text-slate-900">CSIRT</h1>
+                    <div className="flex items-center gap-2 text-sm text-slate-500">
+                        <span className="font-medium text-blue-600 hover:underline cursor-pointer">Dashboards</span>
+                        <ChevronRight className="w-3.5 h-3.5" />
+                        <span className="font-semibold text-slate-900">CSIRT</span>
                     </div>
-
-                    {isLoading ? (
-                        <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-blue-600" /></div>
-                    ) : !csirt ? (
-                        <div className="text-center py-16 text-slate-400 bg-white rounded-3xl border border-slate-200">
-                            <Building2 className="w-12 h-12 mx-auto mb-3 opacity-40" />
-                            <p className="font-semibold text-slate-600 mb-2">Belum ada data CSIRT</p>
-                            <p className="text-sm mt-1 text-slate-500 mb-6">Silakan daftarkan tim CSIRT perusahaan Anda terlebih dahulu.</p>
-                            <button
-                                onClick={() => { setEditing(null); setShowForm(true); }}
-                                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-blue-600 text-white font-bold shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 hover:scale-105 active:scale-95 transition-all"
-                            >
-                                <Plus className="w-5 h-5" /> Buat Profil CSIRT
-                            </button>
-                        </div>
-                    ) : (
-                        <>
-                            {/* Main Card */}
-                            <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden mb-6">
-                                <div className="bg-[#203db0] p-6 flex items-start justify-between text-white">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-12 h-12 rounded-xl border border-white/20 flex items-center justify-center backdrop-blur-sm">
-                                            <Building2 className="w-6 h-6 text-white" />
-                                        </div>
-                                        <div>
-                                            <h2 className="text-xl font-bold">{csirt.nama_csirt || "Nama CSIRT"}</h2>
-                                            <p className="text-blue-100 text-sm mt-0.5">Detail informasi dan manajemen CSIRT</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <button
-                                            onClick={() => { setEditing(csirt); setShowForm(true); }}
-                                            className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm"
-                                        >
-                                            <Pencil className="w-4 h-4" /> Edit CSIRT
-                                        </button>
-                                        <button
-                                            onClick={() => { if (confirm("Hapus profil CSIRT ini?")) deleteMutation.mutate(activeCsirtId); }}
-                                            className="p-2 transition-colors hover:bg-red-500/20 text-red-200 hover:text-red-100 rounded-lg shrink-0"
-                                            title="Hapus CSIRT"
-                                        >
-                                            <Trash2 className="w-5 h-5" />
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div className="p-6 md:p-8 flex flex-col md:flex-row gap-8 relative z-10 bg-slate-50/50">
-                                    <div className="flex-1 flex flex-col md:flex-row gap-6">
-                                        <div className="w-40 h-40 rounded-3xl shadow-md p-2 flex-shrink-0 bg-white border border-slate-100 flex items-center justify-center overflow-hidden">
-                                            {getMediaUrl(csirt.photo_csirt) ? (
-                                                <img src={getMediaUrl(csirt.photo_csirt)} alt="CSIRT Photo" className="w-full h-full object-cover rounded-2xl" onError={(e) => { e.currentTarget.style.display = "none"; }} />
-                                            ) : (
-                                                <div className="w-full h-full rounded-2xl bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center">
-                                                    <Building2 className="w-16 h-16 text-blue-400 opacity-60" />
-                                                </div>
-                                            )}
-                                        </div>
-                                        <div className="pt-2">
-                                            <h3 className="text-3xl font-bold text-slate-800 mb-6 font-display">{csirt.nama_csirt}</h3>
-                                            <div className="flex flex-col gap-4">
-                                                <div className="flex items-center gap-3 text-slate-600">
-                                                    <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0">
-                                                        <Phone className="w-4 h-4 text-blue-500" />
-                                                    </div>
-                                                    <div>
-                                                        <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-0.5">Telepon</p>
-                                                        <p className="font-bold text-slate-800">{csirt.telepon_csirt || "-"}</p>
-                                                    </div>
-                                                </div>
-                                                <div className="flex items-center gap-3 text-slate-600">
-                                                    <div className="w-10 h-10 rounded-full bg-orange-50 flex items-center justify-center flex-shrink-0">
-                                                        <Globe className="w-4 h-4 text-orange-500" />
-                                                    </div>
-                                                    <div>
-                                                        <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-0.5">Website</p>
-                                                        {csirt.web_csirt ? (
-                                                            <a href={csirt.web_csirt.startsWith("http") ? csirt.web_csirt : `https://${csirt.web_csirt}`} target="_blank" rel="noreferrer" className="font-bold text-slate-800 hover:text-blue-600 transition-colors">
-                                                                {csirt.web_csirt}
-                                                            </a>
-                                                        ) : <p className="font-bold text-slate-800">-</p>}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex-1 flex flex-col gap-4">
-                                        <div className="flex gap-4">
-                                            <div className="flex-1 bg-slate-100/90 rounded-2xl p-5 flex items-center gap-4 border border-slate-200/50">
-                                                <div className="text-blue-500"><UserCheck className="w-6 h-6" /></div>
-                                                <div>
-                                                    <h4 className="text-xl font-bold text-blue-600">{sdmList.length}</h4>
-                                                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mt-0.5">SDM Terdaftar</p>
-                                                </div>
-                                            </div>
-                                            <div className="flex-1 bg-emerald-50 rounded-2xl p-5 flex items-center gap-4 border border-emerald-100">
-                                                <div className="text-emerald-500"><Server className="w-6 h-6" /></div>
-                                                <div>
-                                                    <h4 className="text-xl font-bold text-emerald-600">{seList.length}</h4>
-                                                    <p className="text-xs font-semibold text-emerald-600/70 uppercase tracking-wider mt-0.5">SE Terdaftar</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="bg-white rounded-2xl p-4 flex flex-col gap-3 border border-slate-200 shadow-sm mt-2">
-                                            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Dokumen Pendukung</h4>
-                                            <div className="flex gap-3">
-                                                {csirt.file_rfc2350 ? (
-                                                    <button onClick={() => setDownloadDoc({ url: getMediaUrl(csirt.file_rfc2350), name: "RFC 2350", csirtName: csirt.nama_csirt })} className="flex-1 bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-200 rounded-xl p-3 flex items-center gap-3 transition-colors group text-left">
-                                                        <LinkIcon className="w-5 h-5 text-slate-400 group-hover:text-blue-500 transition-colors" />
-                                                        <span className="font-semibold text-slate-700 text-xs group-hover:text-blue-600 transition-colors">RFC 2350</span>
-                                                    </button>
-                                                ) : <span className="flex-1 text-xs text-slate-400 p-3 italic">RFC 2350 belum diunggah</span>}
-                                                {csirt.file_public_key_pgp ? (
-                                                    <button onClick={() => setDownloadDoc({ url: getMediaUrl(csirt.file_public_key_pgp), name: "PGP Public Key", csirtName: csirt.nama_csirt })} className="flex-1 bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-200 rounded-xl p-3 flex items-center gap-3 transition-colors group text-left">
-                                                        <LinkIcon className="w-5 h-5 text-slate-400 group-hover:text-blue-500 transition-colors" />
-                                                        <span className="font-semibold text-slate-700 text-xs group-hover:text-blue-600 transition-colors">PGP Public Key</span>
-                                                    </button>
-                                                ) : <span className="flex-1 text-xs text-slate-400 p-3 italic">PGP Key belum diunggah</span>}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* SDM Table */}
-                            <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden mb-6">
-                                <div className="px-6 py-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                    <h3 className="font-bold text-slate-800 text-lg">Tabel Daftar SDM CSIRT</h3>
-                                    <button onClick={() => { setEditingSdm(null); setShowSdmModal(true); }} className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold text-sm shadow-md shadow-blue-500/25 hover:shadow-blue-500/40 hover:scale-[1.01] active:scale-[0.99] transition-all whitespace-nowrap">
-                                        <Plus className="w-4 h-4" /> Tambah SDM
-                                    </button>
-                                </div>
-                                <div className="overflow-x-auto">
-                                    <table className="w-full text-left text-sm text-slate-600 whitespace-nowrap">
-                                        <thead className="bg-slate-50 text-xs uppercase font-extrabold text-slate-500 tracking-wider">
-                                            <tr>
-                                                <th className="px-6 py-4">NO</th>
-                                                <th className="px-6 py-4"><div className="flex items-center gap-2"><User className="w-3.5 h-3.5" /> NAMA PERSONEL</div></th>
-                                                <th className="px-6 py-4"><div className="flex items-center gap-2"><ShieldCheck className="w-3.5 h-3.5" /> CSIRT</div></th>
-                                                <th className="px-6 py-4"><div className="flex items-center gap-2"><Briefcase className="w-3.5 h-3.5" /> JABATAN CSIRT</div></th>
-                                                <th className="px-6 py-4"><div className="flex items-center gap-2"><Building2 className="w-3.5 h-3.5" /> JABATAN PERUSAHAAN</div></th>
-                                                <th className="px-6 py-4"><div className="flex items-center gap-2"><Wrench className="w-3.5 h-3.5" /> KEAHLIAN</div></th>
-                                                <th className="px-6 py-4"><div className="flex items-center gap-2"><Award className="w-3.5 h-3.5" /> SERTIFIKASI</div></th>
-                                                <th className="px-6 py-4 text-center">AKSI</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-slate-100">
-                                            {sdmList.map((sdm: any, i: number) => (
-                                                <tr key={sdm.id} className="hover:bg-slate-50/50 transition-colors">
-                                                    <td className="px-6 py-4 font-medium">{i + 1}</td>
-                                                    <td className="px-6 py-4 font-bold text-slate-800">{sdm.nama_personel}</td>
-                                                    <td className="px-6 py-4 font-semibold text-blue-400">{sdm.csirt?.nama_csirt || csirt.nama_csirt}</td>
-                                                    <td className="px-6 py-4 font-medium text-slate-700">{sdm.jabatan_csirt}</td>
-                                                    <td className="px-6 py-4 text-slate-500">{sdm.jabatan_perusahaan}</td>
-                                                    <td className="px-6 py-4 text-slate-500">{sdm.skill}</td>
-                                                    <td className="px-6 py-4 whitespace-normal min-w-[200px]">
-                                                        <div className="flex flex-wrap gap-1.5 mt-1">
-                                                            {sdm.sertifikasi ? sdm.sertifikasi.split(',').map((s: string, idx: number) => {
-                                                                const trimmed = s.trim();
-                                                                if (!trimmed) return null;
-                                                                return (
-                                                                    <span key={idx} className="bg-blue-50 border border-blue-100 text-blue-600 px-2.5 py-1 rounded-md text-xs font-bold tracking-wide">
-                                                                        {trimmed}
-                                                                    </span>
-                                                                );
-                                                            }) : <span className="text-slate-400">-</span>}
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        <div className="flex items-center justify-center gap-2">
-                                                            <button onClick={() => { setEditingSdm(sdm); setShowSdmModal(true); }} className="p-2 text-emerald-500 bg-emerald-50 rounded-lg hover:bg-emerald-100 transition-colors"><Pencil className="w-4 h-4" /></button>
-                                                            <button onClick={() => handleDeleteSdm(sdm)} disabled={deleteSdmMutation.isPending} className="p-2 text-red-500 bg-red-50 rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50"><Trash2 className="w-4 h-4" /></button>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                            {sdmList.length === 0 && (
-                                                <tr><td colSpan={8} className="px-6 py-8 text-center text-slate-400">Belum ada data SDM</td></tr>
-                                            )}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-
-                            {/* SE Table */}
-                            <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-                                <div className="px-6 py-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                    <h3 className="font-bold text-slate-800 text-lg">Tabel Daftar SE-CSIRT</h3>
-                                </div>
-                                <div className="overflow-x-auto">
-                                    <table className="w-full text-left text-sm text-slate-600 whitespace-nowrap">
-                                        <thead className="bg-slate-50 text-xs uppercase font-extrabold text-slate-500 tracking-wider">
-                                            <tr>
-                                                <th className="px-6 py-4">NO</th>
-                                                <th className="px-6 py-4"><div className="flex items-center gap-2"><Server className="w-3.5 h-3.5" /> NAMA SE</div></th>
-                                                <th className="px-6 py-4"><div className="flex items-center gap-2"><Globe className="w-3.5 h-3.5" /> IP SE</div></th>
-                                                <th className="px-6 py-4"><div className="flex items-center gap-2"><Hash className="w-3.5 h-3.5" /> AS NUMBER</div></th>
-                                                <th className="px-6 py-4"><div className="flex items-center gap-2"><UserCheck className="w-3.5 h-3.5" /> PENGELOLA</div></th>
-                                                <th className="px-6 py-4"><div className="flex items-center gap-2"><Settings className="w-3.5 h-3.5" /> FITUR</div></th>
-                                                <th className="px-6 py-4"><div className="flex items-center gap-2"><Tag className="w-3.5 h-3.5" /> KATEGORI</div></th>
-                                                <th className="px-6 py-4 text-center">AKSI</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-slate-100">
-                                            {seList.map((se: any, i: number) => (
-                                                <tr key={se.id} className="hover:bg-slate-50/50 transition-colors">
-                                                    <td className="px-6 py-4 font-medium">{i + 1}</td>
-                                                    <td className="px-6 py-4 font-bold text-slate-800">{se.nama_se}</td>
-                                                    <td className="px-6 py-4 font-semibold text-blue-500">{se.ip_se}</td>
-                                                    <td className="px-6 py-4 text-slate-500">{se.as_number_se}</td>
-                                                    <td className="px-6 py-4 text-slate-700 font-medium">{se.pengelola_se}</td>
-                                                    <td className="px-6 py-4 text-slate-500">{se.fitur_se}</td>
-                                                    <td className="px-6 py-4">
-                                                        {se.kategori_se ? <span className="bg-orange-50 border border-orange-100 text-orange-600 px-3 py-1 rounded-lg text-xs font-bold tracking-wide">{se.kategori_se}</span> : <span className="text-slate-400">-</span>}
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        <div className="flex items-center justify-center gap-2">
-                                                            <button onClick={() => setViewingSe(se)} className="p-2 text-blue-500 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"><Eye className="w-4 h-4" /></button>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                            {seList.length === 0 && (
-                                                <tr><td colSpan={8} className="px-6 py-8 text-center text-slate-400">Belum ada data SE</td></tr>
-                                            )}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </>
-                    )}
                 </div>
 
-                {/* ── Modals ── */}
-                <AnimatePresence>
-                    {showForm && !editing && (
-                        <CreateCsirtModal idPerusahaan={idPerusahaan} onSubmit={handleCreate} onClose={() => setShowForm(false)} loading={createMutation.isPending} />
-                    )}
-                    {editing && (
-                        <EditCsirtModal initial={editing} idPerusahaan={idPerusahaan} onSubmit={handleUpdate} onClose={() => { setEditing(null); setShowForm(false); }} loading={updateMutation.isPending} />
-                    )}
-                    {showSdmModal && !editingSdm && activeCsirtId && (
-                        <CreateSdmModal csirtId={activeCsirtId} onSave={handleSdmSave} onClose={() => setShowSdmModal(false)} loading={createSdmMutation.isPending} />
-                    )}
-                    {showSdmModal && editingSdm && activeCsirtId && (
-                        <EditSdmModal initial={editingSdm} csirtId={activeCsirtId} onSave={handleSdmSave} onClose={() => { setShowSdmModal(false); setEditingSdm(null); }} loading={updateSdmMutation.isPending} />
-                    )}
+                {isLoading ? (
+                    <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-blue-600" /></div>
+                ) : !csirt ? (
+                    <div className="text-center py-16 text-slate-400 bg-white rounded-3xl border border-slate-200">
+                        <Building2 className="w-12 h-12 mx-auto mb-3 opacity-40" />
+                        <p className="font-semibold text-slate-600 mb-2">Belum ada data CSIRT</p>
+                        <p className="text-sm mt-1 text-slate-500 mb-6">Silakan daftarkan tim CSIRT perusahaan Anda terlebih dahulu.</p>
+                        <button
+                            onClick={() => { setEditing(null); setShowForm(true); }}
+                            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-blue-600 text-white font-bold shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 hover:scale-105 active:scale-95 transition-all"
+                        >
+                            <Plus className="w-5 h-5" /> Buat Profil CSIRT
+                        </button>
+                    </div>
+                ) : (
+                    <>
+                        {/* Main Card */}
+                        <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden mb-6">
+                            <div className="bg-[#203db0] p-6 flex items-start justify-between text-white">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-12 h-12 rounded-xl border border-white/20 flex items-center justify-center backdrop-blur-sm">
+                                        <Building2 className="w-6 h-6 text-white" />
+                                    </div>
+                                    <div>
+                                        <h2 className="text-xl font-bold">{csirt.nama_csirt || "Nama CSIRT"}</h2>
+                                        <p className="text-blue-100 text-sm mt-0.5">Detail informasi dan manajemen CSIRT</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => { setEditing(csirt); setShowForm(true); }}
+                                        className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm"
+                                    >
+                                        <Pencil className="w-4 h-4" /> Edit CSIRT
+                                    </button>
+                                    <button
+                                        onClick={() => { if (confirm("Hapus profil CSIRT ini?")) deleteMutation.mutate(activeCsirtId); }}
+                                        className="p-2 transition-colors hover:bg-red-500/20 text-red-200 hover:text-red-100 rounded-lg shrink-0"
+                                        title="Hapus CSIRT"
+                                    >
+                                        <Trash2 className="w-5 h-5" />
+                                    </button>
+                                </div>
+                            </div>
 
-                    {viewingSe && (
-                        <SeDetailModal se={viewingSe} onClose={() => setViewingSe(null)} />
-                    )}
-                    {downloadDoc && (
-                        <DownloadDocModal fileUrl={downloadDoc.url} fileName={downloadDoc.name} csirtName={downloadDoc.csirtName} onClose={() => setDownloadDoc(null)} />
-                    )}
-                </AnimatePresence>
-            </RequireCompanyProfile>
+                            <div className="p-6 md:p-8 flex flex-col md:flex-row gap-8 relative z-10 bg-slate-50/50">
+                                <div className="flex-1 flex flex-col md:flex-row gap-6">
+                                    <div className="w-40 h-40 rounded-3xl shadow-md p-2 flex-shrink-0 bg-white border border-slate-100 flex items-center justify-center overflow-hidden">
+                                        {getMediaUrl(csirt.photo_csirt) ? (
+                                            <img src={getMediaUrl(csirt.photo_csirt)} alt="CSIRT Photo" className="w-full h-full object-cover rounded-2xl" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                                        ) : (
+                                            <div className="w-full h-full rounded-2xl bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center">
+                                                <Building2 className="w-16 h-16 text-blue-400 opacity-60" />
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="pt-2">
+                                        <h3 className="text-3xl font-bold text-slate-800 mb-6 font-display">{csirt.nama_csirt}</h3>
+                                        <div className="flex flex-col gap-4">
+                                            <div className="flex items-center gap-3 text-slate-600">
+                                                <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0">
+                                                    <Phone className="w-4 h-4 text-blue-500" />
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-0.5">Telepon</p>
+                                                    <p className="font-bold text-slate-800">{csirt.telepon_csirt || "-"}</p>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-3 text-slate-600">
+                                                <div className="w-10 h-10 rounded-full bg-orange-50 flex items-center justify-center flex-shrink-0">
+                                                    <Globe className="w-4 h-4 text-orange-500" />
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-0.5">Website</p>
+                                                    {csirt.web_csirt ? (
+                                                        <a href={csirt.web_csirt.startsWith("http") ? csirt.web_csirt : `https://${csirt.web_csirt}`} target="_blank" rel="noreferrer" className="font-bold text-slate-800 hover:text-blue-600 transition-colors">
+                                                            {csirt.web_csirt}
+                                                        </a>
+                                                    ) : <p className="font-bold text-slate-800">-</p>}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="flex-1 flex flex-col gap-4">
+                                    <div className="flex gap-4">
+                                        <div className="flex-1 bg-slate-100/90 rounded-2xl p-5 flex items-center gap-4 border border-slate-200/50">
+                                            <div className="text-blue-500"><UserCheck className="w-6 h-6" /></div>
+                                            <div>
+                                                <h4 className="text-xl font-bold text-blue-600">{sdmList.length}</h4>
+                                                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mt-0.5">SDM Terdaftar</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex-1 bg-emerald-50 rounded-2xl p-5 flex items-center gap-4 border border-emerald-100">
+                                            <div className="text-emerald-500"><Server className="w-6 h-6" /></div>
+                                            <div>
+                                                <h4 className="text-xl font-bold text-emerald-600">{seList.length}</h4>
+                                                <p className="text-xs font-semibold text-emerald-600/70 uppercase tracking-wider mt-0.5">SE Terdaftar</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="bg-white rounded-2xl p-4 flex flex-col gap-3 border border-slate-200 shadow-sm mt-2">
+                                        <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Dokumen Pendukung</h4>
+                                        <div className="flex gap-3">
+                                            {csirt.file_rfc2350 ? (
+                                                <button onClick={() => setDownloadDoc({ url: getMediaUrl(csirt.file_rfc2350), name: "RFC 2350", csirtName: csirt.nama_csirt })} className="flex-1 bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-200 rounded-xl p-3 flex items-center gap-3 transition-colors group text-left">
+                                                    <LinkIcon className="w-5 h-5 text-slate-400 group-hover:text-blue-500 transition-colors" />
+                                                    <span className="font-semibold text-slate-700 text-xs group-hover:text-blue-600 transition-colors">RFC 2350</span>
+                                                </button>
+                                            ) : <span className="flex-1 text-xs text-slate-400 p-3 italic">RFC 2350 belum diunggah</span>}
+                                            {csirt.file_public_key_pgp ? (
+                                                <button onClick={() => setDownloadDoc({ url: getMediaUrl(csirt.file_public_key_pgp), name: "PGP Public Key", csirtName: csirt.nama_csirt })} className="flex-1 bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-200 rounded-xl p-3 flex items-center gap-3 transition-colors group text-left">
+                                                    <LinkIcon className="w-5 h-5 text-slate-400 group-hover:text-blue-500 transition-colors" />
+                                                    <span className="font-semibold text-slate-700 text-xs group-hover:text-blue-600 transition-colors">PGP Public Key</span>
+                                                </button>
+                                            ) : <span className="flex-1 text-xs text-slate-400 p-3 italic">PGP Key belum diunggah</span>}
+                                            {csirt.file_str ? (
+                                                <button onClick={() => setDownloadDoc({ url: getMediaUrl(csirt.file_str), name: "Surat Tanda Registrasi", csirtName: csirt.nama_csirt })} className="flex-1 bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-200 rounded-xl p-3 flex items-center gap-3 transition-colors group text-left">
+                                                    <LinkIcon className="w-5 h-5 text-slate-400 group-hover:text-blue-500 transition-colors" />
+                                                    <span className="font-semibold text-slate-700 text-xs group-hover:text-blue-600 transition-colors">Surat Tanda Registrasi</span>
+                                                </button>
+                                            ) : <span className="flex-1 text-xs text-slate-400 p-3 italic">Surat Tanda Registrasi belum diunggah</span>}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* SDM Table */}
+                        <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden mb-6">
+                            <div className="px-6 py-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                <h3 className="font-bold text-slate-800 text-lg">Tabel Daftar SDM CSIRT</h3>
+                                <button onClick={() => { setEditingSdm(null); setShowSdmModal(true); }} className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold text-sm shadow-md shadow-blue-500/25 hover:shadow-blue-500/40 hover:scale-[1.01] active:scale-[0.99] transition-all whitespace-nowrap">
+                                    <Plus className="w-4 h-4" /> Tambah SDM
+                                </button>
+                            </div>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left text-sm text-slate-600 whitespace-nowrap">
+                                    <thead className="bg-slate-50 text-xs uppercase font-extrabold text-slate-500 tracking-wider">
+                                        <tr>
+                                            <th className="px-6 py-4">NO</th>
+                                            <th className="px-6 py-4"><div className="flex items-center gap-2"><User className="w-3.5 h-3.5" /> NAMA PERSONEL</div></th>
+                                            <th className="px-6 py-4"><div className="flex items-center gap-2"><ShieldCheck className="w-3.5 h-3.5" /> CSIRT</div></th>
+                                            <th className="px-6 py-4"><div className="flex items-center gap-2"><Briefcase className="w-3.5 h-3.5" /> JABATAN CSIRT</div></th>
+                                            <th className="px-6 py-4"><div className="flex items-center gap-2"><Building2 className="w-3.5 h-3.5" /> JABATAN PERUSAHAAN</div></th>
+                                            <th className="px-6 py-4"><div className="flex items-center gap-2"><Wrench className="w-3.5 h-3.5" /> KEAHLIAN</div></th>
+                                            <th className="px-6 py-4"><div className="flex items-center gap-2"><Award className="w-3.5 h-3.5" /> SERTIFIKASI</div></th>
+                                            <th className="px-6 py-4 text-center">AKSI</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                        {sdmList.map((sdm: any, i: number) => (
+                                            <tr key={sdm.id} className="hover:bg-slate-50/50 transition-colors">
+                                                <td className="px-6 py-4 font-medium">{i + 1}</td>
+                                                <td className="px-6 py-4 font-bold text-slate-800">{sdm.nama_personel}</td>
+                                                <td className="px-6 py-4 font-semibold text-blue-400">{sdm.csirt?.nama_csirt || csirt.nama_csirt}</td>
+                                                <td className="px-6 py-4 font-medium text-slate-700">{sdm.jabatan_csirt}</td>
+                                                <td className="px-6 py-4 text-slate-500">{sdm.jabatan_perusahaan}</td>
+                                                <td className="px-6 py-4 text-slate-500">{sdm.skill}</td>
+                                                <td className="px-6 py-4 whitespace-normal min-w-[200px]">
+                                                    <div className="flex flex-wrap gap-1.5 mt-1">
+                                                        {sdm.sertifikasi ? sdm.sertifikasi.split(',').map((s: string, idx: number) => {
+                                                            const trimmed = s.trim();
+                                                            if (!trimmed) return null;
+                                                            return (
+                                                                <span key={idx} className="bg-blue-50 border border-blue-100 text-blue-600 px-2.5 py-1 rounded-md text-xs font-bold tracking-wide">
+                                                                    {trimmed}
+                                                                </span>
+                                                            );
+                                                        }) : <span className="text-slate-400">-</span>}
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <div className="flex items-center justify-center gap-2">
+                                                        <button onClick={() => { setEditingSdm(sdm); setShowSdmModal(true); }} className="p-2 text-emerald-500 bg-emerald-50 rounded-lg hover:bg-emerald-100 transition-colors"><Pencil className="w-4 h-4" /></button>
+                                                        <button onClick={() => handleDeleteSdm(sdm)} disabled={deleteSdmMutation.isPending} className="p-2 text-red-500 bg-red-50 rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50"><Trash2 className="w-4 h-4" /></button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                        {sdmList.length === 0 && (
+                                            <tr><td colSpan={8} className="px-6 py-8 text-center text-slate-400">Belum ada data SDM</td></tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        {/* SE Table */}
+                        <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+                            <div className="px-6 py-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                <h3 className="font-bold text-slate-800 text-lg">Tabel Daftar SE-CSIRT</h3>
+                            </div>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left text-sm text-slate-600 whitespace-nowrap">
+                                    <thead className="bg-slate-50 text-xs uppercase font-extrabold text-slate-500 tracking-wider">
+                                        <tr>
+                                            <th className="px-6 py-4">NO</th>
+                                            <th className="px-6 py-4"><div className="flex items-center gap-2"><Server className="w-3.5 h-3.5" /> NAMA SE</div></th>
+                                            <th className="px-6 py-4"><div className="flex items-center gap-2"><Globe className="w-3.5 h-3.5" /> IP SE</div></th>
+                                            <th className="px-6 py-4"><div className="flex items-center gap-2"><Hash className="w-3.5 h-3.5" /> AS NUMBER</div></th>
+                                            <th className="px-6 py-4"><div className="flex items-center gap-2"><UserCheck className="w-3.5 h-3.5" /> PENGELOLA</div></th>
+                                            <th className="px-6 py-4"><div className="flex items-center gap-2"><Settings className="w-3.5 h-3.5" /> FITUR</div></th>
+                                            <th className="px-6 py-4"><div className="flex items-center gap-2"><Tag className="w-3.5 h-3.5" /> KATEGORI</div></th>
+                                            <th className="px-6 py-4 text-center">AKSI</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                        {seList.map((se: any, i: number) => (
+                                            <tr key={se.id} className="hover:bg-slate-50/50 transition-colors">
+                                                <td className="px-6 py-4 font-medium">{i + 1}</td>
+                                                <td className="px-6 py-4 font-bold text-slate-800">{se.nama_se}</td>
+                                                <td className="px-6 py-4 font-semibold text-blue-500">{se.ip_se}</td>
+                                                <td className="px-6 py-4 text-slate-500">{se.as_number_se}</td>
+                                                <td className="px-6 py-4 text-slate-700 font-medium">{se.pengelola_se}</td>
+                                                <td className="px-6 py-4 text-slate-500">{se.fitur_se}</td>
+                                                <td className="px-6 py-4">
+                                                    {se.kategori_se ? <span className="bg-orange-50 border border-orange-100 text-orange-600 px-3 py-1 rounded-lg text-xs font-bold tracking-wide">{se.kategori_se}</span> : <span className="text-slate-400">-</span>}
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <div className="flex items-center justify-center gap-2">
+                                                        <button onClick={() => setViewingSe(se)} className="p-2 text-blue-500 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"><Eye className="w-4 h-4" /></button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                        {seList.length === 0 && (
+                                            <tr><td colSpan={8} className="px-6 py-8 text-center text-slate-400">Belum ada data SE</td></tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </>
+                )}
+            </div>
+
+            {/* ── Modals ── */}
+            <AnimatePresence>
+                {showForm && !editing && (
+                    <CreateCsirtModal idPerusahaan={idPerusahaan} onSubmit={handleCreate} onClose={() => setShowForm(false)} loading={createMutation.isPending} />
+                )}
+                {editing && (
+                    <EditCsirtModal initial={editing} idPerusahaan={idPerusahaan} onSubmit={handleUpdate} onClose={() => { setEditing(null); setShowForm(false); }} loading={updateMutation.isPending} />
+                )}
+                {showSdmModal && !editingSdm && activeCsirtId && (
+                    <CreateSdmModal csirtId={activeCsirtId} onSave={handleSdmSave} onClose={() => setShowSdmModal(false)} loading={createSdmMutation.isPending} />
+                )}
+                {showSdmModal && editingSdm && activeCsirtId && (
+                    <EditSdmModal initial={editingSdm} csirtId={activeCsirtId} onSave={handleSdmSave} onClose={() => { setShowSdmModal(false); setEditingSdm(null); }} loading={updateSdmMutation.isPending} />
+                )}
+
+                {viewingSe && (
+                    <SeDetailModal se={viewingSe} onClose={() => setViewingSe(null)} />
+                )}
+                {downloadDoc && (
+                    <DownloadDocModal fileUrl={downloadDoc.url} fileName={downloadDoc.name} csirtName={downloadDoc.csirtName} onClose={() => setDownloadDoc(null)} />
+                )}
+            </AnimatePresence>
+        </RequireCompanyProfile>
     );
 }

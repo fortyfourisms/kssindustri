@@ -101,10 +101,21 @@ interface AuthState {
 
     /**
      * Restore session dari HTTP-only cookie via GET /api/me.
-     * Dipanggil oleh ProtectedRoute setiap kali tab baru dibuka atau app di-mount.
+     * Dipanggil oleh ProtectedRoute saat navigasi ke halaman protected.
      * Mengembalikan true jika cookie masih valid dan state berhasil di-hydrate.
+     * Berbeda dari bootstrapSession: langsung GET /api/me (tidak refresh dulu).
      */
     rehydrateFromServer: () => Promise<boolean>;
+
+    /**
+     * Silent session restore saat app pertama kali mount (bootstrapApp).
+     * Urutan:
+     *   1. POST /api/refresh — cek apakah refresh token cookie masih valid.
+     *   2. Jika berhasil → GET /api/me → hydrate store → return true.
+     *   3. Jika gagal (guest / expired) → set unauthenticated → return false (silent).
+     * Tidak pernah melempar error — cocok dipanggil dari bootstrapApp().
+     */
+    bootstrapSession: () => Promise<boolean>;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -241,6 +252,26 @@ export const useAuthStore = create<AuthState>()(
                 return true;
             } catch {
                 // Cookie tidak valid atau expired — biarkan state tetap unauthenticated
+                set({ authenticated: false, currentUser: null });
+                return false;
+            }
+        },
+
+        bootstrapSession: async () => {
+            try {
+                // Step 1: Coba refresh token dulu — bypass interceptor apiClient
+                // agar tidak memicu loop jika tidak ada session.
+                await authService.refresh();
+
+                // Step 2: Refresh berhasil → ambil data user
+                const response = await authService.verifySession();
+                if (!response) return false;
+                const userData = mapToCurrentUser(response);
+                set({ authenticated: true, currentUser: userData });
+                return true;
+            } catch {
+                // Tidak ada refresh token valid — guest experience.
+                // Tidak throw, tidak log error — ini kondisi normal.
                 set({ authenticated: false, currentUser: null });
                 return false;
             }
