@@ -3,6 +3,16 @@ import { ikasService } from '@/services/ikas.service';
 import type { IkasData } from '@/types/ikas.types';
 import type { CreateIkasPayload, UpdateIkasPayload } from '@/services/ikas.service';
 
+// ─── Respondent form state (used in FormIkas) ─────────────────────────────────
+export interface RespondentFormData {
+    responden: string;
+    jabatan: string;
+    telepon: string;
+    tanggal: string;
+    target_nilai: number;
+    kategori_kematangan_keamanan_siber: string;
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface ActionResult<T = unknown> {
@@ -20,6 +30,14 @@ interface IkasState {
     initialized: boolean;
     loading: boolean;
     error: string | null;
+
+    // ── Respondent form state (FormIkas step 1) ────────────────────────────────
+    /** Last successfully saved respondent data */
+    respondentData: RespondentFormData | null;
+    /** True when respondent has been saved to backend — gates access to step 2 */
+    respondentSaved: boolean;
+    /** Loading state specifically for the respondent save request */
+    isLoading: boolean;
 
     // ── Selectors ─────────────────────────────────────────────────────────────
     getIkasById: (id: string | number) => IkasData | undefined;
@@ -39,11 +57,11 @@ interface IkasState {
 
     /**
      * Load the IKAS record that belongs to the authenticated user.
-     * Pass the IKAS record ID (or company ID if the API uses company ID).
+     * Pass the IKAS record ID.
      *
      * For regular users, the UI should call this instead of `initialize`.
      */
-    loadByUserId: (id: string | number) => Promise<void>;
+    loadByIkasId: (id: string | number) => Promise<void>;
 
     /** Create a new IKAS record */
     createIkas: (payload: CreateIkasPayload) => Promise<ActionResult<IkasData>>;
@@ -57,6 +75,20 @@ interface IkasState {
     /** Import IKAS data from an Excel file (admin only) */
     importExcel: (file: File) => Promise<ActionResult>;
 
+    /**
+     * Save respondent data to the backend.
+     * - If existingId is provided → PUT /api/maturity/ikas/:id
+     * - Otherwise → POST /api/maturity/ikas
+     * On success: sets respondentSaved = true, respondentData = payload, currentIkas = result.
+     */
+    saveRespondent: (payload: RespondentFormData, existingId?: string | null) => Promise<ActionResult<IkasData>>;
+
+    /** Manually mark respondent as saved (e.g. after fetching existing data) */
+    setRespondentSaved: (value: boolean) => void;
+
+    /** Reset respondentSaved flag (e.g. when user edits the form) */
+    resetRespondentSaved: () => void;
+
     /** Reset store to initial state */
     reset: () => void;
 }
@@ -69,6 +101,10 @@ const initialState = {
     initialized: false,
     loading: false,
     error: null,
+    // Respondent form state
+    respondentData: null as RespondentFormData | null,
+    respondentSaved: false,
+    isLoading: false,
 };
 
 // ─── Store ────────────────────────────────────────────────────────────────────
@@ -113,10 +149,9 @@ export const useIkasStore = create<IkasState>()((set, get) => ({
 
     /**
      * Fetch the IKAS record belonging to the current user.
-     * The endpoint GET /api/maturity/ikas/{id} returns a single record.
-     * Regular users should only see data scoped to their own ID.
+     * The endpoint GET /api/maturity/ikas/{id} returns a single record by its IKAS ID.
      */
-    loadByUserId: async (id) => {
+    loadByIkasId: async (id) => {
         set({ loading: true, error: null });
         try {
             const data = await ikasService.getById(id);
@@ -200,6 +235,40 @@ export const useIkasStore = create<IkasState>()((set, get) => ({
             return { success: false, error: msg };
         }
     },
+
+    // ── Respondent form actions ────────────────────────────────────────────────
+
+    saveRespondent: async (payload, existingId) => {
+        set({ isLoading: true, error: null });
+        try {
+            let result: IkasData;
+            if (existingId) {
+                // Edit mode — PUT
+                result = await ikasService.update(existingId, payload);
+            } else {
+                // Create mode — POST
+                result = await ikasService.create(payload);
+            }
+            set({
+                respondentData: payload,
+                respondentSaved: true,
+                currentIkas: result,
+                isLoading: false,
+                error: null,
+            });
+            // Keep list fresh
+            if (get().initialized) await get().refresh();
+            return { success: true, data: result };
+        } catch (error: unknown) {
+            const msg = error instanceof Error ? error.message : 'Gagal menyimpan data responden';
+            set({ isLoading: false, error: msg });
+            return { success: false, error: msg };
+        }
+    },
+
+    setRespondentSaved: (value) => set({ respondentSaved: value }),
+
+    resetRespondentSaved: () => set({ respondentSaved: false }),
 
     reset: () => set(initialState),
 }));

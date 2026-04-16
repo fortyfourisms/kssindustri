@@ -1,170 +1,509 @@
 import { useState, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@/lib/api";
-import { useToast } from "@/hooks/use-toast";
-import { Loader2, Save, ClipboardList, TrendingUp } from "lucide-react";
-import { motion } from "framer-motion";
 import { RequireCompanyProfile } from "@/components/RequireCompanyProfile";
+import { Info, UserCircle2 } from "lucide-react";
+import { motion } from "framer-motion";
+import { useUser } from "@/hooks/useAuth";
 
-const SURVEI_QUESTIONS = [
-    { id: "Q1", category: "Aset", text: "Seberapa baik organisasi Anda mengidentifikasi dan mengelola aset informasi kritis?" },
-    { id: "Q2", category: "Aset", text: "Apakah inventaris aset selalu diperbarui secara berkala?" },
-    { id: "Q3", category: "Ancaman", text: "Seberapa baik organisasi mendeteksi ancaman siber yang masuk?" },
-    { id: "Q4", category: "Ancaman", text: "Apakah ada proses analisis ancaman (threat intelligence) yang rutin?" },
-    { id: "Q5", category: "Kerentanan", text: "Seberapa sering organisasi melakukan uji kerentanan (vulnerability assessment)?" },
-    { id: "Q6", category: "Kerentanan", text: "Apakah patch keamanan diterapkan dalam waktu yang tepat?" },
-    { id: "Q7", category: "Kontrol", text: "Seberapa efektif kontrol akses yang diterapkan di organisasi Anda?" },
-    { id: "Q8", category: "Kontrol", text: "Apakah enkripsi digunakan untuk melindungi data sensitif?" },
-    { id: "Q9", category: "Respons", text: "Seberapa siap organisasi dalam merespons insiden keamanan siber?" },
-    { id: "Q10", category: "Respons", text: "Apakah ada rencana pemulihan yang telah diuji secara berkala?" },
-];
-
-const SCORE_LABELS = ["", "Sangat Buruk", "Buruk", "Cukup", "Baik", "Sangat Baik"];
-const SCORE_COLORS = ["", "bg-red-500", "bg-orange-500", "bg-yellow-500", "bg-blue-500", "bg-emerald-500"];
-
-function getRiskProfile(score: number) {
-    if (score >= 80) return { label: "Risiko Rendah", color: "text-emerald-700", bg: "bg-emerald-50 border-emerald-200", bar: "bg-emerald-500" };
-    if (score >= 60) return { label: "Risiko Sedang", color: "text-blue-700", bg: "bg-blue-50 border-blue-200", bar: "bg-blue-500" };
-    if (score >= 40) return { label: "Risiko Tinggi", color: "text-amber-700", bg: "bg-amber-50 border-amber-200", bar: "bg-amber-500" };
-    return { label: "Risiko Sangat Tinggi", color: "text-red-700", bg: "bg-red-50 border-red-200", bar: "bg-red-500" };
-}
+const INPUT_CLS = "w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white/80 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400 transition";
+const LABEL_CLS = "block text-sm font-semibold text-slate-700 mb-1.5";
+import { useQuery } from "@tanstack/react-query";
+import { apiClient } from "@/services/apiClient";
 
 export default function SurveiProfil() {
-    const { toast } = useToast();
-    const qc = useQueryClient();
-    const { data, isLoading } = useQuery({ queryKey: ["survei"], queryFn: api.getSurvei });
-    const [answers, setAnswers] = useState<Record<string, number>>({});
-
-    useEffect(() => {
-        if (data?.answers) setAnswers(data.answers);
-    }, [data]);
-
-    const current = data?.answers ? { ...data.answers, ...answers } : answers;
-    const answered = Object.values(current).filter(Boolean).length;
-    const total = SURVEI_QUESTIONS.length;
-    const progress = Math.round((answered / total) * 100);
-
-    const savedScore = data?.score ?? null;
-    const profile = savedScore !== null ? getRiskProfile(savedScore) : null;
-
-    const saveMutation = useMutation({
-        mutationFn: () => api.saveSurvei(current),
-        onSuccess: () => {
-            qc.invalidateQueries({ queryKey: ["survei"] });
-            setAnswers({});
-            toast({ title: "Tersimpan", description: "Survei profil risiko berhasil disimpan." });
-        },
-        onError: (e: any) => toast({ title: "Gagal", description: e.message, variant: "destructive" }),
+    const [answers, setAnswers] = useState<Record<string, any>>({
+        responden_nama: '',
+        responden_jabatan: '',
+        responden_perusahaan: '',
+        responden_email: '',
+        responden_telepon: '',
+        responden_sektor: '',
+        responden_sertifikat: '',
+        q1: 'ya',
+        q1_alasan: '',
+        dampak_reputasi: null,
+        dampak_operasional: 'cukup_signifikan',
+        dampak_finansial: 'cukup_signifikan',
+        dampak_hukum: 'cukup_signifikan',
+        frekuensi: 'sedang',
+        q4: 'ya',
+        q5: ''
     });
 
-    const categories = Array.from(new Set(SURVEI_QUESTIONS.map((q) => q.category)));
+    const { data: user } = useUser();
+    const { data: subSektors } = useQuery({ queryKey: ["subSektor"], queryFn: () => apiClient.get<any[]>("/api/sub_sektor") });
+
+    const [step, setStep] = useState(0);
+
+    useEffect(() => {
+        if (user && !answers.responden_nama) {
+            setAnswers(prev => ({
+                ...prev,
+                responden_nama: user?.display_name || user?.username || '',
+                responden_jabatan: user?.jabatan_name || user?.jabatan || '',
+                responden_perusahaan: user?.perusahaan?.nama_perusahaan || '',
+                responden_email: user?.email || '',
+                responden_telepon: user?.perusahaan?.telepon || '',
+                responden_sektor: user?.perusahaan?.sub_sektor?.id || user?.perusahaan?.id_sub_sektor || ''
+            }));
+        }
+    }, [user]);
+
+    const setAnswer = (key: string, val: any) => {
+        setAnswers(prev => ({ ...prev, [key]: val }));
+    };
+
+    const isStep0Valid = answers.responden_nama && answers.responden_jabatan && answers.responden_perusahaan && answers.responden_email && answers.responden_telepon && answers.responden_sektor;
+
+    const handleNext = () => {
+        if (step === 0 && isStep0Valid) setStep(1);
+    };
+
+    const handlePrev = () => {
+        if (step === 1) setStep(0);
+    };
+
+    // Calculate progress based on how many questions have answers
+    let totalFields = 8;
+    const activeAnswers = { ...answers };
+
+    if (activeAnswers.q1 === 'tidak') {
+        // Only keep q1 and q1_alasan
+        const keysToKeep = ['q1', 'q1_alasan'];
+        Object.keys(activeAnswers).forEach(key => {
+            if (!keysToKeep.includes(key)) {
+                delete activeAnswers[key];
+            }
+        });
+        totalFields = 2; // q1 and q1_alasan
+    } else {
+        delete activeAnswers.q1_alasan;
+        totalFields = 8; // all other fields
+    }
+
+    const answeredFields = Object.values(activeAnswers).filter(v => v !== null && v !== '').length;
+    const progress = step === 0 ? 0 : Math.round((answeredFields / totalFields) * 100);
 
     return (
         <RequireCompanyProfile>
-                <div className="max-w-3xl mx-auto space-y-6">
-                    {/* Header */}
-                    <div className="bg-white/70 backdrop-blur-sm border border-white/60 rounded-2xl p-5 flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center shadow-lg shadow-orange-500/25">
-                            <ClipboardList className="w-6 h-6 text-white" />
-                        </div>
-                        <div>
-                            <h1 className="font-black text-slate-900 font-display">Survei Profil Risiko</h1>
-                            <p className="text-sm text-slate-500">Kuesioner penilaian profil risiko keamanan siber</p>
-                        </div>
+            <div className="min-h-screen bg-white pb-20 font-sans">
+                {/* Thin top blue progress bar like in the screenshot */}
+                <div className="fixed top-0 left-0 w-full h-[6px] bg-slate-200 z-50">
+                    <div
+                        className="h-full bg-blue-600 transition-all duration-300"
+                        style={{ width: `${progress}%` }}
+                    />
+                </div>
+
+                <div className="max-w-[70rem] mx-auto px-4 sm:px-6 mt-16">
+                    {/* Header Title */}
+                    <div className="text-center mb-8">
+                        <h1 className="text-[22px] font-normal text-slate-800">
+                            {step === 0 ? "Responden" : "Risiko 1. Pencurian Intellectual Property Perusahaan"}
+                        </h1>
                     </div>
 
-                    {/* Result Card */}
-                    {profile && (
+                    {step === 0 && (
                         <motion.div
-                            initial={{ opacity: 0, y: 12 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className={`rounded-2xl p-5 border ${profile.bg}`}
+                            initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+                            className="bg-white/70 backdrop-blur-sm border border-slate-200/60 rounded-2xl shadow-sm p-6 mb-8 max-w-4xl mx-auto"
                         >
-                            <div className="flex items-center gap-3 mb-3">
-                                <TrendingUp className={`w-5 h-5 ${profile.color}`} />
-                                <span className={`font-bold text-base ${profile.color}`}>{profile.label}</span>
-                                <span className={`ml-auto text-2xl font-black ${profile.color}`}>{savedScore}%</span>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                                <div className="col-span-1 md:col-span-2 border-b border-slate-100 pb-2">
+                                    <h2 className="font-bold text-slate-800 flex items-center gap-2">
+                                        <UserCircle2 className="w-5 h-5 text-blue-500" /> Detail Responden
+                                    </h2>
+                                </div>
+
+                                <div>
+                                    <label className={LABEL_CLS}>Nama Lengkap <span className="text-red-500">*</span></label>
+                                    <input
+                                        type="text"
+                                        value={answers.responden_nama}
+                                        onChange={(e) => setAnswer('responden_nama', e.target.value)}
+                                        className={INPUT_CLS}
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className={LABEL_CLS}>Jabatan <span className="text-red-500">*</span></label>
+                                    <input
+                                        type="text"
+                                        value={answers.responden_jabatan}
+                                        onChange={(e) => setAnswer('responden_jabatan', e.target.value)}
+                                        className={INPUT_CLS}
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className={LABEL_CLS}>Perusahaan <span className="text-red-500">*</span></label>
+                                    <input
+                                        type="text"
+                                        value={answers.responden_perusahaan}
+                                        onChange={(e) => setAnswer('responden_perusahaan', e.target.value)}
+                                        className={INPUT_CLS}
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className={LABEL_CLS}>Sektor <span className="text-red-500">*</span></label>
+                                    <p className="text-xs text-slate-400 mb-1.5 flex items-center gap-1">
+                                        <Info className="w-3.5 h-3.5" /> Pilih salah satu opsi
+                                    </p>
+                                    <select
+                                        value={answers.responden_sektor}
+                                        onChange={(e) => setAnswer('responden_sektor', e.target.value)}
+                                        className={`${INPUT_CLS} appearance-none cursor-pointer pr-10`}
+                                    >
+                                        <option value="">Harap pilih...</option>
+                                        {subSektors?.map((s: any) => (
+                                            <option key={s.id} value={s.id}>{s.nama_sub_sektor}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className={LABEL_CLS}>Email <span className="text-red-500">*</span></label>
+                                    <p className="text-xs text-slate-400 mb-1.5 flex items-center gap-1">
+                                        <Info className="w-3.5 h-3.5" /> Harap periksa format jawaban
+                                    </p>
+                                    <input
+                                        type="email"
+                                        value={answers.responden_email}
+                                        onChange={(e) => setAnswer('responden_email', e.target.value)}
+                                        className={INPUT_CLS}
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className={LABEL_CLS}>Nomor Telepon/Whatsapp <span className="text-red-500">*</span></label>
+                                    <p className="text-xs text-slate-400 mb-1.5 flex items-center gap-1">
+                                        <Info className="w-3.5 h-3.5" /> Berupa angka
+                                    </p>
+                                    <input
+                                        type="tel"
+                                        value={answers.responden_telepon}
+                                        onChange={(e) => setAnswer('responden_telepon', e.target.value)}
+                                        className={INPUT_CLS}
+                                    />
+                                </div>
+
+                                <div className="col-span-1 md:col-span-2 mt-2">
+                                    <label className={LABEL_CLS}>Sertifikat atau Training Keamanan Siber yang Pernah Diikuti</label>
+                                    <textarea
+                                        className={`${INPUT_CLS} min-h-[120px] resize-y mt-1.5`}
+                                        value={answers.responden_sertifikat}
+                                        onChange={(e) => setAnswer('responden_sertifikat', e.target.value)}
+                                    />
+                                </div>
+
                             </div>
-                            <div className="w-full bg-white/60 rounded-full h-2.5">
-                                <motion.div
-                                    className={`h-2.5 rounded-full ${profile.bar}`}
-                                    initial={{ width: 0 }}
-                                    animate={{ width: `${savedScore}%` }}
-                                    transition={{ duration: 0.8 }}
-                                />
-                            </div>
-                            <p className="text-xs mt-2 opacity-70">Berdasarkan {total} pertanyaan survei</p>
                         </motion.div>
                     )}
 
-                    {/* Progress */}
-                    <div className="bg-white/70 backdrop-blur-sm border border-white/60 rounded-2xl p-5">
-                        <div className="flex items-center justify-between mb-2">
-                            <span className="text-sm font-semibold text-slate-700">Progress</span>
-                            <span className="text-sm font-bold text-orange-600">{answered}/{total}</span>
-                        </div>
-                        <div className="w-full bg-slate-100 rounded-full h-2">
-                            <motion.div
-                                className="h-2 rounded-full bg-gradient-to-r from-orange-500 to-amber-500"
-                                animate={{ width: `${progress}%` }}
-                                transition={{ duration: 0.4 }}
-                            />
-                        </div>
-                    </div>
+                    {step === 1 && (
+                        <>
+                            {/* Intro Card */}
+                            <div className="bg-slate-50 border border-slate-100 rounded-lg p-6 mb-8 text-[14px] text-slate-700 leading-relaxed shadow-sm">
+                                <div className="mb-4 text-slate-600 font-medium">
+                                    Risiko 1/14
+                                </div>
+                                <p className="mb-4">
+                                    Intellectual Property atau Hak Kekayaan Intelektual mencakup paten, hak cipta, merek dagang, desain industri, rahasia dagang, serta inovasi lainnya yang menjadi aset strategis bagi perusahaan. Dalam era Industri 4.0, semakin banyak perusahaan mengandalkan teknologi digital untuk menyimpan, mengelola, dan berbagi informasi terkait HAKI mereka. Namun, hal ini juga meningkatkan risiko pencurian HAKI oleh pihak tidak bertanggung jawab, baik melalui serangan siber, insider threat (ancaman dari dalam), maupun kebocoran data yang tidak disengaja.
+                                </p>
+                                <p>
+                                    Kami ingin mengetahui sejauh mana perusahaan Anda menyadari dan mengelola risiko ini. Mohon berikan jawaban yang mencerminkan kondisi aktual di perusahaan Anda.
+                                </p>
+                            </div>
 
-                    {/* Questions by category */}
-                    {isLoading ? (
-                        <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-orange-500" /></div>
-                    ) : (
-                        categories.map((cat, ci) => (
-                            <motion.div
-                                key={cat}
-                                initial={{ opacity: 0, y: 16 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: ci * 0.07 }}
-                                className="bg-white/70 backdrop-blur-sm border border-white/60 rounded-2xl p-5 space-y-5"
-                            >
-                                <h3 className="font-bold text-slate-900 border-b border-slate-100 pb-2">Kategori: {cat}</h3>
-                                {SURVEI_QUESTIONS.filter((q) => q.category === cat).map((q) => (
-                                    <div key={q.id} className="space-y-2">
-                                        <p className="text-sm text-slate-700">{q.text}</p>
-                                        <div className="flex gap-2">
-                                            {[1, 2, 3, 4, 5].map((n) => (
-                                                <button
-                                                    key={n}
-                                                    onClick={() => setAnswers((a) => ({ ...a, [q.id]: n }))}
-                                                    title={SCORE_LABELS[n]}
-                                                    className={`flex-1 py-2 rounded-xl text-xs font-bold border transition-all ${current[q.id] === n
-                                                        ? `${SCORE_COLORS[n]} text-white border-transparent shadow-md`
-                                                        : "bg-white text-slate-500 border-slate-200 hover:border-orange-300"
-                                                        }`}
-                                                >
-                                                    {n}
-                                                </button>
-                                            ))}
-                                        </div>
-                                        {current[q.id] && (
-                                            <p className="text-xs text-slate-400">{SCORE_LABELS[current[q.id]]}</p>
-                                        )}
+                            <div className="space-y-8">
+                                {/* Question 1 */}
+                                <div className="bg-slate-50/50 border border-slate-200/60 rounded-xl p-6">
+                                    <p className="text-[15px] font-medium text-slate-800 mb-3 flex items-start gap-1">
+                                        <span className="text-red-500 mt-0.5">*</span>
+                                        Apakah perusahaan Anda berpotensi mengalami atau pernah mengalami insiden <strong>pencurian Intellectual Property</strong>?
+                                    </p>
+                                    <div className="flex items-center gap-2 mb-4 text-[#00bcd4] text-sm font-medium">
+                                        <Info className="w-4 h-4" />
+                                        <span>Pilih salah satu dari jawaban berikut</span>
                                     </div>
-                                ))}
-                            </motion.div>
-                        ))
+                                    <div className="space-y-3 pl-3">
+                                        <label className="flex items-center gap-3 cursor-pointer">
+                                            <input
+                                                type="radio"
+                                                name="q1"
+                                                value="ya"
+                                                checked={answers.q1 === 'ya'}
+                                                onChange={() => setAnswer('q1', 'ya')}
+                                                className="w-4 h-4 text-blue-600 border-slate-300 focus:ring-blue-500"
+                                            />
+                                            <span className="text-sm text-slate-700">Ya</span>
+                                        </label>
+                                        <label className="flex items-center gap-3 cursor-pointer">
+                                            <input
+                                                type="radio"
+                                                name="q1"
+                                                value="tidak"
+                                                checked={answers.q1 === 'tidak'}
+                                                onChange={() => setAnswer('q1', 'tidak')}
+                                                className="w-4 h-4 text-blue-600 border-slate-300 focus:ring-blue-500"
+                                            />
+                                            <span className="text-sm text-slate-700">Tidak</span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                {answers.q1 === 'tidak' && (
+                                    <div className="bg-slate-50/50 border border-slate-200/60 rounded-xl p-6">
+                                        <p className="text-[15px] font-medium text-slate-800 mb-4 flex items-start gap-1">
+                                            <span className="text-red-500 mt-0.5">*</span>
+                                            Mengapa perusahaan Anda tidak berpotensi mengalami atau tidak pernah mengalami insiden <strong>pencurian Intellectual Property</strong>?
+                                        </p>
+                                        <textarea
+                                            className="w-full min-h-[120px] p-4 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 transition-shadow resize-y"
+                                            value={answers.q1_alasan}
+                                            onChange={(e) => setAnswer('q1_alasan', e.target.value)}
+                                        />
+                                    </div>
+                                )}
+
+                                {answers.q1 === 'ya' && (
+                                    <>
+                                        {/* Dampak Table */}
+                                        <div className="bg-slate-50/50 border border-slate-200/60 rounded-xl p-6 overflow-x-auto">
+                                            <table className="w-full text-[12px] border-collapse border border-slate-300 min-w-[800px]">
+                                                <thead>
+                                                    <tr>
+                                                        <th className="border border-slate-300 bg-slate-200 p-2 text-center w-[12%]">Dampak</th>
+                                                        <th className="border border-slate-300 bg-[#a3d86d] p-2 text-center text-slate-900 w-[22%]">Tidak Signifikan</th>
+                                                        <th className="border border-slate-300 bg-[#ffea56] p-2 text-center text-slate-900 w-[22%]">Cukup Signifikan</th>
+                                                        <th className="border border-slate-300 bg-[#ffb74d] p-2 text-center text-slate-900 w-[22%]">Signifikan</th>
+                                                        <th className="border border-slate-300 bg-[#f44336] p-2 text-center text-white w-[22%]">Sangat Signifikan</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <tr className="bg-white">
+                                                        <td className="border border-slate-300 p-2 text-center font-medium bg-slate-50">Reputasi</td>
+                                                        <td className="border border-slate-300 p-2 text-slate-700">Terdapat pemberitaan negatif, tetapi tidak berdampak pada kepercayaan stakeholder.</td>
+                                                        <td className="border border-slate-300 p-2 text-slate-700">Pemberitaan negatif yang mulai memengaruhi kepercayaan sebagian kecil stakeholder.</td>
+                                                        <td className="border border-slate-300 p-2 text-slate-700">Pemberitaan negatif yang menyebabkan penurunan kepercayaan sebagian besar stakeholder.</td>
+                                                        <td className="border border-slate-300 p-2 text-slate-700">Pemberitaan negatif yang menyebabkan hilangnya kepercayaan hampir seluruh stakeholder.</td>
+                                                    </tr>
+                                                    <tr className="bg-slate-50">
+                                                        <td className="border border-slate-300 p-2 text-center font-medium bg-slate-50">Operasional</td>
+                                                        <td className="border border-slate-300 p-2 text-slate-700">Penundaan proses bisnis hingga <strong>30 menit</strong> dengan dampak minimal.</td>
+                                                        <td className="border border-slate-300 p-2 text-slate-700">Penundaan proses bisnis antara <strong>30 menit hingga 1 jam</strong>, menyebabkan sedikit gangguan operasional.</td>
+                                                        <td className="border border-slate-300 p-2 text-slate-700">Penundaan proses bisnis antara <strong>1 hingga 8 jam</strong>, berdampak pada produktivitas dan layanan.</td>
+                                                        <td className="border border-slate-300 p-2 text-slate-700">Penundaan proses bisnis <strong>lebih dari 8 jam</strong>, menyebabkan gangguan besar dalam operasional.</td>
+                                                    </tr>
+                                                    <tr className="bg-white">
+                                                        <td className="border border-slate-300 p-2 text-center font-medium bg-slate-50">Finansial</td>
+                                                        <td className="border border-slate-300 p-2 text-slate-700">Kerugian atau pengeluaran tambahan hingga <strong>5% dari revenue organisasi</strong>.</td>
+                                                        <td className="border border-slate-300 p-2 text-slate-700">Kerugian atau pengeluaran tambahan antara <strong>6% hingga 10% dari revenue organisasi</strong>.</td>
+                                                        <td className="border border-slate-300 p-2 text-slate-700">Kerugian atau pengeluaran tambahan antara <strong>11% hingga 20% dari revenue organisasi</strong>.</td>
+                                                        <td className="border border-slate-300 p-2 text-slate-700">Kerugian atau pengeluaran tambahan <strong>lebih dari 20% dari revenue organisasi</strong>.</td>
+                                                    </tr>
+                                                    <tr className="bg-slate-50">
+                                                        <td className="border border-slate-300 p-2 text-center font-medium bg-slate-50">Hukum</td>
+                                                        <td className="border border-slate-300 p-2 text-slate-700">Terdapat permasalahan hukum kecil (misalnya, pelanggaran regulasi), tetapi belum sampai ke tuntutan hukum.</td>
+                                                        <td className="border border-slate-300 p-2 text-slate-700">Tuntutan hukum yang berdampak kecil terhadap operasional perusahaan.</td>
+                                                        <td className="border border-slate-300 p-2 text-slate-700">Tuntutan hukum yang memengaruhi sebagian besar kinerja dan performa organisasi.</td>
+                                                        <td className="border border-slate-300 p-2 text-slate-700">Tuntutan hukum yang mengancam kelangsungan organisasi dan top manajemen.</td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+
+                                        {/* Question 2 Matrix */}
+                                        <div className="bg-slate-50/50 border border-slate-200/60 rounded-xl p-6 overflow-x-auto">
+                                            <p className="text-[15px] font-medium text-slate-800 mb-6 flex items-start gap-1">
+                                                <span className="text-red-500 mt-0.5">*</span>
+                                                Seberapa besar dampak dari <strong>pencurian Intellectual Property</strong> perusahaan?
+                                            </p>
+                                            <table className="w-full text-sm border-collapse min-w-[700px]">
+                                                <thead>
+                                                    <tr className="border-[0.5px] border-slate-300">
+                                                        <th className="p-3 text-left border-[0.5px] border-slate-300 w-[20%]"></th>
+                                                        <th className="p-3 text-center border-[0.5px] border-slate-300 text-slate-700 w-[20%]">Tidak Signifikan</th>
+                                                        <th className="p-3 text-center border-[0.5px] border-slate-300 text-slate-700 w-[20%]">Cukup Signifikan</th>
+                                                        <th className="p-3 text-center border-[0.5px] border-slate-300 text-slate-700 w-[20%]">Signifikan</th>
+                                                        <th className="p-3 text-center border-[0.5px] border-slate-300 text-slate-700 w-[20%]">Sangat Signifikan</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {[
+                                                        { id: 'reputasi', label: 'Reputasi' },
+                                                        { id: 'operasional', label: 'Operasional' },
+                                                        { id: 'finansial', label: 'Finansial' },
+                                                        { id: 'hukum', label: 'Hukum' }
+                                                    ].map((row, idx) => (
+                                                        <tr key={row.id} className={`border-[0.5px] border-slate-300 ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'} hover:bg-slate-50 transition-colors`}>
+                                                            <td className="p-3 text-center border-[0.5px] border-slate-300 font-medium text-slate-700">{row.label}</td>
+                                                            {['tidak_signifikan', 'cukup_signifikan', 'signifikan', 'sangat_signifikan'].map((val) => (
+                                                                <td key={val} className="p-3 text-center border-[0.5px] border-slate-300">
+                                                                    <input
+                                                                        type="radio"
+                                                                        name={`dampak_${row.id}`}
+                                                                        value={val}
+                                                                        checked={answers[`dampak_${row.id}`] === val}
+                                                                        onChange={() => setAnswer(`dampak_${row.id}`, val)}
+                                                                        className="w-4 h-4 text-slate-600 border-slate-300 focus:ring-slate-500 cursor-pointer"
+                                                                    />
+                                                                </td>
+                                                            ))}
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+
+                                        {/* Kriteria Kemungkinan Table */}
+                                        <div className="bg-slate-50/50 border border-slate-200/60 rounded-xl p-6 overflow-x-auto">
+                                            <table className="w-full text-[13px] border-collapse border border-slate-300 min-w-[600px] max-w-3xl">
+                                                <thead>
+                                                    <tr>
+                                                        <th className="border border-slate-300 bg-slate-200 p-2 text-center w-16">Nilai</th>
+                                                        <th className="border border-slate-300 bg-slate-200 p-2 text-center w-24">Tingkat</th>
+                                                        <th className="border border-slate-300 bg-slate-200 p-2 text-center">Kriteria Kemungkinan/Frekuensi</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <tr>
+                                                        <td className="border border-slate-300 p-2 text-center bg-white">1</td>
+                                                        <td className="border border-slate-300 p-2 text-center font-medium bg-[#a3d86d]">Kecil</td>
+                                                        <td className="border border-slate-300 p-2 bg-white">Kemungkinan terjadinya tidak lebih dari 2 kali per tahun</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td className="border border-slate-300 p-2 text-center bg-slate-50">2</td>
+                                                        <td className="border border-slate-300 p-2 text-center font-medium bg-[#2196f3] text-white">Sedang</td>
+                                                        <td className="border border-slate-300 p-2 bg-slate-50">Kemungkinan terjadinya <strong>lebih dari 2 kali / tahun</strong>, namun <strong>tidak lebih dari 5 kali / tahun</strong></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td className="border border-slate-300 p-2 text-center bg-white">3</td>
+                                                        <td className="border border-slate-300 p-2 text-center font-medium bg-[#ffeb3b]">Besar</td>
+                                                        <td className="border border-slate-300 p-2 bg-white">Kemungkinan terjadinya <strong>lebih dari 5 kali / tahun</strong>, namun <strong>tidak lebih dari 10 kali / tahun</strong></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td className="border border-slate-300 p-2 text-center bg-slate-50">4</td>
+                                                        <td className="border border-slate-300 p-2 text-center font-medium bg-[#f44336] text-white">Sangat Besar</td>
+                                                        <td className="border border-slate-300 p-2 bg-slate-50">Kemungkinan terjadinya <strong>lebih dari 10 kali / tahun</strong></td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+
+                                        {/* Question 3 Matrix (Frekuensi) */}
+                                        <div className="bg-slate-50/50 border border-slate-200/60 rounded-xl p-6 overflow-x-auto">
+                                            <p className="text-[15px] font-medium text-slate-800 mb-6 flex items-start gap-1">
+                                                <span className="text-red-500 mt-0.5">*</span>
+                                                Seberapa sering dalam setahun risiko <strong>pencurian Intellectual Property</strong> berpotensi terjadi atau teridentifikasi di perusahaan Anda?
+                                            </p>
+                                            <table className="w-full text-sm border-collapse border-[0.5px] border-slate-300 max-w-2xl">
+                                                <thead>
+                                                    <tr className="border-[0.5px] border-slate-300">
+                                                        <th className="p-3 border-[0.5px] border-slate-300 text-left w-1/2"></th>
+                                                        <th className="p-3 border-[0.5px] border-slate-300 text-center text-slate-700 w-1/2">Frekuensi</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {[
+                                                        { id: 'kecil', label: 'Kecil' },
+                                                        { id: 'sedang', label: 'Sedang' },
+                                                        { id: 'besar', label: 'Besar' },
+                                                        { id: 'sangat_besar', label: 'Sangat Besar' }
+                                                    ].map((row, idx) => (
+                                                        <tr key={row.id} className={`border-[0.5px] border-slate-300 ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'} hover:bg-slate-50 transition-colors`}>
+                                                            <td className="p-3 border-[0.5px] border-slate-300 text-center text-slate-700">{row.label}</td>
+                                                            <td className="p-3 border-[0.5px] border-slate-300 text-center">
+                                                                <input
+                                                                    type="radio"
+                                                                    name="frekuensi"
+                                                                    value={row.id}
+                                                                    checked={answers.frekuensi === row.id}
+                                                                    onChange={() => setAnswer('frekuensi', row.id)}
+                                                                    className="w-4 h-4 text-slate-600 border-slate-300 focus:ring-slate-500 cursor-pointer"
+                                                                />
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        {/* Question 4 */}
+                                        <div className="bg-slate-50/50 border border-slate-200/60 rounded-xl p-6">
+                                            <p className="text-[15px] font-medium text-slate-800 mb-3 flex items-start gap-1">
+                                                <span className="text-red-500 mt-0.5">*</span>
+                                                Apa perusahaan Anda telah memiliki tindakan pengendalian terhadap risiko <strong>pencurian Intellectual Property</strong>?
+                                            </p>
+                                            <div className="flex items-center gap-2 mb-4 text-[#00bcd4] text-sm font-medium">
+                                                <Info className="w-4 h-4" />
+                                                <span>Pilih salah satu dari jawaban berikut</span>
+                                            </div>
+                                            <div className="space-y-3 pl-3">
+                                                <label className="flex items-center gap-3 cursor-pointer">
+                                                    <input
+                                                        type="radio"
+                                                        name="q4"
+                                                        value="ya"
+                                                        checked={answers.q4 === 'ya'}
+                                                        onChange={() => setAnswer('q4', 'ya')}
+                                                        className="w-4 h-4 text-blue-600 border-slate-300 focus:ring-blue-500"
+                                                    />
+                                                    <span className="text-sm text-slate-700">Ya</span>
+                                                </label>
+                                                <label className="flex items-center gap-3 cursor-pointer">
+                                                    <input
+                                                        type="radio"
+                                                        name="q4"
+                                                        value="tidak"
+                                                        checked={answers.q4 === 'tidak'}
+                                                        onChange={() => setAnswer('q4', 'tidak')}
+                                                        className="w-4 h-4 text-blue-600 border-slate-300 focus:ring-blue-500"
+                                                    />
+                                                    <span className="text-sm text-slate-700">Tidak</span>
+                                                </label>
+                                            </div>
+                                        </div>
+
+                                        {/* Question 5 */}
+                                        <div className="bg-slate-50/50 border border-slate-200/60 rounded-xl p-6">
+                                            <p className="text-[15px] font-medium text-slate-800 mb-4 flex items-start gap-1">
+                                                <span className="text-red-500 mt-0.5">*</span>
+                                                Apa tindakan pengendalian yang telah dilakukan oleh perusahaan Anda terhadap risiko <strong>pencurian Intellectual Property</strong> perusahaan?
+                                            </p>
+                                            <textarea
+                                                className="w-full min-h-[120px] p-4 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 transition-shadow resize-y"
+                                                placeholder="Tulis tindakan pengendalian di sini..."
+                                                value={answers.q5}
+                                                onChange={(e) => setAnswer('q5', e.target.value)}
+                                            />
+                                        </div>
+                                    </>
+                                )}
+
+                            </div>
+                        </>
                     )}
 
-                    {/* Submit */}
-                    <button
-                        onClick={() => saveMutation.mutate()}
-                        disabled={saveMutation.isPending || answered === 0}
-                        className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-600 text-white font-bold text-sm shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40 hover:scale-[1.01] active:scale-[0.99] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-                    >
-                        {saveMutation.isPending ? (
-                            <><Loader2 className="w-4 h-4 animate-spin" />Menghitung...</>
-                        ) : (
-                            <><Save className="w-4 h-4" />Simpan & Hitung Profil Risiko</>
-                        )}
-                    </button>
+                    {/* Footer Actions */}
+                    <div className="flex items-center justify-between mt-10 pb-8 pt-4">
+                        <button
+                            onClick={handlePrev}
+                            className="px-6 py-2.5 rounded-lg border border-slate-300 bg-white shadow-sm text-slate-600 font-medium text-sm hover:bg-slate-50 transition-colors"
+                        >
+                            Sebelumnya
+                        </button>
+                        <button
+                            onClick={handleNext}
+                            disabled={step === 0 && !isStep0Valid}
+                            className="px-8 py-2.5 rounded-lg bg-[#ffca28] hover:bg-[#ffb300] text-slate-900 font-medium text-sm transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                        >
+                            Berikutnya
+                        </button>
+                    </div>
+
                 </div>
-            </RequireCompanyProfile>
+            </div>
+        </RequireCompanyProfile>
     );
 }
