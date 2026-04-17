@@ -5,8 +5,8 @@ import type {
     Answer,
     AssessmentProgress,
     RespondentProfile,
+    AssessmentData,
 } from '@/types/assessment.types';
-import { assessmentData } from '@/data/assessment-data';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -16,14 +16,21 @@ const STORAGE_KEYS = {
     ASSESSMENT_PROGRESS: 'assessment_progress_map',
 } as const;
 
-const createDefaultProgress = (): AssessmentProgress => ({
-    currentDomainId: 'identifikasi',
-    currentCategoryId: 'peran-tanggung-jawab',
-    currentSubCategoryId: 'peran-keamanan',
-    currentPage: 1,
-    status: 'IN_PROGRESS',
-    lastUpdated: Date.now(),
-});
+const EMPTY_ASSESSMENT_DATA: AssessmentData = { domains: [] };
+
+function createDefaultProgress(assessmentData?: AssessmentData): AssessmentProgress {
+    const firstDomain = assessmentData?.domains[0];
+    const firstCat = firstDomain?.categories[0];
+    const firstSub = firstCat?.subCategories[0];
+    return {
+        currentDomainId: firstDomain?.id ?? 'identifikasi',
+        currentCategoryId: firstCat?.id ?? '',
+        currentSubCategoryId: firstSub?.id ?? '',
+        currentPage: 1,
+        status: 'IN_PROGRESS',
+        lastUpdated: Date.now(),
+    };
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -34,6 +41,9 @@ interface AssessmentState {
     progressMap: Record<string, AssessmentProgress>;
     initialized: boolean;
     existingIkasId: string | null;
+
+    /** Dynamic assessment data loaded from API (replaces static assessment-data.ts) */
+    assessmentStructure: AssessmentData;
 
     // ── Derived ──────────────────────────────────────────────────────────────
     respondentProfile: () => RespondentProfile | null;
@@ -58,6 +68,13 @@ interface AssessmentState {
     setCurrentStakeholder: (slug: string) => void;
     setExistingIkasId: (id: string | null) => void;
     initialize: () => void;
+
+    /** Set dynamic assessment structure from API data */
+    setAssessmentStructure: (data: AssessmentData) => void;
+
+    /** Hydrate answersMap with pre-existing answers from the database */
+    hydrateAnswers: (answerMap: AnswerMap) => void;
+
     saveRespondentProfile: (profile: RespondentProfile) => void;
     saveAnswer: (questionId: string, index: number) => void;
     updateProgress: (domainId: string, categoryId: string, subCategoryId: string, page: number) => void;
@@ -79,6 +96,12 @@ export const useAssessmentStore = create<AssessmentState>()(
             progressMap: {},
             initialized: false,
             existingIkasId: null,
+            assessmentStructure: EMPTY_ASSESSMENT_DATA,
+
+            // ── Helpers ────────────────────────────────────────────────────────────
+            _data: () => get().assessmentStructure.domains.length > 0
+                ? get().assessmentStructure
+                : EMPTY_ASSESSMENT_DATA,
 
             // ── Derived ────────────────────────────────────────────────────────────
             respondentProfile: () => {
@@ -92,16 +115,16 @@ export const useAssessmentStore = create<AssessmentState>()(
             progress: () => {
                 const { currentStakeholderSlug, progressMap } = get();
                 return currentStakeholderSlug
-                    ? (progressMap[currentStakeholderSlug] ?? createDefaultProgress())
-                    : createDefaultProgress();
+                    ? (progressMap[currentStakeholderSlug] ?? createDefaultProgress(get().assessmentStructure))
+                    : createDefaultProgress(get().assessmentStructure);
             },
             hasRespondentProfile: () => get().respondentProfile() !== null,
             isCompleted: () => get().progress().status === 'COMPLETED',
             isLocked: () => get().isCompleted(),
             getBreadcrumbPath: () => {
-                const { progress } = get();
+                const { progress, assessmentStructure } = get();
                 const current = progress();
-                const d = assessmentData.domains.find((d: any) => d.id === current.currentDomainId);
+                const d = assessmentStructure.domains.find((d: any) => d.id === current.currentDomainId);
                 const c = d?.categories.find((c: any) => c.id === current.currentCategoryId);
                 const s = c?.subCategories.find((s: any) => s.id === current.currentSubCategoryId);
                 if (!d || !c || !s) return [];
@@ -109,16 +132,16 @@ export const useAssessmentStore = create<AssessmentState>()(
             },
             getCurrentDomain: () => {
                 const dId = get().progress().currentDomainId;
-                return assessmentData.domains.find((d: any) => d.id === dId);
+                return get().assessmentStructure.domains.find((d: any) => d.id === dId);
             },
             getCurrentCategory: () => {
                 const p = get().progress();
-                const d = assessmentData.domains.find((d: any) => d.id === p.currentDomainId);
+                const d = get().assessmentStructure.domains.find((d: any) => d.id === p.currentDomainId);
                 return d?.categories.find((c: any) => c.id === p.currentCategoryId);
             },
             getCurrentSubCategory: () => {
                 const p = get().progress();
-                const d = assessmentData.domains.find((d: any) => d.id === p.currentDomainId);
+                const d = get().assessmentStructure.domains.find((d: any) => d.id === p.currentDomainId);
                 const c = d?.categories.find((c: any) => c.id === p.currentCategoryId);
                 return c?.subCategories.find((s: any) => s.id === p.currentSubCategoryId);
             },
@@ -140,7 +163,7 @@ export const useAssessmentStore = create<AssessmentState>()(
             },
             totalQuestions: () => {
                 let total = 0;
-                assessmentData.domains.forEach((d: any) => {
+                get().assessmentStructure.domains.forEach((d: any) => {
                     d.categories.forEach((c: any) => {
                         c.subCategories.forEach((sc: any) => {
                             total += sc.questions.length;
@@ -165,7 +188,7 @@ export const useAssessmentStore = create<AssessmentState>()(
                     },
                     progressMap: {
                         ...state.progressMap,
-                        [slug]: state.progressMap[slug] ?? createDefaultProgress(),
+                        [slug]: state.progressMap[slug] ?? createDefaultProgress(state.assessmentStructure),
                     },
                 }));
             },
@@ -174,7 +197,6 @@ export const useAssessmentStore = create<AssessmentState>()(
 
             initialize: () => {
                 if (get().initialized) return;
-                // Clean up old global (non-per-stakeholder) keys from previous implementation
                 const oldKeys = ['respondent_profile', 'assessment_answers', 'assessment_progress'];
                 oldKeys.forEach((key) => localStorage.removeItem(key));
 
@@ -190,6 +212,33 @@ export const useAssessmentStore = create<AssessmentState>()(
                     answersMap: load<Record<string, AnswerMap>>(STORAGE_KEYS.ASSESSMENT_ANSWERS) ?? {},
                     progressMap: load<Record<string, AssessmentProgress>>(STORAGE_KEYS.ASSESSMENT_PROGRESS) ?? {},
                     initialized: true,
+                });
+            },
+
+            setAssessmentStructure: (data: AssessmentData) => {
+                set((state) => {
+                    // If no current progress for this stakeholder, initialize it with the
+                    // new structure so navigation starts at the first domain/category/sub
+                    const slug = state.currentStakeholderSlug;
+                    const hasProgress = slug && !!state.progressMap[slug];
+                    const progressMap = hasProgress ? state.progressMap : {
+                        ...state.progressMap,
+                        ...(slug ? { [slug]: createDefaultProgress(data) } : {}),
+                    };
+                    return { assessmentStructure: data, progressMap };
+                });
+            },
+
+            hydrateAnswers: (answerMap: AnswerMap) => {
+                const { currentStakeholderSlug } = get();
+                if (!currentStakeholderSlug) return;
+                set((state) => {
+                    const existing = state.answersMap[currentStakeholderSlug] ?? {};
+                    // API answers override localStorage drafts
+                    const merged = { ...existing, ...answerMap };
+                    const map = { ...state.answersMap, [currentStakeholderSlug]: merged };
+                    localStorage.setItem(STORAGE_KEYS.ASSESSMENT_ANSWERS, JSON.stringify(map));
+                    return { answersMap: map };
                 });
             },
 
@@ -269,20 +318,15 @@ export const useAssessmentStore = create<AssessmentState>()(
             goToNextPage: () => {
                 const p = get().progress();
                 const s = get().getCurrentSubCategory();
-
+                const data = get().assessmentStructure;
                 if (!s) return;
 
                 const totalPages = get().totalPagesInSubCategory();
-
                 if (p.currentPage < totalPages) {
                     get().updateProgress(p.currentDomainId, p.currentCategoryId, p.currentSubCategoryId, p.currentPage + 1);
                 } else {
-                    // Navigate to next subcategory logic here if needed, or disable 'Next' on last page.
-                    // For now, AssessmentView disables Next on the very last page of the app.
-                    // This implements a simple jump to next sub-category
-                    const d = assessmentData.domains.find((d: any) => d.id === p.currentDomainId);
+                    const d = data.domains.find((d: any) => d.id === p.currentDomainId);
                     const c = d?.categories.find((c: any) => c.id === p.currentCategoryId);
-
                     if (d && c) {
                         const sIdx = c.subCategories.findIndex((sub: any) => sub.id === p.currentSubCategoryId);
                         if (sIdx < c.subCategories.length - 1) {
@@ -292,9 +336,9 @@ export const useAssessmentStore = create<AssessmentState>()(
                             if (cIdx < d.categories.length - 1) {
                                 get().jumpTo(d.id, d.categories[cIdx + 1].id, d.categories[cIdx + 1].subCategories[0].id, 1);
                             } else {
-                                const dIdx = assessmentData.domains.findIndex((dom: any) => dom.id === p.currentDomainId);
-                                if (dIdx < assessmentData.domains.length - 1) {
-                                    const nextD = assessmentData.domains[dIdx + 1];
+                                const dIdx = data.domains.findIndex((dom: any) => dom.id === p.currentDomainId);
+                                if (dIdx < data.domains.length - 1) {
+                                    const nextD = data.domains[dIdx + 1];
                                     get().jumpTo(nextD.id, nextD.categories[0].id, nextD.categories[0].subCategories[0].id, 1);
                                 }
                             }
@@ -305,34 +349,30 @@ export const useAssessmentStore = create<AssessmentState>()(
 
             goToPreviousPage: () => {
                 const p = get().progress();
+                const data = get().assessmentStructure;
                 if (p.currentPage > 1) {
                     get().updateProgress(p.currentDomainId, p.currentCategoryId, p.currentSubCategoryId, p.currentPage - 1);
                 } else {
-                    // Navigate to previous subcategory
-                    const d = assessmentData.domains.find((d: any) => d.id === p.currentDomainId);
+                    const d = data.domains.find((d: any) => d.id === p.currentDomainId);
                     const c = d?.categories.find((c: any) => c.id === p.currentCategoryId);
-
                     if (d && c) {
                         const sIdx = c.subCategories.findIndex((sub: any) => sub.id === p.currentSubCategoryId);
                         if (sIdx > 0) {
                             const prevS = c.subCategories[sIdx - 1];
-                            const prevSTotalPages = prevS.questions.length;
-                            get().jumpTo(d.id, c.id, prevS.id, prevSTotalPages);
+                            get().jumpTo(d.id, c.id, prevS.id, prevS.questions.length);
                         } else {
                             const cIdx = d.categories.findIndex((cat: any) => cat.id === p.currentCategoryId);
                             if (cIdx > 0) {
                                 const prevC = d.categories[cIdx - 1];
                                 const prevS = prevC.subCategories[prevC.subCategories.length - 1];
-                                const prevSTotalPages = prevS.questions.length;
-                                get().jumpTo(d.id, prevC.id, prevS.id, prevSTotalPages);
+                                get().jumpTo(d.id, prevC.id, prevS.id, prevS.questions.length);
                             } else {
-                                const dIdx = assessmentData.domains.findIndex((dom: any) => dom.id === p.currentDomainId);
+                                const dIdx = data.domains.findIndex((dom: any) => dom.id === p.currentDomainId);
                                 if (dIdx > 0) {
-                                    const prevD = assessmentData.domains[dIdx - 1];
+                                    const prevD = data.domains[dIdx - 1];
                                     const prevC = prevD.categories[prevD.categories.length - 1];
                                     const prevS = prevC.subCategories[prevC.subCategories.length - 1];
-                                    const prevSTotalPages = prevS.questions.length;
-                                    get().jumpTo(prevD.id, prevC.id, prevS.id, prevSTotalPages);
+                                    get().jumpTo(prevD.id, prevC.id, prevS.id, prevS.questions.length);
                                 }
                             }
                         }
@@ -364,19 +404,20 @@ export const useAssessmentStore = create<AssessmentState>()(
                     answersMap: {},
                     progressMap: {},
                     currentStakeholderSlug: '',
+                    assessmentStructure: EMPTY_ASSESSMENT_DATA,
                 });
             },
         }),
         {
             name: 'assessment-store',
             storage: createJSONStorage(() => localStorage),
-            // Persist all maps so data survives page reload
             partialize: (state) => ({
                 currentStakeholderSlug: state.currentStakeholderSlug,
                 respondentProfilesMap: state.respondentProfilesMap,
                 answersMap: state.answersMap,
                 progressMap: state.progressMap,
                 initialized: state.initialized,
+                // NOTE: assessmentStructure is NOT persisted — always re-fetched from API
             }),
         }
     )

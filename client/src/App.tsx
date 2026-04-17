@@ -28,6 +28,9 @@ import EditProfil from "@/pages/dashboard/EditProfil";
 import PengaturanAkun from "@/pages/dashboard/PengaturanAkun";
 import LMS from "@/pages/dashboard/LMS";
 import LMSCourse from "@/pages/dashboard/LMSCourse";
+import LMSLearn from "@/pages/dashboard/LMSLearn";
+import LMSQuiz from "@/pages/dashboard/LMSQuiz";
+import LMSCertificate from "@/pages/dashboard/LMSCertificate";
 
 // App Bootstrap function
 import { bootstrapApp } from "@/lib/bootstrapApp";
@@ -56,7 +59,17 @@ const router = createBrowserRouter([
       { path: "/dashboard/profil", element: <EditProfil />, handle: { title: "Profil" } },
       { path: "/dashboard/pengaturan", element: <PengaturanAkun />, handle: { title: "Pengaturan Akun" } },
       { path: "/dashboard/materi", element: <LMS />, handle: { title: "Materi Pembelajaran" } },
-      { path: "/dashboard/materi/:courseId", element: <LMSCourse />, handle: { title: "Materi Pembelajaran" } },
+      {
+        path: "/dashboard/materi/:courseId",
+        element: <LMSCourse />,
+        handle: { title: "Kelas Pembelajaran" },
+        children: [
+            // Konten otomatis di-render ke kanan (Outlet)
+            { path: "learn/:materiId", element: <LMSLearn /> },
+            { path: "quiz/:quizId", element: <LMSQuiz /> },
+            { path: "certificate", element: <LMSCertificate /> },
+        ]
+      },
     ],
   },
 

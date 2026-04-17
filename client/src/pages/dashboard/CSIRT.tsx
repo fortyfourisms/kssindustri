@@ -5,7 +5,7 @@ import { api } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { csirtService } from "@/services/csirt.service";
 import { getMediaUrl } from "@/lib/utils";
-import { Loader2, Building2, Pencil, Phone, Globe, Server, Link as LinkIcon, Plus, User, ShieldCheck, Briefcase, Wrench, Award, Trash2, Hash, UserCheck, Settings, Tag, Eye, ChevronRight, Save, X, Download } from "lucide-react";
+import { Loader2, Building2, Pencil, Phone, Globe, Mail, Server, Link as LinkIcon, Plus, User, ShieldCheck, Briefcase, Wrench, Award, Trash2, Hash, UserCheck, Settings, Tag, Eye, ChevronRight, Save, X, Download } from "lucide-react";
 import { RequireCompanyProfile } from "@/components/RequireCompanyProfile";
 import { motion, AnimatePresence } from "framer-motion";
 import { useCsirtProfile } from "@/hooks/useCsirtProfile";
@@ -17,7 +17,7 @@ const LABEL_CLS = "block text-sm font-semibold text-slate-700 mb-1.5";
 
 // ─── Modal: CSIRT Profile Create ──────────────────────────────────────────────
 function CreateCsirtModal({ onSubmit, onClose, loading, idPerusahaan }: any) {
-    const [formData, setFormData] = useState({ nama_csirt: "", web_csirt: "", telepon_csirt: "" });
+    const [formData, setFormData] = useState({ nama_csirt: "", web_csirt: "", telepon_csirt: "", email_csirt: "" });
     const [photoCsirt, setPhotoCsirt] = useState<File | null>(null);
     const [fileRfc, setFileRfc] = useState<File | null>(null);
     const [filePgp, setFilePgp] = useState<File | null>(null);
@@ -29,6 +29,7 @@ function CreateCsirtModal({ onSubmit, onClose, loading, idPerusahaan }: any) {
         fd.append("nama_csirt", formData.nama_csirt);
         fd.append("web_csirt", formData.web_csirt);
         fd.append("telepon_csirt", formData.telepon_csirt);
+        fd.append("email_csirt", formData.email_csirt);
         if (idPerusahaan) fd.append("id_perusahaan", idPerusahaan);
         if (photoCsirt) fd.append("photo_csirt", photoCsirt);
         if (fileRfc) fd.append("file_rfc2350", fileRfc);
@@ -57,6 +58,10 @@ function CreateCsirtModal({ onSubmit, onClose, loading, idPerusahaan }: any) {
                         <div>
                             <label className={LABEL_CLS}>Telepon CSIRT</label>
                             <input value={formData.telepon_csirt} onChange={(e) => setFormData({ ...formData, telepon_csirt: e.target.value })} required className={INPUT_CLS} placeholder="+62 21 xxxxxxx" />
+                        </div>
+                        <div>
+                            <label className={LABEL_CLS}>Email CSIRT</label>
+                            <input value={formData.email_csirt} onChange={(e) => setFormData({ ...formData, email_csirt: e.target.value })} required className={INPUT_CLS} placeholder="[EMAIL_ADDRESS]" />
                         </div>
                     </div>
                     <div className="pt-2">
@@ -96,6 +101,7 @@ function EditCsirtModal({ initial, onSubmit, onClose, loading, idPerusahaan }: a
         nama_csirt: initial?.nama_csirt || "",
         web_csirt: initial?.web_csirt || "",
         telepon_csirt: initial?.telepon_csirt || "",
+        email_csirt: initial?.email_csirt || "",
     });
     const [photoCsirt, setPhotoCsirt] = useState<File | null>(null);
     const [fileRfc, setFileRfc] = useState<File | null>(null);
@@ -108,6 +114,7 @@ function EditCsirtModal({ initial, onSubmit, onClose, loading, idPerusahaan }: a
         fd.append("nama_csirt", formData.nama_csirt);
         fd.append("web_csirt", formData.web_csirt);
         fd.append("telepon_csirt", formData.telepon_csirt);
+        fd.append("email_csirt", formData.email_csirt);
         // Do not append id_perusahaan on update to prevent permission errors
         if (photoCsirt) fd.append("photo_csirt", photoCsirt);
         if (fileRfc) fd.append("file_rfc2350", fileRfc);
@@ -136,6 +143,10 @@ function EditCsirtModal({ initial, onSubmit, onClose, loading, idPerusahaan }: a
                         <div>
                             <label className={LABEL_CLS}>Telepon CSIRT</label>
                             <input value={formData.telepon_csirt} onChange={(e) => setFormData({ ...formData, telepon_csirt: e.target.value })} required className={INPUT_CLS} placeholder="+62 21 xxxxxxx" />
+                        </div>
+                        <div>
+                            <label className={LABEL_CLS}>Email CSIRT</label>
+                            <input value={formData.email_csirt} onChange={(e) => setFormData({ ...formData, email_csirt: e.target.value })} required className={INPUT_CLS} placeholder="[EMAIL_ADDRESS]" />
                         </div>
                     </div>
                     <div className="pt-2">
@@ -623,14 +634,27 @@ export default function CSIRT() {
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-3 text-slate-600">
-                                                <div className="w-10 h-10 rounded-full bg-orange-50 flex items-center justify-center flex-shrink-0">
-                                                    <Globe className="w-4 h-4 text-orange-500" />
+                                                <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center flex-shrink-0">
+                                                    <Globe className="w-4 h-4 text-green-500" />
                                                 </div>
                                                 <div>
                                                     <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-0.5">Website</p>
                                                     {csirt.web_csirt ? (
                                                         <a href={csirt.web_csirt.startsWith("http") ? csirt.web_csirt : `https://${csirt.web_csirt}`} target="_blank" rel="noreferrer" className="font-bold text-slate-800 hover:text-blue-600 transition-colors">
                                                             {csirt.web_csirt}
+                                                        </a>
+                                                    ) : <p className="font-bold text-slate-800">-</p>}
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-3 text-slate-600">
+                                                <div className="w-10 h-10 rounded-full bg-orange-50 flex items-center justify-center flex-shrink-0">
+                                                    <Mail className="w-4 h-4 text-orange-500" />
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-0.5">Email</p>
+                                                    {csirt.email_csirt ? (
+                                                        <a href={`mailto:${csirt.email_csirt}`} className="font-bold text-slate-800 hover:text-blue-600 transition-colors">
+                                                            {csirt.email_csirt}
                                                         </a>
                                                     ) : <p className="font-bold text-slate-800">-</p>}
                                                 </div>
@@ -648,33 +672,33 @@ export default function CSIRT() {
                                                 <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mt-0.5">SDM Terdaftar</p>
                                             </div>
                                         </div>
-                                        <div className="flex-1 bg-emerald-50 rounded-2xl p-5 flex items-center gap-4 border border-emerald-100">
+                                        <div className="flex-1 bg-slate-100/90 rounded-2xl p-5 flex items-center gap-4 border border-slate-200/50">
                                             <div className="text-emerald-500"><Server className="w-6 h-6" /></div>
                                             <div>
                                                 <h4 className="text-xl font-bold text-emerald-600">{seList.length}</h4>
-                                                <p className="text-xs font-semibold text-emerald-600/70 uppercase tracking-wider mt-0.5">SE Terdaftar</p>
+                                                <p className="text-xs font-semibold text-slate-600/70 uppercase tracking-wider mt-0.5">SE Terdaftar</p>
                                             </div>
                                         </div>
                                     </div>
                                     <div className="bg-white rounded-2xl p-4 flex flex-col gap-3 border border-slate-200 shadow-sm mt-2">
                                         <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Dokumen Pendukung</h4>
-                                        <div className="flex gap-3">
+                                        <div className="flex gap-3 ">
                                             {csirt.file_rfc2350 ? (
-                                                <button onClick={() => setDownloadDoc({ url: getMediaUrl(csirt.file_rfc2350), name: "RFC 2350", csirtName: csirt.nama_csirt })} className="flex-1 bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-200 rounded-xl p-3 flex items-center gap-3 transition-colors group text-left">
-                                                    <LinkIcon className="w-5 h-5 text-slate-400 group-hover:text-blue-500 transition-colors" />
-                                                    <span className="font-semibold text-slate-700 text-xs group-hover:text-blue-600 transition-colors">RFC 2350</span>
+                                                <button onClick={() => setDownloadDoc({ url: getMediaUrl(csirt.file_rfc2350), name: "RFC 2350", csirtName: csirt.nama_csirt })} className="flex-1 bg-green-50 hover:bg-green-50 border border-slate-200 hover:border-green-200 rounded-xl p-3 flex items-center gap-3 transition-colors group text-left">
+                                                    <Download className="w-5 h-5 text-slate-400 group-hover:text-green-500 transition-colors" />
+                                                    <span className="font-semibold text-slate-700 text-xs group-hover:text-green-600 transition-colors">RFC 2350</span>
                                                 </button>
                                             ) : <span className="flex-1 text-xs text-slate-400 p-3 italic">RFC 2350 belum diunggah</span>}
                                             {csirt.file_public_key_pgp ? (
-                                                <button onClick={() => setDownloadDoc({ url: getMediaUrl(csirt.file_public_key_pgp), name: "PGP Public Key", csirtName: csirt.nama_csirt })} className="flex-1 bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-200 rounded-xl p-3 flex items-center gap-3 transition-colors group text-left">
-                                                    <LinkIcon className="w-5 h-5 text-slate-400 group-hover:text-blue-500 transition-colors" />
-                                                    <span className="font-semibold text-slate-700 text-xs group-hover:text-blue-600 transition-colors">PGP Public Key</span>
+                                                <button onClick={() => setDownloadDoc({ url: getMediaUrl(csirt.file_public_key_pgp), name: "PGP Public Key", csirtName: csirt.nama_csirt })} className="flex-1 bg-green-50 hover:bg-green-50 border border-slate-200 hover:border-green-200 rounded-xl p-3 flex items-center gap-3 transition-colors group text-left">
+                                                    <Download className="w-5 h-5 text-slate-400 group-hover:text-green-500 transition-colors" />
+                                                    <span className="font-semibold text-slate-700 text-xs group-hover:text-green-600 transition-colors">PGP Public Key</span>
                                                 </button>
                                             ) : <span className="flex-1 text-xs text-slate-400 p-3 italic">PGP Key belum diunggah</span>}
                                             {csirt.file_str ? (
-                                                <button onClick={() => setDownloadDoc({ url: getMediaUrl(csirt.file_str), name: "Surat Tanda Registrasi", csirtName: csirt.nama_csirt })} className="flex-1 bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-200 rounded-xl p-3 flex items-center gap-3 transition-colors group text-left">
-                                                    <LinkIcon className="w-5 h-5 text-slate-400 group-hover:text-blue-500 transition-colors" />
-                                                    <span className="font-semibold text-slate-700 text-xs group-hover:text-blue-600 transition-colors">Surat Tanda Registrasi</span>
+                                                <button onClick={() => setDownloadDoc({ url: getMediaUrl(csirt.file_str), name: "Surat Tanda Registrasi", csirtName: csirt.nama_csirt })} className="flex-1 bg-green-50 hover:bg-green-50 border border-slate-200 hover:border-green-200 rounded-xl p-3 flex items-center gap-3 transition-colors group text-left">
+                                                    <Download className="w-5 h-5 text-slate-400 group-hover:text-green-500 transition-colors" />
+                                                    <span className="font-semibold text-slate-700 text-xs group-hover:text-green-600 transition-colors">Surat Tanda Registrasi</span>
                                                 </button>
                                             ) : <span className="flex-1 text-xs text-slate-400 p-3 italic">Surat Tanda Registrasi belum diunggah</span>}
                                         </div>

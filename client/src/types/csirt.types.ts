@@ -9,6 +9,7 @@ export interface CsirtMember {
     nama_csirt: string;
     web_csirt: string;
     telepon_csirt: string;
+    email_csirt: string;
     file_rfc2350: string;
     file_public_key_pgp: string;
     file_str: string;
@@ -44,6 +45,7 @@ export interface CreateCsirtPayload {
     nama_csirt: string;
     web_csirt: string;
     telepon_csirt: string;
+    email_csirt: string;
     file_rfc2350?: File | string | null;
     file_public_key_pgp?: File | string | null;
     file_str?: File | string | null;

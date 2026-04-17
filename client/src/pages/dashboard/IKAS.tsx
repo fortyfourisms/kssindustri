@@ -92,14 +92,10 @@ export default function IKAS() {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const queryClient = useQueryClient();
 
-    // ── Resolve company ID from user data ─────────────────────────────────
-    const perusahaanId = (user as any)?.id_perusahaan || (user as any)?.perusahaan?.id;
-
-    // ── Fetch data IKAS milik user → GET /api/maturity/ikas/{id} ──────────
+    // ── Fetch seluruh data IKAS milik perusahaan user → GET /api/maturity/ikas ──────────
     const { data: ikasRaw, isLoading: ikasListLoading } = useQuery({
-        queryKey: ["ikas", perusahaanId],
-        queryFn: () => api.getIkasById(String(perusahaanId)),
-        enabled: !!perusahaanId,
+        queryKey: ["ikasList"],
+        queryFn: () => api.getIkasList(),
         staleTime: 30_000,
     });
 
