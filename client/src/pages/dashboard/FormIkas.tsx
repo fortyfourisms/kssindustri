@@ -18,6 +18,7 @@ import AssessmentView from "@/pages/dashboard/Assessment/AssessmentView";
 import { useUser } from "@/hooks/useAuth";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { perusahaanService } from "@/services/perusahaan.service";
+import { getKategoriKematangan } from "@/types/ikas.types";
 
 const respondentSchema = z.object({
     responden: z.string().min(1, "Nama responden wajib diisi"),
@@ -102,7 +103,7 @@ export default function FormIkas() {
     }, [initialized, initializeStore, setCurrentStakeholder]);
 
     // ── React Hook Form ─────────────────────────────────────────────────────────
-    const { register, handleSubmit, watch, reset, formState: { errors, isDirty } } = useForm<RespondentFormValues>({
+    const { register, handleSubmit, watch, reset, setValue, formState: { errors, isDirty } } = useForm<RespondentFormValues>({
         resolver: zodResolver(respondentSchema),
         defaultValues: {
             responden: respondentProfile()?.responden || "",
@@ -116,6 +117,13 @@ export default function FormIkas() {
 
     // watchedTanggal used only to trigger UI updates
     const watchedTanggal = watch("tanggal");
+    const watchedTargetNilai = watch("target_nilai");
+
+    useEffect(() => {
+        const score = Number(watchedTargetNilai) || 0;
+        const kategori = getKategoriKematangan(score);
+        setValue("kategori_kematangan_keamanan_siber", kategori, { shouldDirty: true, shouldValidate: true });
+    }, [watchedTargetNilai, setValue]);
 
     // ── Fetch existing IKAS records from backend (for respondent pre-fill) ──────
     const { data: ikasList, isLoading: listLoading } = useQuery({
@@ -338,7 +346,7 @@ export default function FormIkas() {
 
                             <div>
                                 <label className={LABEL_CLS}>Target Level Kematangan <span className="text-red-500">*</span></label>
-                                <input type="text" {...register("kategori_kematangan_keamanan_siber")} className={INPUT_CLS} placeholder="Kategori Kematangan Keamanan Siber" />
+                                <input readOnly type="text" {...register("kategori_kematangan_keamanan_siber")} className={`${INPUT_CLS} bg-slate-50 text-slate-500 cursor-not-allowed select-none`} placeholder="Kategori Kematangan Keamanan Siber" />
                                 {errors.kategori_kematangan_keamanan_siber && <p className="text-red-500 text-xs mt-1">{errors.kategori_kematangan_keamanan_siber.message}</p>}
                             </div>
                         </div>

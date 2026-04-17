@@ -278,3 +278,17 @@ export interface SaveJawabanPayload {
     evidence?: string;
     keterangan?: string;
 }
+
+/**
+ * Konversi skoring numerik (Target Nilai) ke kategori tingkat kematangan
+ * sesuai standar IKAS.
+ */
+export function getKategoriKematangan(score: number): string {
+    if (score <= 0) return "INPUT BELUM LENGKAP";
+    if (score < 1.50) return "Level 1 - Awal";
+    if (score < 2.50) return "Level 2 - Berulang";
+    if (score < 3.50) return "Level 3 - Terdefinisi";
+    if (score < 4.50) return "Level 4 - Terkelola";
+    return "Level 5 - Inovatif";
+}
+

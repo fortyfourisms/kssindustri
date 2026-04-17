@@ -14,6 +14,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLogout } from "@/hooks/useAuth";
+import kssiLogo from "@/assets/KSSI.svg";
+import fortyfourLogo from "@/assets/d44.svg";
 
 const navItems = [
     { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -39,13 +41,12 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
             {/* Logo */}
             <div className={cn("flex items-center py-5 border-b border-slate-100/80 px-4 overflow-x-hidden", !forMobile && collapsed ? "justify-center" : "")}>
                 <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/30 flex-shrink-0">
-                        <Shield className="w-5 h-5 text-white" />
+                    <div className="w-9 h-9 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/30 flex-shrink-0">
+                        <img src={fortyfourLogo} alt="FORTYFOUR" className="h-6 w-auto object-contain" />
                     </div>
                     {(forMobile || !collapsed) && (
                         <div className="overflow-hidden">
-                            <p className="font-black text-slate-900 font-display text-sm leading-none">FORTYFOUR</p>
-                            <p className="text-[10px] text-slate-400 mt-0.5">Cyber Security Platform</p>
+                            <img src={kssiLogo} alt="KSSI" className="h-6 w-auto object-contain" />
                         </div>
                     )}
                 </div>
