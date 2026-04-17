@@ -314,46 +314,6 @@ export default function SurveiProfil() {
 
                                     {answers.q1 === 'ya' && (
                                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }} className="space-y-8">
-                                            {/* Dampak Table Reference */}
-                                            <div className="bg-slate-50 border border-slate-200/80 rounded-2xl shadow-sm overflow-hidden text-slate-700">
-                                                <div className="p-5 border-b border-slate-200 flex items-center justify-between bg-zinc-100/50 backdrop-blur-sm">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-                                                            <Info className="w-4 h-4 text-blue-600" />
-                                                        </div>
-                                                        <h3 className="font-semibold text-slate-800 text-[15px] tracking-wide">Panduan Referensi Kriteria Dampak</h3>
-                                                    </div>
-                                                </div>
-                                                <div className="overflow-x-auto p-4 sm:p-6 bg-white">
-                                                    <table className="w-full text-[11px] sm:text-xs lg:text-[13px] border-collapse min-w-[600px] lg:min-w-full rounded-lg overflow-hidden ring-1 ring-slate-200">
-                                                        <thead>
-                                                            <tr>
-                                                                <th className="bg-slate-100 text-slate-700 p-3 text-left w-[12%] border-b border-r border-slate-200 font-semibold">Kategori Dampak</th>
-                                                                <th className="bg-[#10b981]/10 text-emerald-700 p-3 text-center w-[22%] border-b border-slate-200 font-semibold">Tidak Signifikan (1)</th>
-                                                                <th className="bg-[#fbbf24]/10 text-amber-700 p-3 text-center w-[22%] border-b border-slate-200 font-semibold">Cukup Signifikan (2)</th>
-                                                                <th className="bg-[#f97316]/10 text-orange-700 p-3 text-center w-[22%] border-b border-slate-200 font-semibold">Signifikan (3)</th>
-                                                                <th className="bg-[#ef4444]/10 text-rose-700 p-3 text-center w-[22%] border-b border-slate-200 font-semibold">Sangat Signifikan (4)</th>
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody>
-                                                            {[
-                                                                { title: "Reputasi", cols: ["Terdapat pemberitaan negatif kompartemen, tidak berdampak pada kepercayaan.", "Pemberitaan negatif yang memengaruhi kepercayaan sebagian kecil stakeholder.", "Pemberitaan negatif yang menurunkan kepercayaan sebagian besar stakeholder.", "Pemberitaan yang menyebabkan hilangnya kepercayaan hampir seluruh stakeholder."] },
-                                                                { title: "Operasional", cols: ["Penundaan bisnis s/d 30 menit, dampak minimal.", "Penundaan 30 menit s/d 1 jam, sedikit gangguan.", "Penundaan 1 s/d 8 jam, berdampak pada produktivitas.", "Penundaan lebih dari 8 jam, gangguan operasional masif."] },
-                                                                { title: "Finansial", cols: ["Kerugian tambahan s/d 5% dari revenue.", "Kerugian tambahan 6% - 10% dari revenue.", "Kerugian tambahan 11% - 20% dari revenue.", "Kerugian lebih dari 20% dari revenue."] },
-                                                                { title: "Hukum", cols: ["Masalah hukum kecil, belum ada tuntutan.", "Tuntutan hukum yang berdampak kecil.", "Tuntutan memengaruhi kinerja organisasi.", "Tuntutan yang mengancam kelangsungan organisasi."] }
-                                                            ].map((row, i) => (
-                                                                <tr key={i} className="hover:bg-slate-50 transition-colors">
-                                                                    <td className="p-3 bg-slate-50 border-r border-slate-200 border-b border-slate-100 font-medium text-slate-800">{row.title}</td>
-                                                                    {row.cols.map((col, j) => (
-                                                                        <td key={j} className="p-3 border-b border-slate-100 border-r border-slate-100/50 text-slate-600">{col}</td>
-                                                                    ))}
-                                                                </tr>
-                                                            ))}
-                                                        </tbody>
-                                                    </table>
-                                                </div>
-                                            </div>
-
                                             {/* Question 2 Matrix */}
                                             <div className="bg-white/80 backdrop-blur-sm border border-slate-200/80 rounded-2xl p-6 sm:p-8 shadow-[0_4px_25px_rgb(0,0,0,0.02)]">
                                                 <p className="text-base font-semibold text-slate-800 mb-6 flex items-start gap-2">
@@ -391,6 +351,46 @@ export default function SurveiProfil() {
                                                                                 className="w-5 h-5 text-blue-600 border-slate-300 focus:ring-blue-500 cursor-pointer shadow-sm"
                                                                             />
                                                                         </td>
+                                                                    ))}
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+
+                                            {/* Dampak Table Reference */}
+                                            <div className="bg-slate-50 border border-slate-200/80 rounded-2xl shadow-sm overflow-hidden text-slate-700">
+                                                <div className="p-5 border-b border-slate-200 flex items-center justify-between bg-zinc-100/50 backdrop-blur-sm">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                                                            <Info className="w-4 h-4 text-blue-600" />
+                                                        </div>
+                                                        <h3 className="font-semibold text-slate-800 text-[15px] tracking-wide">Panduan Referensi Kriteria Dampak</h3>
+                                                    </div>
+                                                </div>
+                                                <div className="overflow-x-auto p-4 sm:p-6 bg-white">
+                                                    <table className="w-full text-[11px] sm:text-xs lg:text-[13px] border-collapse min-w-[600px] lg:min-w-full rounded-lg overflow-hidden ring-1 ring-slate-200">
+                                                        <thead>
+                                                            <tr>
+                                                                <th className="bg-slate-100 text-slate-700 p-3 text-left w-[12%] border-b border-r border-slate-200 font-semibold">Kategori Dampak</th>
+                                                                <th className="bg-[#10b981]/10 text-emerald-700 p-3 text-center w-[22%] border-b border-slate-200 font-semibold">Tidak Signifikan (1)</th>
+                                                                <th className="bg-[#fbbf24]/10 text-amber-700 p-3 text-center w-[22%] border-b border-slate-200 font-semibold">Cukup Signifikan (2)</th>
+                                                                <th className="bg-[#f97316]/10 text-orange-700 p-3 text-center w-[22%] border-b border-slate-200 font-semibold">Signifikan (3)</th>
+                                                                <th className="bg-[#ef4444]/10 text-rose-700 p-3 text-center w-[22%] border-b border-slate-200 font-semibold">Sangat Signifikan (4)</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {[
+                                                                { title: "Reputasi", cols: ["Terdapat pemberitaan negatif kompartemen, tidak berdampak pada kepercayaan.", "Pemberitaan negatif yang memengaruhi kepercayaan sebagian kecil stakeholder.", "Pemberitaan negatif yang menurunkan kepercayaan sebagian besar stakeholder.", "Pemberitaan yang menyebabkan hilangnya kepercayaan hampir seluruh stakeholder."] },
+                                                                { title: "Operasional", cols: ["Penundaan bisnis s/d 30 menit, dampak minimal.", "Penundaan 30 menit s/d 1 jam, sedikit gangguan.", "Penundaan 1 s/d 8 jam, berdampak pada produktivitas.", "Penundaan lebih dari 8 jam, gangguan operasional masif."] },
+                                                                { title: "Finansial", cols: ["Kerugian tambahan s/d 5% dari revenue.", "Kerugian tambahan 6% - 10% dari revenue.", "Kerugian tambahan 11% - 20% dari revenue.", "Kerugian lebih dari 20% dari revenue."] },
+                                                                { title: "Hukum", cols: ["Masalah hukum kecil, belum ada tuntutan.", "Tuntutan hukum yang berdampak kecil.", "Tuntutan memengaruhi kinerja organisasi.", "Tuntutan yang mengancam kelangsungan organisasi."] }
+                                                            ].map((row, i) => (
+                                                                <tr key={i} className="hover:bg-slate-50 transition-colors">
+                                                                    <td className="p-3 bg-slate-50 border-r border-slate-200 border-b border-slate-100 font-medium text-slate-800">{row.title}</td>
+                                                                    {row.cols.map((col, j) => (
+                                                                        <td key={j} className="p-3 border-b border-slate-100 border-r border-slate-100/50 text-slate-600">{col}</td>
                                                                     ))}
                                                                 </tr>
                                                             ))}

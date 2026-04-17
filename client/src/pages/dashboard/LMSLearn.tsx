@@ -326,7 +326,7 @@ export default function LMSLearn() {
 
                     {/* Action & Nav Bar */}
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 bg-white border border-slate-200 rounded-3xl p-5 shadow-sm">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 shrink-0">
                             <button
                                 onClick={() => prevMateri && navigate(`/dashboard/materi/${courseId}/learn/${prevMateri.id}`)}
                                 disabled={!prevMateri}
@@ -336,12 +336,15 @@ export default function LMSLearn() {
                                 <ArrowLeft className="w-4 h-4" />
                                 <span className="hidden sm:inline">Sebelumnya</span>
                             </button>
-                            <button onClick={() => navigate(`/dashboard/materi/${courseId}`)} className="text-sm font-bold text-slate-500 hover:text-slate-800 px-3 transition-colors">
-                                Daftar Materi
-                            </button>
                         </div>
 
-                        <div className="flex items-center gap-2 flex-wrap">
+                        <div className="flex-1 flex justify-center px-4 order-first sm:order-none pb-4 sm:pb-0 border-b border-slate-100 sm:border-0 mb-2 sm:mb-0">
+                            <span className="text-[17px] sm:text-lg font-extrabold text-slate-800 text-center line-clamp-2 tracking-tight" title={materi.judul}>
+                                {materi.judul}
+                            </span>
+                        </div>
+
+                        <div className="flex items-center gap-2 flex-wrap sm:justify-end shrink-0">
                             {isCompleted && (
                                 <div className="flex items-center gap-2 px-4 py-2 bg-teal-50 border border-teal-200 rounded-xl text-teal-700 font-bold text-sm">
                                     <CheckCircle2 className="w-5 h-5" />
