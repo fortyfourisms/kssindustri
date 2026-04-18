@@ -101,13 +101,13 @@ export function PerusahaanSelector({ value, onChange, error, onNewName, newName 
                         <div className="flex items-center border-b border-slate-100 px-3">
                             <Search className="mr-2 h-4 w-4 shrink-0 text-slate-400" />
                             <input
-                                placeholder="Search company..."
+                                placeholder="Search your company name..."
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
                                 className="flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-slate-400"
                             />
                         </div>
-                        <CommandList className="max-h-[280px]">
+                        <CommandList className="max-h-[200px] overflow-y-auto">
                             {isLoading ? (
                                 <div className="p-4 text-center text-sm text-slate-500">Loading data...</div>
                             ) : (
@@ -140,32 +140,35 @@ export function PerusahaanSelector({ value, onChange, error, onNewName, newName 
                                             ))
                                         )}
                                     </CommandGroup>
-
-                                    {/* "Tambah Perusahaan Baru" — opens a modal to type the name.
-                                        No POST /api/perusahaan needed; parent sends nama_perusahaan in register payload. */}
-                                    <div className="p-1 border-t border-slate-100 bg-slate-50/50">
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                setDraftName(newName);
-                                                setOpen(false);
-                                                setShowModal(true);
-                                            }}
-                                            className={cn(
-                                                "w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors",
-                                                isNew
-                                                    ? "bg-blue-50 text-blue-700"
-                                                    : "text-blue-600 hover:bg-blue-50"
-                                            )}
-                                        >
-                                            <Plus className="h-4 w-4" />
-                                            Add New Company
-                                            {isNew && <Check className="h-4 w-4 ml-auto" />}
-                                        </button>
-                                    </div>
                                 </>
                             )}
                         </CommandList>
+
+                        {/* "Tambah Perusahaan Baru" — opens a modal to type the name.
+                            No POST /api/perusahaan needed; parent sends nama_perusahaan in register payload. */}
+                        {!isLoading && (
+                            <div className="p-2 flex items-center justify-center gap-3 border-t border-slate-100 bg-slate-50/50">
+                                <p className="text-xs text-slate-500 font-medium">Haven't found your company?</p>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setDraftName(newName);
+                                        setOpen(false);
+                                        setShowModal(true);
+                                    }}
+                                    className={cn(
+                                        "flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-colors",
+                                        isNew
+                                            ? "bg-blue-50 text-blue-700"
+                                            : "text-blue-600 hover:bg-blue-50"
+                                    )}
+                                >
+                                    <Plus className="h-3.5 w-3.5" />
+                                    Add Now
+                                    {isNew && <Check className="h-3.5 w-3.5 ml-1" />}
+                                </button>
+                            </div>
+                        )}
                     </Command>
                 </PopoverContent>
             </Popover>
