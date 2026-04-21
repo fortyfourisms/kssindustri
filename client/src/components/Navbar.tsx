@@ -1,31 +1,62 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
-const navLinks = [
-  { name: "Home", href: "#" },
-  { name: "About", href: "#about" },
-  { name: "Features", href: "#features" },
-  { name: "FAQ", href: "#faq" },
-];
+type NavbarMode = "landing" | "preview";
 
-export function Navbar() {
+type NavbarProps = {
+  mode?: NavbarMode;
+};
+
+export function Navbar({ mode = "landing" }: NavbarProps) {
   const [scrolled, setScrolled] = useState(false);
   const [isAtBottom, setIsAtBottom] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [activeSection, setActiveSection] = useState("Home");
   const navigate = useNavigate();
 
+  const navLinks = useMemo(
+    () =>
+      mode === "preview"
+        ? [
+            { name: "Home", href: "/" },
+            { name: "About", href: "/#about" },
+            { name: "Features", href: "/#features" },
+            { name: "Courses", href: "/#courses" },
+            { name: "FAQ", href: "/#faq" },
+          ]
+        : [
+            { name: "Home", href: "#" },
+            { name: "About", href: "#about" },
+            { name: "Features", href: "#features" },
+            { name: "Courses", href: "#courses" },
+            { name: "FAQ", href: "#faq" },
+          ],
+    [mode]
+  );
+
   useEffect(() => {
+    if (mode === "preview") {
+      const handlePreviewScroll = () => {
+        setScrolled(window.scrollY > 20);
+        setIsAtBottom(false);
+        setActiveSection("CourseShowcase");
+      };
+
+      window.addEventListener("scroll", handlePreviewScroll);
+      handlePreviewScroll();
+      return () => window.removeEventListener("scroll", handlePreviewScroll);
+    }
+
     const handleScroll = () => {
       setScrolled(window.scrollY > 20);
       setIsAtBottom(window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 100);
 
       let currentActive = "Home";
       for (const link of navLinks) {
-        if (link.href === "#") continue;
+        if (link.href === "#" || link.href.startsWith("/")) continue;
         const element = document.querySelector(link.href);
         if (element) {
           const rect = element.getBoundingClientRect();
@@ -44,7 +75,7 @@ export function Navbar() {
     window.addEventListener("scroll", handleScroll);
     handleScroll();
     return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+  }, [mode, navLinks]);
 
   // Prevent scrolling when mobile menu is open
   useEffect(() => {
@@ -62,6 +93,11 @@ export function Navbar() {
 
   const handleScrollTo = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
     e.preventDefault();
+    if (href.startsWith("/")) {
+      navigate(href);
+      setIsOpen(false);
+      return;
+    }
     if (href === "#") {
       window.scrollTo({ top: 0, behavior: "smooth" });
       return;
@@ -75,16 +111,38 @@ export function Navbar() {
   return (
     <motion.header
       initial={{ y: -100 }}
-      animate={{ y: 0 }}
-      transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-      className={`fixed top-0 left-0 right-0 z-50 flex justify-center transition-all duration-500 ${scrolled || isOpen ? "pt-4" : "pt-6"
-        } ${isAtBottom ? "-translate-y-full opacity-0 pointer-events-none" : "translate-y-0 opacity-100"}`}
+      animate={{
+        y: isAtBottom ? -96 : 0,
+        opacity: isAtBottom ? 0 : 1,
+        paddingTop: scrolled || isOpen ? 16 : 24,
+      }}
+      transition={{
+        y: { type: "spring", stiffness: 180, damping: 24, mass: 0.9 },
+        opacity: { duration: 0.28, ease: "easeOut" },
+        paddingTop: { type: "spring", stiffness: 220, damping: 26 },
+      }}
+      className={`fixed top-0 left-0 right-0 z-50 flex justify-center ${isAtBottom ? "pointer-events-none" : "pointer-events-auto"}`}
     >
-      <div
-        className={`w-full max-w-7xl mx-4 sm:mx-6 lg:mx-8 transition-all duration-500 flex items-center justify-between z-[60] ${scrolled || isOpen
-          ? "bg-white/10 backdrop-blur-xl saturate-[1.8] border border-white/20 rounded-full px-6 sm:px-8 py-2 shadow-2xl shadow-black/5 ring-1 ring-white/20"
-          : "px-0"
-          }`}
+      <motion.div
+        animate={{
+          backgroundColor: scrolled || isOpen ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0)",
+          borderColor: scrolled || isOpen ? "rgba(255,255,255,0.24)" : "rgba(255,255,255,0)",
+          borderRadius: scrolled || isOpen ? 999 : 24,
+          paddingLeft: scrolled || isOpen ? 24 : 0,
+          paddingRight: scrolled || isOpen ? 24 : 0,
+          paddingTop: scrolled || isOpen ? 8 : 0,
+          paddingBottom: scrolled || isOpen ? 8 : 0,
+          boxShadow: scrolled || isOpen
+            ? "0 20px 45px rgba(15, 23, 42, 0.08)"
+            : "0 0 0 rgba(15, 23, 42, 0)",
+        }}
+        transition={{
+          type: "spring",
+          stiffness: 170,
+          damping: 22,
+          mass: 0.95,
+        }}
+        className="w-full max-w-7xl mx-4 sm:mx-6 lg:mx-8 flex items-center justify-between z-[60] border backdrop-blur-xl saturate-[1.8] ring-1 ring-white/20"
       >
         {/* Logo Section */}
         <div className="flex-1 flex items-center justify-start gap-3 py-2">
@@ -94,11 +152,25 @@ export function Navbar() {
         </div>
 
         {/* Desktop Navigation Pill */}
-        <nav
-          className={`hidden md:flex items-center transition-all duration-500 shrink-0 gap-1 ${scrolled
-            ? "bg-transparent border-none shadow-none ring-0 px-0 py-0"
-            : "bg-white/10 backdrop-blur-xl saturate-[1.8] border border-white/20 rounded-full px-1.5 py-1.5 shadow-2xl shadow-black/5 ring-1 ring-white/20"
-            }`}
+        <motion.nav
+          animate={{
+            backgroundColor: scrolled ? "rgba(255,255,255,0)" : "rgba(255,255,255,0.10)",
+            borderColor: scrolled ? "rgba(255,255,255,0)" : "rgba(255,255,255,0.20)",
+            paddingLeft: scrolled ? 0 : 6,
+            paddingRight: scrolled ? 0 : 6,
+            paddingTop: scrolled ? 0 : 6,
+            paddingBottom: scrolled ? 0 : 6,
+            boxShadow: scrolled
+              ? "0 0 0 rgba(15, 23, 42, 0)"
+              : "0 18px 40px rgba(15, 23, 42, 0.06)",
+          }}
+          transition={{
+            type: "spring",
+            stiffness: 190,
+            damping: 24,
+            mass: 0.9,
+          }}
+          className="hidden md:flex items-center shrink-0 gap-1 rounded-full border backdrop-blur-xl saturate-[1.8] ring-1 ring-white/20"
         >
           {navLinks.map((link) => (
             <a
@@ -113,7 +185,7 @@ export function Navbar() {
               {link.name}
             </a>
           ))}
-        </nav>
+        </motion.nav>
 
         {/* Action Buttons & Mobile Toggle */}
         <div className="flex-1 flex items-center justify-end gap-3 sm:gap-6 py-1">
@@ -121,13 +193,13 @@ export function Navbar() {
             onClick={() => navigate("/login")}
             className="text-sm font-bold text-slate-500 hover:text-foreground transition-colors hidden sm:block"
           >
-            Sign In
+            {mode === "preview" ? "Sign In" : "Sign In"}
           </button>
           <Button
             onClick={() => navigate("/register")}
             className="hidden sm:inline-flex bg-blue-600 hover:bg-blue-700 text-white rounded-full px-8 h-10 text-sm font-bold shadow-lg shadow-blue-500/20 border-none transition-all hover:scale-105 active:scale-95 leading-none"
           >
-            Sign Up
+            {mode === "preview" ? "Sign Up" : "Sign Up"}
           </Button>
 
           {/* Mobile Menu Toggle */}
@@ -139,7 +211,7 @@ export function Navbar() {
             {isOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
         </div>
-      </div>
+      </motion.div>
 
       {/* Mobile Menu Overlay */}
       <AnimatePresence>
@@ -182,13 +254,13 @@ export function Navbar() {
                   onClick={() => { setIsOpen(false); navigate("/login"); }}
                   className="w-full py-4 rounded-2xl text-lg font-bold text-slate-600 border border-slate-200"
                 >
-                  Sign In
+                  {mode === "preview" ? "Sign In" : "Sign In"}
                 </button>
                 <Button
                   onClick={() => { setIsOpen(false); navigate("/register"); }}
                   className="w-full py-7 rounded-2xl text-lg font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-xl shadow-blue-500/20"
                 >
-                  Sign Up
+                  {mode === "preview" ? "Sign Up" : "Sign Up"}
                 </Button>
               </motion.div>
             </nav>

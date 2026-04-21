@@ -246,7 +246,12 @@ export function Features() {
                   Tingkatkan literasi dan kompetensi SDM melalui berbagai modul pembelajaran interaktif terkait keamanan siber.
                 </p>
                 <button 
-                  onClick={() => navigate("/register")}
+                  onClick={() => {
+                    const section = document.querySelector("#courses");
+                    if (section) {
+                      section.scrollIntoView({ behavior: "smooth" });
+                    }
+                  }}
                   className="w-full py-3 bg-white text-slate-900 rounded-lg text-sm font-bold pointer-events-auto hover:bg-slate-100 group-hover:bg-slate-900 group-hover:text-white transition-all duration-500"
                 >
                   Lihat Materi

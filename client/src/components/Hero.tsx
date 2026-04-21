@@ -5,7 +5,9 @@ import { useNavigate } from "react-router-dom";
 export function Hero() {
   const navigate = useNavigate();
   const [displayText, setDisplayText] = useState("");
-  const fullText = "#JagaRuangSiber";
+  const slogans = ["#JagaRuangSiber", "#NyamanKarenaAman"];
+  const [activeSloganIndex, setActiveSloganIndex] = useState(0);
+  const fullText = slogans[activeSloganIndex];
   const [isDeleting, setIsDeleting] = useState(false);
   const [typingSpeed, setTypingSpeed] = useState(150);
 
@@ -22,6 +24,7 @@ export function Hero() {
         setTypingSpeed(100);
       } else if (isDeleting && updatedText === "") {
         setIsDeleting(false);
+        setActiveSloganIndex((prev) => (prev + 1) % slogans.length);
         setTypingSpeed(150);
       } else if (isDeleting) {
         setTypingSpeed(50);
@@ -33,7 +36,7 @@ export function Hero() {
     }, typingSpeed);
 
     return () => clearTimeout(timer);
-  }, [displayText, isDeleting, typingSpeed]);
+  }, [displayText, fullText, isDeleting, slogans.length, typingSpeed]);
 
   return (
     <section className="relative pt-24 pb-16 md:pt-48 md:pb-32 overflow-hidden bg-transparent min-h-[90vh] flex items-center">
@@ -93,4 +96,3 @@ export function Hero() {
     </section>
   );
 }
-
