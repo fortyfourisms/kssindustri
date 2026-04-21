@@ -60,23 +60,6 @@ export default function KSE() {
         queryKey: ["se"],
         queryFn: api.getKse,
     });
-
-    const deleteMutation = useMutation({
-        mutationFn: (id: number | string) => csirtService.deleteSe(id),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["se"] });
-            toast({ title: "Berhasil", description: "Sistem elektronik berhasil dihapus." });
-        },
-        onError: () => {
-            toast({ title: "Gagal", description: "Terjadi kesalahan saat menghapus data.", variant: "destructive" });
-        },
-    });
-
-    const handleDelete = (se: any) => {
-        if (!window.confirm(`Hapus "${se.nama_se || 'SE ini'}"? Tindakan ini tidak dapat dibatalkan.`)) return;
-        deleteMutation.mutate(se.id);
-    };
-
     // Normalise: API returns { data: [...], total_count: N }
     const seList: any[] = Array.isArray(seData?.data)
         ? seData.data
@@ -197,14 +180,6 @@ export default function KSE() {
                                                                     hover:bg-blue-100 hover:border-blue-200 transition-colors group-hover:shadow-sm"
                                                         >
                                                             <Edit2 className="w-3.5 h-3.5" /> Edit
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleDelete(se)}
-                                                            disabled={deleteMutation.isPending}
-                                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 border border-red-100 text-red-500 font-bold text-xs
-                                                                    hover:bg-red-100 hover:border-red-200 transition-colors group-hover:shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                                                        >
-                                                            <Trash2 className="w-3.5 h-3.5" /> Hapus
                                                         </button>
                                                     </div>
                                                 </td>

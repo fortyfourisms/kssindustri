@@ -42,7 +42,7 @@ interface KseRespondentProfile {
 }
 
 // ── Constants ────────────────────────────────────────────────────────────────
-const QUESTIONS_PER_PAGE = 5;
+const QUESTIONS_PER_PAGE = 10;
 const MAX_SCORE = 50;
 
 const QUESTION_TO_FIELD: Record<string, string> = {
@@ -622,13 +622,13 @@ export default function FormKse() {
                     {currentStep === 2 && (
                         <motion.div
                             key="step2"
-                            initial={{ opacity: 0, y: 16 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -16 }}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
                             transition={{ duration: 0.3 }}
                         >
                             {/* Progress Bar */}
-                            <div className="sticky top-[74px] z-[99] -mt-2.5 mb-6">
+                            <div className="sticky top-0 z-[99] mb-6 pt-2 pb-2 -mt-2 bg-[#f5f7ff]">
                                 <div className="bg-white/80 backdrop-blur-md border border-slate-200/60 rounded-2xl p-4 shadow-sm">
                                     <ProgressBar
                                         answered={answeredCount}
@@ -643,7 +643,7 @@ export default function FormKse() {
                             <div className="grid grid-cols-1 lg:grid-cols-4 gap-5">
                                 {/* ── Sidebar ── */}
                                 <div className="lg:col-span-1">
-                                    <div className="lg:sticky lg:top-[200px] space-y-4">
+                                    <div className="lg:sticky lg:top-[90px] space-y-4">
 
                                         {/* Score / Gauge Card */}
                                         <div className="bg-white rounded-2xl border border-slate-100/50 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 overflow-hidden">
@@ -787,16 +787,18 @@ export default function FormKse() {
                                             ))}
 
                                             {/* Pagination */}
-                                            <div className="mt-8 pt-5 border-t border-slate-200">
-                                                <PaginationControl
-                                                    currentPage={currentPage}
-                                                    totalPages={totalPagesInCategory}
-                                                    canGoPrevious={canGoPrevious}
-                                                    canGoNext={canGoNext}
-                                                    onPrevious={prevPage}
-                                                    onNext={nextPage}
-                                                />
-                                            </div>
+                                            {totalPagesInCategory > 1 && (
+                                                <div className="mt-8 pt-5 border-t border-slate-200">
+                                                    <PaginationControl
+                                                        currentPage={currentPage}
+                                                        totalPages={totalPagesInCategory}
+                                                        canGoPrevious={canGoPrevious}
+                                                        canGoNext={canGoNext}
+                                                        onPrevious={prevPage}
+                                                        onNext={nextPage}
+                                                    />
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 </div>

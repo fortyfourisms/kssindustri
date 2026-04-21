@@ -209,9 +209,6 @@ export default function Login() {
                                     Remember me
                                 </span>
                             </label>
-                            <Link to="#" className="text-slate-500 hover:text-slate-900 transition-colors tracking-wide">
-                                Forgot Password?
-                            </Link>
                         </div>
 
                         <button

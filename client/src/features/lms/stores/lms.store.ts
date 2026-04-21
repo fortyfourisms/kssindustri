@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { lmsService } from '@/services/lms.service';
+import { lmsService } from '@/features/lms/services/lms.service';
 import type {
     Kelas,
     MateriItem,
@@ -11,7 +11,7 @@ import type {
     KuisAttempt,
     JawabanPayload,
     SertifikatItem,
-} from '@/types/lms.types';
+} from '@/features/lms/types/lms.types';
 
 // ─── Action Result ────────────────────────────────────────────────────────────
 

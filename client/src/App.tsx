@@ -11,10 +11,13 @@ import Login from "@/pages/Login";
 import Register from "@/pages/Register";
 import MfaVerify from "@/pages/MfaVerify";
 import NotFound from "@/pages/not-found";
+import CoursePreview from "@/pages/CoursePreview";
 import { LoadingScreen } from "@/components/LoadingScreen";
 
 // Dashboard layout (App Shell – mounts once)
 import { DashboardLayout } from "@/layouts/DashboardLayout";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { Outlet } from "react-router-dom";
 
 // Dashboard pages
 import Dashboard from "@/pages/dashboard/Dashboard";
@@ -26,11 +29,14 @@ import CSIRT from "@/pages/dashboard/CSIRT";
 import SurveiProfil from "@/pages/dashboard/SurveiProfil";
 import EditProfil from "@/pages/dashboard/EditProfil";
 import PengaturanAkun from "@/pages/dashboard/PengaturanAkun";
-import LMS from "@/pages/dashboard/LMS";
-import LMSCourse from "@/pages/dashboard/LMSCourse";
-import LMSLearn from "@/pages/dashboard/LMSLearn";
-import LMSQuiz from "@/pages/dashboard/LMSQuiz";
-import LMSCertificate from "@/pages/dashboard/LMSCertificate";
+import { LMSLayout } from "@/features/lms/layouts/LMSLayout";
+import { LMSDashboard } from "@/features/lms/pages/LMSDashboard";
+import LMSMateri from "@/features/lms/pages/LMSMateri";
+import { LMSProgress } from "@/features/lms/pages/LMSProgress";
+import LMSCourse from "@/features/lms/pages/LMSCourse";
+import LMSLearn from "@/features/lms/pages/LMSLearn";
+import LMSQuiz from "@/features/lms/pages/LMSQuiz";
+import LMSCertificate from "@/features/lms/pages/LMSCertificate";
 
 // App Bootstrap function
 import { bootstrapApp } from "@/lib/bootstrapApp";
@@ -44,6 +50,7 @@ const router = createBrowserRouter([
   { path: "/login", element: <Login /> },
   { path: "/register", element: <Register /> },
   { path: "/mfa", element: <MfaVerify /> },
+  { path: "/course-preview/:slug", element: <CoursePreview /> },
 
   // Dashboard App Shell – DashboardLayout mounts ONCE per session
   {
@@ -58,13 +65,21 @@ const router = createBrowserRouter([
       { path: "/dashboard/survei", element: <SurveiProfil />, handle: { title: "Survei Profil Risiko" } },
       { path: "/dashboard/profil", element: <EditProfil />, handle: { title: "Profil" } },
       { path: "/dashboard/pengaturan", element: <PengaturanAkun />, handle: { title: "Pengaturan Akun" } },
-      { path: "/dashboard/materi", element: <LMS />, handle: { title: "Materi Pembelajaran" } },
+    ],
+  },
+
+  // LMS Module Layout
+  {
+    element: <LMSLayout />,
+    children: [
+      { path: "/lms", element: <LMSDashboard />, handle: { title: "Dashboard LMS" } },
+      { path: "/lms/materi", element: <LMSMateri />, handle: { title: "Materi Pembelajaran" } },
+      { path: "/lms/progress", element: <LMSProgress />, handle: { title: "Progress & Penilaian" } },
       {
-        path: "/dashboard/materi/:courseId",
+        path: "/lms/materi/:courseId",
         element: <LMSCourse />,
         handle: { title: "Kelas Pembelajaran" },
         children: [
-            // Konten otomatis di-render ke kanan (Outlet)
             { path: "learn/:materiId", element: <LMSLearn /> },
             { path: "quiz/:quizId", element: <LMSQuiz /> },
             { path: "certificate", element: <LMSCertificate /> },

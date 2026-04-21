@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { BookOpen, ChevronRight, GraduationCap, Shield, Calendar, AlertCircle, RefreshCcw } from "lucide-react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { useLmsStore } from "@/stores/lms.store";
+import { useLmsStore } from "@/features/lms/stores/lms.store";
 
 // ─── Blob color palette (cycles through courses) ──────────────────────────────
 const BLOB_PAIRS = [
@@ -88,7 +88,8 @@ export default function LMS() {
     }, [fetchCourses]);
 
     return (
-        <div className="max-w-7xl mx-auto pb-12 space-y-6">
+        <div className="h-full overflow-y-auto p-4 md:p-6">
+            <div className="max-w-7xl mx-auto pb-12 space-y-6">
             {/* Header */}
             <div className="flex items-center justify-between mb-2">
                 <div>
@@ -128,7 +129,7 @@ export default function LMS() {
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.4, delay: i * 0.05 }}
-                            onClick={() => navigate(`/dashboard/materi/${course.id}`)}
+                            onClick={() => navigate(`/lms/materi/${course.id}`)}
                             className="group flex flex-col h-full bg-white border border-slate-200 hover:border-blue-200 rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer"
                         >
                             {/* Top Decorative Section */}
@@ -179,6 +180,7 @@ export default function LMS() {
                         </motion.div>
                     );
                 })}
+            </div>
             </div>
         </div>
     );

@@ -15,8 +15,8 @@ import {
     GraduationCap,
     ExternalLink,
 } from "lucide-react";
-import { useLmsStore } from "@/stores/lms.store";
-import { lmsService } from "@/services/lms.service";
+import { useLmsStore } from "@/features/lms/stores/lms.store";
+import { lmsService } from "@/features/lms/services/lms.service";
 import { toast } from "sonner";
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
@@ -93,7 +93,7 @@ export default function LMSCertificate() {
         <div className="max-w-3xl mx-auto pb-12">
             {/* Back */}
             <button
-                onClick={() => navigate(`/dashboard/materi/${courseId}`)}
+                onClick={() => navigate(`/lms/materi/${courseId}`)}
                 className="flex items-center gap-2 text-sm font-bold text-slate-600 hover:text-slate-900 transition-colors mb-8"
             >
                 <ArrowLeft className="w-4 h-4" />

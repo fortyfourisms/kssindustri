@@ -1,4 +1,4 @@
-import { apiClient } from "./apiClient";
+import { apiClient } from '@/services/apiClient';
 import { PICPerusahaan } from "@/types/pic.types";
 
 export const picService = {

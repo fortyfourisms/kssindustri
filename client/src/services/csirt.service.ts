@@ -1,4 +1,4 @@
-import { apiClient } from './apiClient';
+import { apiClient } from '@/services/apiClient';
 import type { CsirtMember, CreateCsirtPayload, SdmCsirt, SeCsirt, CreateSePayload, CreateSdmPayload } from '@/types/csirt.types';
 
 /**

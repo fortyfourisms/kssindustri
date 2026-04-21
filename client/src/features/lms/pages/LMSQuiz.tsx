@@ -13,9 +13,9 @@ import {
     AlertCircle,
     PlayCircle,
 } from "lucide-react";
-import { useLmsStore } from "@/stores/lms.store";
+import { useLmsStore } from "@/features/lms/stores/lms.store";
 import { toast } from "sonner";
-import type { JawabanPayload, SoalWithPilihan } from "@/types/lms.types";
+import type { JawabanPayload, SoalWithPilihan } from "@/features/lms/types/lms.types";
 
 // ─── Stages ───────────────────────────────────────────────────────────────────
 type Stage = "start" | "questions" | "submitting" | "result";
@@ -385,7 +385,7 @@ export default function LMSQuiz() {
                             totalBenar={kuisResult.total_benar}
                             totalSoal={kuisResult.total_soal}
                             onRetry={handleRetry}
-                            onBack={() => navigate(`/dashboard/materi/${courseId}`)}
+                            onBack={() => navigate(`/lms/materi/${courseId}`)}
                         />
                     </motion.div>
                 )}
