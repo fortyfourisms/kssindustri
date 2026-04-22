@@ -23,8 +23,17 @@ function processQueue(error: unknown): void {
  * - /api/login   : belum ada session
  * - /api/refresh : jika ini pun 401, artinya refresh token sudah expired
  * - /api/logout  : sedang keluar, tidak perlu retry
+ * - /api/mfa/*   : kesalahan MFA harus ditangani di halaman MFA, bukan redirect login
  */
-const NO_REFRESH_PATHS = ['/api/login', '/api/refresh', '/api/logout', '/api/register'];
+const NO_REFRESH_PATHS = [
+    '/api/login',
+    '/api/refresh',
+    '/api/logout',
+    '/api/register',
+    '/api/mfa/setup',
+    '/api/mfa/enable',
+    '/api/mfa/verify',
+];
 
 /**
  * Header internal yang ditambahkan ke request yang sudah diulang setelah refresh.
