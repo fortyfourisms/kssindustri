@@ -4,7 +4,9 @@ import { ikasDataStatic } from "@/data/ikas-data";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { api } from "@/lib/api";
-import { Building2, Search, Shield, Radar, Activity, Edit, FileSpreadsheet, Loader2, CalendarDays } from "lucide-react";
+import { exportIkasPdf } from "@/lib/pdf-export";
+import { PageHeader } from "@/components/dashboard/PageHeader";
+import { Building2, Search, Shield, Radar, Activity, Edit, FileSpreadsheet, Loader2, CalendarDays, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { RadarChartIkas } from "@/components/RadarChartIkas";
 import { IkasYearComparisonChart } from "@/components/IkasYearComparisonChart";
@@ -83,6 +85,8 @@ export default function IKAS() {
     const navigate = useNavigate();
     const { toast } = useToast();
     const { data: user } = useQuery({ queryKey: ["me"], queryFn: api.getMe });
+    const userData = user as any;
+    const perusahaanId = userData?.id_perusahaan || userData?.perusahaan?.id;
 
     const currentYear = new Date().getFullYear();
     const [selectedYear, setSelectedYear] = useState<number>(currentYear);
@@ -94,9 +98,10 @@ export default function IKAS() {
 
     // ── Fetch seluruh data IKAS milik perusahaan user → GET /api/maturity/ikas ──────────
     const { data: ikasRaw, isLoading: ikasListLoading } = useQuery({
-        queryKey: ["ikasList"],
-        queryFn: () => api.getIkasList(),
+        queryKey: ["my-ikas", perusahaanId || "unknown"],
+        queryFn: () => api.getMyIkas(perusahaanId),
         staleTime: 30_000,
+        enabled: !!perusahaanId,
     });
 
     // Normalize: API may return single object or array
@@ -138,6 +143,153 @@ export default function IKAS() {
         return value;
     };
 
+    const ikasDetailRows = [
+        {
+            domain: "Identifikasi",
+            indikator: "Mengidentifikasi Peran dan tanggung jawab organisasi",
+            target: ikasDataStatic.identifikasi.peran_tanggung_jawab,
+            nilai: formatValue(ikasDataDynamic.identifikasi.nilai_subdomain1),
+            nilaiDomain: formatValue(ikasDataDynamic.identifikasi.nilai_identifikasi),
+            kategoriDomain: ikasDataDynamic.identifikasi.kategori_identifikasi,
+        },
+        {
+            domain: "Identifikasi",
+            indikator: "Menyusun strategi, kebijakan, dan prosedur Keamanan Siber",
+            target: ikasDataStatic.identifikasi.strategi_kebijakan,
+            nilai: formatValue(ikasDataDynamic.identifikasi.nilai_subdomain2),
+            nilaiDomain: formatValue(ikasDataDynamic.identifikasi.nilai_identifikasi),
+            kategoriDomain: ikasDataDynamic.identifikasi.kategori_identifikasi,
+        },
+        {
+            domain: "Identifikasi",
+            indikator: "Mengelola aset informasi",
+            target: ikasDataStatic.identifikasi.aset_informasi,
+            nilai: formatValue(ikasDataDynamic.identifikasi.nilai_subdomain3),
+            nilaiDomain: formatValue(ikasDataDynamic.identifikasi.nilai_identifikasi),
+            kategoriDomain: ikasDataDynamic.identifikasi.kategori_identifikasi,
+        },
+        {
+            domain: "Identifikasi",
+            indikator: "Menilai dan mengelola risiko Keamanan Siber",
+            target: ikasDataStatic.identifikasi.risiko_keamanan,
+            nilai: formatValue(ikasDataDynamic.identifikasi.nilai_subdomain4),
+            nilaiDomain: formatValue(ikasDataDynamic.identifikasi.nilai_identifikasi),
+            kategoriDomain: ikasDataDynamic.identifikasi.kategori_identifikasi,
+        },
+        {
+            domain: "Identifikasi",
+            indikator: "Mengelola risiko rantai pasok",
+            target: ikasDataStatic.identifikasi.rantai_pasok,
+            nilai: formatValue(ikasDataDynamic.identifikasi.nilai_subdomain5),
+            nilaiDomain: formatValue(ikasDataDynamic.identifikasi.nilai_identifikasi),
+            kategoriDomain: ikasDataDynamic.identifikasi.kategori_identifikasi,
+        },
+        {
+            domain: "Proteksi",
+            indikator: "Mengelola identitas, autentikasi, dan kendali akses",
+            target: ikasDataStatic.proteksi.identitas_autentikasi,
+            nilai: formatValue(ikasDataDynamic.proteksi.nilai_subdomain1),
+            nilaiDomain: formatValue(ikasDataDynamic.proteksi.nilai_proteksi),
+            kategoriDomain: ikasDataDynamic.proteksi.kategori_proteksi,
+        },
+        {
+            domain: "Proteksi",
+            indikator: "Melindungi aset fisik",
+            target: ikasDataStatic.proteksi.aset_fisik,
+            nilai: formatValue(ikasDataDynamic.proteksi.nilai_subdomain2),
+            nilaiDomain: formatValue(ikasDataDynamic.proteksi.nilai_proteksi),
+            kategoriDomain: ikasDataDynamic.proteksi.kategori_proteksi,
+        },
+        {
+            domain: "Proteksi",
+            indikator: "Melindungi data",
+            target: ikasDataStatic.proteksi.data,
+            nilai: formatValue(ikasDataDynamic.proteksi.nilai_subdomain3),
+            nilaiDomain: formatValue(ikasDataDynamic.proteksi.nilai_proteksi),
+            kategoriDomain: ikasDataDynamic.proteksi.kategori_proteksi,
+        },
+        {
+            domain: "Proteksi",
+            indikator: "Melindungi aplikasi",
+            target: ikasDataStatic.proteksi.aplikasi,
+            nilai: formatValue(ikasDataDynamic.proteksi.nilai_subdomain4),
+            nilaiDomain: formatValue(ikasDataDynamic.proteksi.nilai_proteksi),
+            kategoriDomain: ikasDataDynamic.proteksi.kategori_proteksi,
+        },
+        {
+            domain: "Proteksi",
+            indikator: "Melindungi jaringan",
+            target: ikasDataStatic.proteksi.jaringan,
+            nilai: formatValue(ikasDataDynamic.proteksi.nilai_subdomain5),
+            nilaiDomain: formatValue(ikasDataDynamic.proteksi.nilai_proteksi),
+            kategoriDomain: ikasDataDynamic.proteksi.kategori_proteksi,
+        },
+        {
+            domain: "Proteksi",
+            indikator: "Melindungi sumber daya manusia",
+            target: ikasDataStatic.proteksi.sdm,
+            nilai: formatValue(ikasDataDynamic.proteksi.nilai_subdomain6),
+            nilaiDomain: formatValue(ikasDataDynamic.proteksi.nilai_proteksi),
+            kategoriDomain: ikasDataDynamic.proteksi.kategori_proteksi,
+        },
+        {
+            domain: "Deteksi",
+            indikator: "Mengelola deteksi Peristiwa Siber",
+            target: ikasDataStatic.deteksi.deteksi_peristiwa,
+            nilai: formatValue(ikasDataDynamic.deteksi.nilai_subdomain1),
+            nilaiDomain: formatValue(ikasDataDynamic.deteksi.nilai_deteksi),
+            kategoriDomain: ikasDataDynamic.deteksi.kategori_deteksi,
+        },
+        {
+            domain: "Deteksi",
+            indikator: "Menganalisis anomali dan Peristiwa Siber",
+            target: ikasDataStatic.deteksi.anomali_peristiwa,
+            nilai: formatValue(ikasDataDynamic.deteksi.nilai_subdomain2),
+            nilaiDomain: formatValue(ikasDataDynamic.deteksi.nilai_deteksi),
+            kategoriDomain: ikasDataDynamic.deteksi.kategori_deteksi,
+        },
+        {
+            domain: "Deteksi",
+            indikator: "Memantau Peristiwa Siber berkelanjutan",
+            target: ikasDataStatic.deteksi.pemantauan_berkelanjutan,
+            nilai: formatValue(ikasDataDynamic.deteksi.nilai_subdomain3),
+            nilaiDomain: formatValue(ikasDataDynamic.deteksi.nilai_deteksi),
+            kategoriDomain: ikasDataDynamic.deteksi.kategori_deteksi,
+        },
+        {
+            domain: "Tanggulih",
+            indikator: "Menyusun perencanaan penanggulangan dan pemulihan Insiden Siber",
+            target: ikasDataStatic.tanggulih.perencanaan_pemulihan,
+            nilai: formatValue(ikasDataDynamic.tanggulih.nilai_subdomain1),
+            nilaiDomain: formatValue(ikasDataDynamic.tanggulih.nilai_tanggulih),
+            kategoriDomain: ikasDataDynamic.tanggulih.kategori_tanggulih,
+        },
+        {
+            domain: "Tanggulih",
+            indikator: "Menganalisis dan melaporkan Insiden Siber",
+            target: ikasDataStatic.tanggulih.analisis_pelaporan,
+            nilai: formatValue(ikasDataDynamic.tanggulih.nilai_subdomain2),
+            nilaiDomain: formatValue(ikasDataDynamic.tanggulih.nilai_tanggulih),
+            kategoriDomain: ikasDataDynamic.tanggulih.kategori_tanggulih,
+        },
+        {
+            domain: "Tanggulih",
+            indikator: "Melaksanakan penanggulangan dan pemulihan Insiden Siber",
+            target: ikasDataStatic.tanggulih.pelaksanaan_pemulihan,
+            nilai: formatValue(ikasDataDynamic.tanggulih.nilai_subdomain3),
+            nilaiDomain: formatValue(ikasDataDynamic.tanggulih.nilai_tanggulih),
+            kategoriDomain: ikasDataDynamic.tanggulih.kategori_tanggulih,
+        },
+        {
+            domain: "Tanggulih",
+            indikator: "Meningkatkan keamanan setelah terjadinya Insiden Siber",
+            target: ikasDataStatic.tanggulih.peningkatan_keamanan,
+            nilai: formatValue(ikasDataDynamic.tanggulih.nilai_subdomain4),
+            nilaiDomain: formatValue(ikasDataDynamic.tanggulih.nilai_tanggulih),
+            kategoriDomain: ikasDataDynamic.tanggulih.kategori_tanggulih,
+        },
+    ];
+
     const triggerFileInput = () => {
         fileInputRef.current?.click();
     };
@@ -165,7 +317,7 @@ export default function IKAS() {
             await api.importIkasExcel(file);
             toast({ title: "Berhasil", description: "Upload berhasil! Data IKAS telah diperbarui." });
             // Refresh daftar IKAS setelah import
-            queryClient.invalidateQueries({ queryKey: ["ikasList"] });
+            queryClient.invalidateQueries({ queryKey: ["my-ikas", perusahaanId || "unknown"] });
         } catch (error: any) {
             toast({ title: "Gagal Upload", description: error.message || "Terjadi kesalahan saat upload file.", variant: "destructive" });
         } finally {
@@ -183,28 +335,12 @@ export default function IKAS() {
         <RequireCompanyProfile>
             <div className="max-w-7xl mx-auto space-y-6">
 
-                {/* Unified Header */}
-                <div className="bg-gradient-to-br from-blue-900 via-blue-700 to-blue-500 rounded-2xl p-4 md:p-6 relative overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl text-white border border-blue-400/20">
-                    <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-blue-300 to-emerald-300 opacity-60"></div>
-                    <div className="flex items-center gap-4 relative z-10">
-                        <div className="w-12 h-12 md:w-16 md:h-16 rounded-2xl bg-white/10 flex items-center justify-center backdrop-blur-sm shadow-inner overflow-hidden border border-white/20">
-                            <Building2 className="w-6 h-6 md:w-8 md:h-8 text-white drop-shadow" />
-                        </div>
-                        <div>
-                            <h1 className="text-lg md:text-2xl font-black drop-shadow-sm">IKAS - {user?.perusahaan?.nama_perusahaan || 'Stakeholder'}</h1>
-                            {user?.perusahaan?.subSektor && (
-                                <p className="text-sm font-semibold text-white/90 mt-1 drop-shadow-sm flex items-center">
-                                    <span className="text-white/70 text-[13px]">{user.perusahaan.subSektor.name || 'Sektor'}</span>
-                                </p>
-                            )}
-                        </div>
-                    </div>
-                    <div className="relative z-10">
-                        <span className="inline-block px-4 md:px-5 py-2 rounded-full bg-white/15 text-white text-sm font-bold tracking-wide border border-white/30 uppercase backdrop-blur-md shadow-lg">
-                            {ikasDataDynamic.total_kategori}
-                        </span>
-                    </div>
-                </div>
+                <PageHeader
+                    icon={Building2}
+                    title={`IKAS - ${userData?.perusahaan?.nama_perusahaan || "Stakeholder"}`}
+                    subtitle={userData?.perusahaan?.subSektor?.name || undefined}
+                />
+
 
                 {/* ── Year Tab Bar ──────────────────────────────────────── */}
                 <div className="bg-white/80 backdrop-blur-md border border-slate-200/70 rounded-2xl px-4 py-3 shadow-sm">
@@ -224,7 +360,7 @@ export default function IKAS() {
                                         id={`ikas-year-tab-${year}`}
                                         type="button"
                                         onClick={() => setSelectedYear(year)}
-                                        className={`relative px-4 py-1.5 rounded-full text-sm font-bold transition-all duration-200 ${isSelected
+                                        className={`relative px-4 py-1.5 rounded-xl text-sm font-bold transition-all duration-200 ${isSelected
                                             ? 'bg-blue-600 text-white shadow-md shadow-blue-500/30 scale-105'
                                             : 'bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-700'
                                             }`}
@@ -480,7 +616,7 @@ export default function IKAS() {
                                 />
                                 <button
                                     type="button"
-                                    className="px-5 py-2.5 rounded-full bg-white border border-slate-200 text-slate-600 font-bold text-sm shadow-sm hover:bg-slate-50 transition-colors flex items-center gap-2"
+                                    className="px-5 py-2.5 rounded-xl bg-gradient-to-l from-yellow-400 to-amber-500 text-white font-bold text-sm shadow-md shadow-yellow-500/30 hover:shadow-yellow-500/45 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center gap-2 whitespace-nowrap"
                                     onClick={() => navigate('/dashboard/form-ikas')}
                                 >
                                     <Edit className="w-4 h-4" /> Input Data
@@ -489,13 +625,42 @@ export default function IKAS() {
                                     type="button"
                                     onClick={triggerFileInput}
                                     disabled={loading}
-                                    className="px-5 py-2.5 rounded-full bg-gradient-to-r from-emerald-600 to-emerald-500 text-white font-bold text-sm shadow-md shadow-emerald-500/25 hover:shadow-emerald-500/40 hover:-translate-y-0.5 transition-all disabled:opacity-70 disabled:hover:translate-y-0 flex items-center gap-2"
+                                    className="px-5 py-2.5 rounded-xl bg-gradient-to-l from-emerald-600 to-emerald-500 text-white font-bold text-sm shadow-md shadow-emerald-500/25 hover:shadow-emerald-500/40 hover:-translate-y-0.5 transition-all disabled:opacity-70 disabled:hover:translate-y-0 flex items-center gap-2"
                                 >
                                     {loading ? (
                                         <><Loader2 className="w-4 h-4 animate-spin" /> Mengupload...</>
                                     ) : (
                                         <><FileSpreadsheet className="w-4 h-4" /> Upload Excel</>
                                     )}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        try {
+                                            exportIkasPdf({
+                                                companyName: userData?.perusahaan?.nama_perusahaan,
+                                                selectedYear,
+                                                totalCategory: ikasDataDynamic.total_kategori,
+                                                totalScore: formatValue(ikasDataDynamic.total_rata_rata),
+                                                summaryRows: [
+                                                    { label: "Nilai Identifikasi", value: formatValue(ikasDataDynamic.identifikasi.nilai_identifikasi) },
+                                                    { label: "Nilai Proteksi", value: formatValue(ikasDataDynamic.proteksi.nilai_proteksi) },
+                                                    { label: "Nilai Deteksi", value: formatValue(ikasDataDynamic.deteksi.nilai_deteksi) },
+                                                    { label: "Nilai Tanggulih", value: formatValue(ikasDataDynamic.tanggulih.nilai_tanggulih) },
+                                                ],
+                                                detailRows: ikasDetailRows,
+                                            });
+                                        } catch (error: any) {
+                                            toast({
+                                                title: "Export PDF gagal",
+                                                description: error?.message || "Tidak dapat membuka jendela export.",
+                                                variant: "destructive",
+                                            });
+                                        }
+                                    }}
+                                    className="px-5 py-2.5 rounded-xl bg-gradient-to-l from-blue-500 to-blue-600 text-white font-bold text-sm shadow-md shadow-blue-500/25 hover:shadow-blue-500/40 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center gap-2 whitespace-nowrap"
+                                >
+                                    <Download className="w-4 h-4" /> Export PDF
                                 </button>
                             </div>
                         </>

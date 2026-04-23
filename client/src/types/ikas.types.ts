@@ -49,6 +49,7 @@ export interface PerusahaanInfo {
 
 export interface IkasData {
     id: string;
+    id_perusahaan?: string | number;
     created_at: string;
     updated_at: string;
     tanggal: string;
@@ -72,6 +73,7 @@ export interface CreateIkasPayload {
     telepon: string;
     tanggal: string;
     target_nilai: number;
+    id_perusahaan?: string | number;
     [key: string]: any;
 }
 
@@ -291,4 +293,3 @@ export function getKategoriKematangan(score: number): string {
     if (score < 4.50) return "Level 4 - Terkelola";
     return "Level 5 - Inovatif";
 }
-

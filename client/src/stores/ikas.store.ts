@@ -11,6 +11,7 @@ export interface RespondentFormData {
     tanggal: string;
     target_nilai: number;
     kategori_kematangan_keamanan_siber: string;
+    id_perusahaan?: string | number;
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -239,6 +240,12 @@ export const useIkasStore = create<IkasState>()((set, get) => ({
     // ── Respondent form actions ────────────────────────────────────────────────
 
     saveRespondent: async (payload, existingId) => {
+        if (!payload.id_perusahaan) {
+            const msg = 'ID perusahaan belum tersedia. Muat ulang data perusahaan lalu coba lagi.';
+            set({ isLoading: false, error: msg, respondentSaved: false });
+            return { success: false, error: msg };
+        }
+
         set({ isLoading: true, error: null });
         try {
             let result: IkasData;

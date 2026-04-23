@@ -17,14 +17,14 @@ interface CsirtState {
     error: string | null;
 
     // ── Derived ──────────────────────────────────────────────────────────────
-    getCsirtById: (id: number) => CsirtMember | undefined;
+    getCsirtById: (id: string | number) => CsirtMember | undefined;
 
     // ── Actions ───────────────────────────────────────────────────────────────
     initialize: () => Promise<void>;
     refresh: () => Promise<void>;
     createCsirt: (payload: CreateCsirtPayload) => Promise<ActionResult<CsirtMember>>;
-    updateCsirtById: (id: number, updates: Partial<CreateCsirtPayload>) => Promise<ActionResult<CsirtMember>>;
-    deleteCsirtById: (id: number) => Promise<ActionResult>;
+    updateCsirtById: (id: string | number, updates: Partial<CreateCsirtPayload>) => Promise<ActionResult<CsirtMember>>;
+    deleteCsirtById: (id: string | number) => Promise<ActionResult>;
     generateSlug: (name: string) => string;
 }
 
@@ -36,7 +36,7 @@ export const useCsirtStore = create<CsirtState>()((set, get) => ({
     loading: false,
     error: null,
 
-    getCsirtById: (id) => get().csirts.find((c) => c.id === id),
+    getCsirtById: (id) => get().csirts.find((c) => String(c.id) === String(id)),
 
     generateSlug: (name) =>
         name
@@ -116,7 +116,7 @@ export const useCsirtStore = create<CsirtState>()((set, get) => ({
         try {
             await csirtService.delete(id);
             set((state) => ({
-                csirts: state.csirts.filter((c) => c.id !== id),
+                csirts: state.csirts.filter((c) => String(c.id) !== String(id)),
                 loading: false,
             }));
             return { success: true };

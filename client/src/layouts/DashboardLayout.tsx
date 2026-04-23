@@ -54,17 +54,19 @@ function CompanyGuard() {
 
     // Resolve company ID from user data
     const perusahaanId = meData?.id_perusahaan || meData?.perusahaan?.id;
+    const embeddedPerusahaan = meData?.perusahaan ?? null;
+    const shouldFetchPerusahaan = !!perusahaanId && !embeddedPerusahaan?.nama_perusahaan;
 
     // Fetch company data when we have an ID
     const { data: perusahaan, isSuccess: isPerusahaanSuccess } = useQuery({
         queryKey: ["perusahaan", perusahaanId],
         queryFn: () => perusahaanService.getById(String(perusahaanId)),
-        enabled: !!perusahaanId,
+        enabled: shouldFetchPerusahaan,
         staleTime: 1000 * 60 * 5,
     });
 
     // Wait until we have both user and company data (or know there's no company)
-    const isReady = isUserSuccess && (!perusahaanId || isPerusahaanSuccess);
+    const isReady = isUserSuccess && (!shouldFetchPerusahaan || isPerusahaanSuccess);
 
     useEffect(() => {
         if (!isReady || checked.current) return;
@@ -74,7 +76,7 @@ function CompanyGuard() {
         if (alreadyShown) return;
 
         // Check company completeness: use fetched perusahaan or nested object from meData
-        const companyData = perusahaan ?? meData?.perusahaan ?? null;
+        const companyData = perusahaan ?? embeddedPerusahaan;
         if (!perusahaanId || isCompanyEmpty(companyData)) {
             sessionStorage.setItem(COMPANY_CHECK_KEY, "1");
             setShowModal(true);

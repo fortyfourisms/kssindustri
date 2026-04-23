@@ -37,22 +37,24 @@ export function RequireCompanyProfile({ children }: RequireCompanyProfileProps) 
 
     // Resolve the company ID from nested or flat user data
     const perusahaanId = meData?.id_perusahaan || meData?.perusahaan?.id;
+    const embeddedPerusahaan = meData?.perusahaan ?? null;
+    const shouldFetchPerusahaan = !!perusahaanId && !embeddedPerusahaan?.nama_perusahaan;
 
     // Fetch the full company data only when we have an ID
     const { data: perusahaan, isLoading: isPerusahaanLoading } = useQuery({
         queryKey: ["perusahaan", perusahaanId],
         queryFn: () => perusahaanService.getById(String(perusahaanId)),
-        enabled: !!perusahaanId,
+        enabled: shouldFetchPerusahaan,
         staleTime: 1000 * 60 * 5,
     });
 
     // While loading either the user or company data, render children to avoid flicker
-    if (isUserLoading || (!!perusahaanId && isPerusahaanLoading)) {
+    if (isUserLoading || (shouldFetchPerusahaan && isPerusahaanLoading)) {
         return <>{children}</>;
     }
 
     // If user has no company linked at all, OR the company data is incomplete → show lock
-    const companyData = perusahaan ?? meData?.perusahaan ?? null;
+    const companyData = perusahaan ?? embeddedPerusahaan;
     if (!perusahaanId || isCompanyEmpty(companyData)) {
         return (
             <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">

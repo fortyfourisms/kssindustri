@@ -1,10 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { RequireCompanyProfile } from "@/components/RequireCompanyProfile";
+import { PageHeader } from "@/components/dashboard/PageHeader";
 import { api } from "@/lib/api";
 import { csirtService } from "@/services/csirt.service";
+import { useUser } from "@/hooks/useAuth";
+import { exportKsePdf } from "@/lib/pdf-export";
 import { getKategoriSE } from "@/data/kse-data";
-import { Monitor, Plus, Edit2, Trash2, Loader2, ServerCrash } from "lucide-react";
+import { Building2, Monitor, Plus, Edit2, Trash2, Loader2, ServerCrash, Download } from "lucide-react";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 
@@ -55,6 +58,14 @@ export default function KSE() {
     const navigate = useNavigate();
     const { toast } = useToast();
     const queryClient = useQueryClient();
+    const { data: user } = useUser();
+    const perusahaanId = user?.id_perusahaan || user?.perusahaan?.id;
+    const { data: perusahaanResponse } = useQuery({
+        queryKey: ["perusahaan", perusahaanId],
+        queryFn: () => api.getPerusahaanById(String(perusahaanId)),
+        enabled: !!perusahaanId && !user?.perusahaan?.nama_perusahaan,
+    });
+    const perusahaan = perusahaanResponse ?? user?.perusahaan;
 
     const { data: seData, isLoading, isError, refetch } = useQuery<any>({
         queryKey: ["se"],
@@ -74,22 +85,11 @@ export default function KSE() {
             <div className="max-w-7xl mx-auto space-y-6 pb-12">
 
                 {/* ── Page Header ── */}
-                <div className="bg-white/70 backdrop-blur-sm border border-white/60 rounded-2xl p-4 md:p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4 shadow-sm">
-                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/25 shrink-0">
-                        <Monitor className="w-6 h-6 text-white" />
-                    </div>
-                    <div className="flex-1">
-                        <h1 className="font-black text-slate-900 text-xl">Kategorisasi Sistem Elektronik</h1>
-                        <p className="text-sm text-slate-500 mt-0.5">Daftar Sistem Elektronik yang telah dinilai beserta kategori dan skornya.</p>
-                    </div>
-                    <button
-                        onClick={() => navigate('/dashboard/form-kse')}
-                        className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold text-sm shadow-md shadow-blue-500/25
-                                hover:shadow-blue-500/40 hover:scale-[1.01] active:scale-[0.99] transition-all whitespace-nowrap"
-                    >
-                        <Plus className="w-4 h-4" /> Tambah SE
-                    </button>
-                </div>
+                <PageHeader
+                    icon={Building2}
+                    title={`Kategorisasi Sistem Elektronik - ${perusahaan?.nama_perusahaan || "Stakeholder"}`}
+                    subtitle="Daftar Sistem Elektronik yang telah dinilai beserta kategori dan skornya."
+                />
 
                 {/* ── Table Card ── */}
                 <motion.div
@@ -98,6 +98,40 @@ export default function KSE() {
                     transition={{ duration: 0.3 }}
                     className="bg-white/80 backdrop-blur-sm border border-slate-200/60 rounded-2xl shadow-sm overflow-hidden"
                 >
+                    <div className="px-6 py-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div>
+                            <h3 className="font-bold text-slate-800 text-lg">Tabel KSE</h3>
+                            <p className="text-sm text-slate-500 mt-0.5">Daftar sistem elektronik yang telah dinilai beserta kategori dan skornya.</p>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-3">
+                            {seList.length > 0 && (
+                                <button
+                                    type="button"
+                                    onClick={async () => {
+                                        try {
+                                            await exportKsePdf(perusahaan?.nama_perusahaan);
+                                        } catch (error: any) {
+                                            toast({
+                                                title: "Export PDF gagal",
+                                                description: error?.message || "Tidak dapat membuka jendela export.",
+                                                variant: "destructive",
+                                            });
+                                        }
+                                    }}
+                                    className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white shadow-md shadow-blue-500/25 transition-all hover:bg-blue-700 hover:shadow-blue-500/40 hover:scale-[1.01] active:scale-[0.99] whitespace-nowrap"
+                                >
+                                    <Download className="w-4 h-4" /> Export PDF
+                                </button>
+                            )}
+                            <button
+                                onClick={() => navigate('/dashboard/form-kse')}
+                                className="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-bold text-white shadow-md shadow-yellow-500/30 transition-all hover:bg-amber-600 hover:shadow-yellow-500/45 hover:scale-[1.01] active:scale-[0.99] whitespace-nowrap"
+                            >
+                                <Plus className="w-4 h-4" /> Tambah SE
+                            </button>
+                        </div>
+                    </div>
+
                     {isLoading ? (
                         <div className="flex flex-col items-center justify-center py-24 gap-3">
                             <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
@@ -121,7 +155,7 @@ export default function KSE() {
                             </div>
                             <button
                                 onClick={() => navigate('/dashboard/form-kse')}
-                                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold text-sm shadow-md shadow-blue-500/20 hover:shadow-blue-500/35 transition-all"
+                                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500 text-white font-bold text-sm shadow-md shadow-yellow-500/30 hover:bg-amber-600 hover:shadow-yellow-500/45 hover:scale-[1.01] active:scale-[0.99] transition-all whitespace-nowrap"
                             >
                                 <Plus className="w-4 h-4" /> Tambah SE Sekarang
                             </button>
@@ -176,10 +210,9 @@ export default function KSE() {
                                                     <div className="flex items-center justify-center gap-1.5">
                                                         <button
                                                             onClick={() => navigate(`/dashboard/form-kse?id=${se.id}`)}
-                                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 border border-blue-100 text-blue-600 font-bold text-xs
-                                                                    hover:bg-blue-100 hover:border-blue-200 transition-colors group-hover:shadow-sm"
+                                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500 text-white font-bold text-xs shadow-md shadow-yellow-500/30 transition-all hover:bg-amber-600 hover:shadow-yellow-500/45 hover:scale-[1.01] active:scale-[0.99] group-hover:shadow-md"
                                                         >
-                                                            <Edit2 className="w-3.5 h-3.5" /> Edit
+                                                            <Edit2 className="w-3.5 h-3.5" /> Ajukan perubahan data
                                                         </button>
                                                     </div>
                                                 </td>

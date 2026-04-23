@@ -8,6 +8,7 @@ import { authService } from "@/services/auth.service";
 import { csirtService } from "@/services/csirt.service";
 import { perusahaanService } from "@/services/perusahaan.service";
 import { ikasService } from "@/services/ikas.service";
+import { surveyService } from "@/services/survey.service";
 
 export const api = {
     // ── Auth (delegates to authService) ──────────────────────────────────────
@@ -20,7 +21,10 @@ export const api = {
         }),
 
     login: (data: { email: string; password: string }) =>
-        authService.login(data),
+        authService.login({
+            identifier: data.email,
+            password: data.password,
+        }),
 
     logout: () => authService.logout(),
 
@@ -50,8 +54,8 @@ export const api = {
     // ── IKAS (delegates to ikasService) ──────────────────────────────────────
     /** GET /api/maturity/ikas/{id} — for user-facing views (scoped to their own ID) */
     getIkasById: (id: string) => ikasService.getById(id),
-    /** GET /api/maturity/ikas — full list for admin / year-over-year charts */
-    getIkasList: () => ikasService.getAll(),
+    /** GET /api/maturity/ikas — scoped to the authenticated user */
+    getMyIkas: (idPerusahaan?: string | number) => ikasService.getMyIkas(idPerusahaan),
     saveIkas: (id: string, responses: Record<string, string>) =>
         apiClient.post<any>(`/api/maturity/ikas/${id}`, { responses }),
     updateIkas: (id: string, payload: Record<string, any>) =>
@@ -70,7 +74,19 @@ export const api = {
     deleteCsirt: (id: string) => csirtService.delete(id),
 
     // ── Survei ───────────────────────────────────────────────────────────────
-    getSurvei: () => apiClient.get<any>("/api/survei"),
-    saveSurvei: (answers: Record<string, number>) =>
-        apiClient.post<any>("/api/survei", { answers }),
+    getSurvei: () => surveyService.getRespondents(),
+    getSurveyRespondentById: (id: string | number) => surveyService.getRespondentById(id),
+    saveSurveyRespondent: (payload: any) => surveyService.createRespondent(payload),
+    updateSurveyRespondent: (id: string | number, payload: any) => surveyService.updateRespondent(id, payload),
+    deleteSurveyRespondent: (id: string | number) => surveyService.deleteRespondent(id),
+    getSurveyProgress: (respondenId: string | number) => surveyService.getProgress(respondenId),
+    getSurveyRisk: (respondenId: string | number) => surveyService.getRiskByRespondent(respondenId),
+    saveSurveyRiskEligibility: (payload: any) => surveyService.saveEligibility(payload),
+    saveSurveyRiskReason: (payload: any) => surveyService.saveReason(payload),
+    saveSurveyRiskImpact: (payload: any) => surveyService.saveImpact(payload),
+    saveSurveyRiskControl: (payload: any) => surveyService.saveControl(payload),
+    saveSurveyRiskProgress: (payload: any) => surveyService.saveProgress(payload),
+    navigateSurveyRisk: (payload: any) => surveyService.navigateRisk(payload),
+    finishSurveyRisk: (payload: any) => surveyService.finishSurvey(payload),
+    saveSurvei: (payload: any) => surveyService.saveRiskStep(payload),
 };

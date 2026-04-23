@@ -1,68 +1,320 @@
 import { useState, useEffect } from "react";
 import { RequireCompanyProfile } from "@/components/RequireCompanyProfile";
-import { Info, UserCircle2, ArrowRight, ArrowLeft, ShieldCheck, AlertTriangle } from "lucide-react";
+import { Info, UserCircle2, ArrowRight, ArrowLeft, ShieldCheck, AlertTriangle, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useUser } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/services/apiClient";
+import { useSurveyStore } from "@/stores/survey.store";
+import { useToast } from "@/hooks/use-toast";
+import type { SurveyRiskResponse, SurveyScaleValue, UpsertSurveyRespondentPayload } from "@/types/survey.types";
 
 const INPUT_CLS = "w-full px-4 py-3 rounded-xl border border-slate-200/80 bg-white/60 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:ring-4 focus:ring-blue-500/15 focus:border-blue-500 hover:border-slate-300 transition-all duration-300 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.03)]";
 const LABEL_CLS = "block text-sm font-semibold text-slate-700 mb-2 tracking-wide";
+const DEFAULT_RISK_TITLE = "Pencurian Intellectual Property";
+const DEFAULT_RISK_DESCRIPTION = "Silakan evaluasi dan berikan estimasi dampak yang mungkin terjadi terkait perlindungan Hak Kekayaan Intelektual perusahaan Anda.";
+const IMPACT_TO_API: Record<string, SurveyScaleValue> = {
+    tidak_signifikan: 1,
+    cukup_signifikan: 2,
+    signifikan: 3,
+    sangat_signifikan: 4,
+};
+const API_TO_IMPACT: Record<number, string> = {
+    1: "tidak_signifikan",
+    2: "cukup_signifikan",
+    3: "signifikan",
+    4: "sangat_signifikan",
+};
+const FREQUENCY_TO_API: Record<string, SurveyScaleValue> = {
+    kecil: 1,
+    sedang: 2,
+    besar: 3,
+    sangat_besar: 4,
+};
+const API_TO_FREQUENCY: Record<number, string> = {
+    1: "kecil",
+    2: "sedang",
+    3: "besar",
+    4: "sangat_besar",
+};
+const DEFAULT_ANSWERS = {
+    responden_nama: '',
+    responden_jabatan: '',
+    responden_perusahaan: '',
+    responden_email: '',
+    responden_telepon: '',
+    responden_sektor: '',
+    responden_sertifikat: '',
+    q1: 'ya',
+    q1_alasan: '',
+    dampak_reputasi: null,
+    dampak_operasional: 'cukup_signifikan',
+    dampak_finansial: 'cukup_signifikan',
+    dampak_hukum: 'cukup_signifikan',
+    frekuensi: 'sedang',
+    q4: 'ya',
+    q5: ''
+};
+
+function hasNextRisk(risk: SurveyRiskResponse | null, progress: Record<string, any> | null): boolean {
+    if (typeof risk?.has_next === "boolean") return risk.has_next;
+    if (typeof progress?.has_next === "boolean") return progress.has_next;
+    if (typeof risk?.next_risk === "number") return true;
+
+    const totalRisks = typeof risk?.total_risks === "number"
+        ? risk.total_risks
+        : typeof progress?.total_risks === "number"
+            ? progress.total_risks
+            : typeof progress?.total_steps === "number"
+                ? progress.total_steps
+                : undefined;
+
+    if (typeof totalRisks === "number") {
+        return getCurrentRiskIndex(risk, progress) + 1 < totalRisks;
+    }
+
+    return true;
+}
+
+function hasPreviousRisk(risk: SurveyRiskResponse | null, progress: Record<string, any> | null): boolean {
+    if (typeof risk?.has_previous === "boolean") return risk.has_previous;
+    if (typeof progress?.has_previous === "boolean") return progress.has_previous;
+    if (typeof risk?.previous_risk === "number") return true;
+    return getCurrentRiskIndex(risk, progress) > 0;
+}
+
+function getRiskId(risk: SurveyRiskResponse | null): number | undefined {
+    if (!risk) return undefined;
+    if (typeof risk.risiko_id === "number") return risk.risiko_id;
+    if (typeof risk.id === "number") return risk.id;
+    return undefined;
+}
+
+function getCustomRiskId(risk: SurveyRiskResponse | null): number | undefined {
+    if (!risk) return undefined;
+    return typeof risk.custom_risiko_id === "number" ? risk.custom_risiko_id : undefined;
+}
+
+function getCurrentRiskIndex(risk: SurveyRiskResponse | null, progress: Record<string, any> | null): number {
+    if (risk && typeof risk.current_risk === "number") return risk.current_risk;
+    if (progress && typeof progress.current_risk === "number") return progress.current_risk;
+    return 0;
+}
 
 export default function SurveiProfil() {
-    const [answers, setAnswers] = useState<Record<string, any>>({
-        responden_nama: '',
-        responden_jabatan: '',
-        responden_perusahaan: '',
-        responden_email: '',
-        responden_telepon: '',
-        responden_sektor: '',
-        responden_sertifikat: '',
-        q1: 'ya',
-        q1_alasan: '',
-        dampak_reputasi: null,
-        dampak_operasional: 'cukup_signifikan',
-        dampak_finansial: 'cukup_signifikan',
-        dampak_hukum: 'cukup_signifikan',
-        frekuensi: 'sedang',
-        q4: 'ya',
-        q5: ''
-    });
+    const [answers, setAnswers] = useState<Record<string, any>>(DEFAULT_ANSWERS);
 
     const { data: user } = useUser();
+    const { toast } = useToast();
     const { data: subSektors } = useQuery({ queryKey: ["subSektor"], queryFn: () => apiClient.get<any[]>("/api/sub_sektor") });
+    const currentRespondent = useSurveyStore((state) => state.currentRespondent);
+    const currentRisk = useSurveyStore((state) => state.currentRisk);
+    const progressState = useSurveyStore((state) => state.progress);
+    const saving = useSurveyStore((state) => state.saving);
+    const hydrateByEmail = useSurveyStore((state) => state.hydrateByEmail);
+    const saveRespondent = useSurveyStore((state) => state.saveRespondent);
+    const loadSurveyContext = useSurveyStore((state) => state.loadSurveyContext);
+    const saveRiskStep = useSurveyStore((state) => state.saveRiskStep);
+    const navigateRisk = useSurveyStore((state) => state.navigateRisk);
 
     const [step, setStep] = useState(0);
+    const [isFinished, setIsFinished] = useState(false);
 
     useEffect(() => {
-        if (user && !answers.responden_nama) {
-            setAnswers(prev => ({
-                ...prev,
-                responden_nama: user?.display_name || user?.username || '',
-                responden_jabatan: user?.jabatan_name || user?.jabatan || '',
-                responden_perusahaan: user?.perusahaan?.nama_perusahaan || '',
-                responden_email: user?.email || '',
-                responden_telepon: user?.perusahaan?.telepon || '',
-                responden_sektor: user?.perusahaan?.sub_sektor?.id || user?.perusahaan?.id_sub_sektor || ''
-            }));
+        if (!user?.email) return;
+        void hydrateByEmail(user.email);
+    }, [user?.email, hydrateByEmail]);
+
+    useEffect(() => {
+        if (!currentRespondent && !currentRisk) return;
+
+        setAnswers({
+            ...DEFAULT_ANSWERS,
+            responden_nama: currentRespondent?.nama_lengkap || DEFAULT_ANSWERS.responden_nama,
+            responden_jabatan: currentRespondent?.jabatan || DEFAULT_ANSWERS.responden_jabatan,
+            responden_perusahaan: currentRespondent?.perusahaan || DEFAULT_ANSWERS.responden_perusahaan,
+            responden_email: currentRespondent?.email || DEFAULT_ANSWERS.responden_email,
+            responden_telepon: currentRespondent?.no_telepon || DEFAULT_ANSWERS.responden_telepon,
+            responden_sektor: currentRespondent?.sektor || DEFAULT_ANSWERS.responden_sektor,
+            responden_sertifikat: currentRespondent?.sertifikat_training || DEFAULT_ANSWERS.responden_sertifikat,
+            q1: typeof currentRisk?.pernah_terjadi === "boolean" ? (currentRisk.pernah_terjadi ? "ya" : "tidak") : DEFAULT_ANSWERS.q1,
+            q1_alasan: typeof currentRisk?.alasan === "string" ? currentRisk.alasan : DEFAULT_ANSWERS.q1_alasan,
+            dampak_reputasi: typeof currentRisk?.dampak_reputasi === "number" ? (API_TO_IMPACT[currentRisk.dampak_reputasi] || DEFAULT_ANSWERS.dampak_reputasi) : DEFAULT_ANSWERS.dampak_reputasi,
+            dampak_operasional: typeof currentRisk?.dampak_operasional === "number" ? (API_TO_IMPACT[currentRisk.dampak_operasional] || DEFAULT_ANSWERS.dampak_operasional) : DEFAULT_ANSWERS.dampak_operasional,
+            dampak_finansial: typeof currentRisk?.dampak_finansial === "number" ? (API_TO_IMPACT[currentRisk.dampak_finansial] || DEFAULT_ANSWERS.dampak_finansial) : DEFAULT_ANSWERS.dampak_finansial,
+            dampak_hukum: typeof currentRisk?.dampak_hukum === "number" ? (API_TO_IMPACT[currentRisk.dampak_hukum] || DEFAULT_ANSWERS.dampak_hukum) : DEFAULT_ANSWERS.dampak_hukum,
+            frekuensi: typeof currentRisk?.frekuensi === "number" ? (API_TO_FREQUENCY[currentRisk.frekuensi] || DEFAULT_ANSWERS.frekuensi) : DEFAULT_ANSWERS.frekuensi,
+            q4: typeof currentRisk?.ada_pengendalian === "boolean" ? (currentRisk.ada_pengendalian ? "ya" : "tidak") : DEFAULT_ANSWERS.q4,
+            q5: typeof currentRisk?.deskripsi_pengendalian === "string" ? currentRisk.deskripsi_pengendalian : DEFAULT_ANSWERS.q5,
+        });
+
+        if (currentRespondent || currentRisk) {
+            setStep(1);
         }
-    }, [user]);
+    }, [currentRespondent, currentRisk]);
+
+    useEffect(() => {
+        setIsFinished(Boolean(progressState?.completed || progressState?.finished_at));
+    }, [progressState]);
 
     const setAnswer = (key: string, val: any) => {
         setAnswers(prev => ({ ...prev, [key]: val }));
     };
 
     const isStep0Valid = answers.responden_nama && answers.responden_jabatan && answers.responden_perusahaan && answers.responden_email && answers.responden_telepon && answers.responden_sektor;
+    const isStep1Valid = answers.q1 === "tidak"
+        ? Boolean(answers.q1_alasan?.trim())
+        : Boolean(
+            answers.dampak_reputasi &&
+            answers.dampak_operasional &&
+            answers.dampak_finansial &&
+            answers.dampak_hukum &&
+            answers.frekuensi &&
+            answers.q4 &&
+            (answers.q4 === "tidak" || answers.q5?.trim())
+        );
 
-    const handleNext = () => {
+    const submitRisk = async (direction: "next" | "previous") => {
+        if (!currentRespondent?.id) {
+            toast({
+                title: "Responden belum tersedia",
+                description: "Simpan data responden terlebih dahulu.",
+                variant: "destructive",
+            });
+            return false;
+        }
+
+        const risikoId = getRiskId(currentRisk);
+        const customRisikoId = getCustomRiskId(currentRisk);
+        if (!risikoId && !customRisikoId) {
+            toast({
+                title: "Identitas risiko belum tersedia",
+                description: "Backend belum mengirim risiko aktif untuk responden ini.",
+                variant: "destructive",
+            });
+            return false;
+        }
+
+        const shouldFinish = direction === "next" && !hasNextRisk(currentRisk, progressState as Record<string, any> | null);
+        const result = await saveRiskStep({
+            responden_id: currentRespondent.id,
+            current_risk: getCurrentRiskIndex(currentRisk, progressState as Record<string, any> | null),
+            direction,
+            finish: shouldFinish,
+            risiko_id: risikoId,
+            custom_risiko_id: customRisikoId,
+            pernah_terjadi: answers.q1 === "ya",
+            alasan: answers.q1_alasan || "",
+            dampak_reputasi: IMPACT_TO_API[answers.dampak_reputasi] ?? 1,
+            dampak_operasional: IMPACT_TO_API[answers.dampak_operasional] ?? 2,
+            dampak_finansial: IMPACT_TO_API[answers.dampak_finansial] ?? 2,
+            dampak_hukum: IMPACT_TO_API[answers.dampak_hukum] ?? 2,
+            frekuensi: FREQUENCY_TO_API[answers.frekuensi] ?? 2,
+            ada_pengendalian: answers.q4 === "ya",
+            deskripsi_pengendalian: answers.q4 === "ya" ? answers.q5 || "" : "",
+        });
+
+        if (!result.success) {
+            toast({
+                title: "Gagal menyimpan jawaban",
+                description: result.error || "Jawaban survei belum berhasil dikirim.",
+                variant: "destructive",
+            });
+            return false;
+        }
+
+        if (shouldFinish) {
+            setIsFinished(true);
+            toast({
+                title: "Survei selesai",
+                description: "Seluruh jawaban survei profil risiko berhasil dikirim.",
+            });
+            return true;
+        }
+
+        toast({
+            title: direction === "next" ? "Jawaban tersimpan" : "Kembali ke risiko sebelumnya",
+            description: direction === "next"
+                ? "Progress survei risiko berhasil diperbarui."
+                : "Data risiko saat ini sudah tersimpan.",
+        });
+        return true;
+    };
+
+    const handleNext = async () => {
         if (step === 0 && isStep0Valid) {
+            const respondentPayload: UpsertSurveyRespondentPayload = {
+                nama_lengkap: answers.responden_nama,
+                jabatan: answers.responden_jabatan,
+                perusahaan: answers.responden_perusahaan,
+                email: answers.responden_email,
+                no_telepon: answers.responden_telepon,
+                sektor: String(answers.responden_sektor),
+                sertifikat_training: answers.responden_sertifikat || '',
+                sektor_lainnya: '',
+            };
+
+            const respondentResult = await saveRespondent(respondentPayload, currentRespondent?.id);
+            if (!respondentResult.success || !respondentResult.data) {
+                toast({
+                    title: "Gagal menyimpan responden",
+                    description: respondentResult.error || "Data responden belum dapat disimpan.",
+                    variant: "destructive",
+                });
+                return;
+            }
+
+            await loadSurveyContext(respondentResult.data.id);
             window.scrollTo({ top: 0, behavior: 'smooth' });
             setStep(1);
+            toast({
+                title: "Data responden tersimpan",
+                description: "Lanjutkan pengisian survei risiko.",
+            });
+            return;
+        }
+
+        if (step === 1) {
+            if (!isStep1Valid) {
+                toast({
+                    title: "Jawaban belum lengkap",
+                    description: "Lengkapi jawaban risiko sebelum melanjutkan.",
+                    variant: "destructive",
+                });
+                return;
+            }
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            await submitRisk("next");
         }
     };
 
-    const handlePrev = () => {
+    const handlePrev = async () => {
         if (step === 1) {
+            if (hasPreviousRisk(currentRisk, progressState as Record<string, any> | null) && currentRespondent?.id) {
+                if (isStep1Valid) {
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                    await submitRisk("previous");
+                    return;
+                }
+
+                const result = await navigateRisk({
+                    respondenId: currentRespondent.id,
+                    currentRisk: getCurrentRiskIndex(currentRisk, progressState as Record<string, any> | null),
+                    direction: "previous",
+                });
+
+                if (!result.success) {
+                    toast({
+                        title: "Gagal membuka risiko sebelumnya",
+                        description: result.error || "Coba lagi beberapa saat lagi.",
+                        variant: "destructive",
+                    });
+                    return;
+                }
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                return;
+            }
+
             window.scrollTo({ top: 0, behavior: 'smooth' });
             setStep(0);
         }
@@ -86,6 +338,25 @@ export default function SurveiProfil() {
 
     const answeredFields = Object.values(activeAnswers).filter(v => v !== null && v !== '').length;
     const progress = step === 0 ? 0 : Math.round((answeredFields / totalFields) * 100);
+    const riskTitle = String(currentRisk?.nama_risiko || currentRisk?.judul || DEFAULT_RISK_TITLE);
+    const riskDescription = typeof currentRisk?.deskripsi === "string" && currentRisk.deskripsi.trim()
+        ? currentRisk.deskripsi
+        : DEFAULT_RISK_DESCRIPTION;
+    const currentRiskNumber = getCurrentRiskIndex(currentRisk, progressState as Record<string, any> | null) + 1;
+    const totalRiskCount = typeof currentRisk?.total_risks === "number"
+        ? currentRisk.total_risks
+        : typeof progressState?.total_risks === "number"
+            ? progressState.total_risks
+            : typeof progressState?.total_steps === "number"
+                ? progressState.total_steps
+                : undefined;
+    const nextLabel = step === 0
+        ? "Simpan & Lanjut"
+        : isFinished
+            ? "Survei Selesai"
+            : hasNextRisk(currentRisk, progressState as Record<string, any> | null)
+                ? "Simpan & Berikutnya"
+                : "Simpan & Selesaikan";
 
     return (
         <RequireCompanyProfile>
@@ -107,11 +378,11 @@ export default function SurveiProfil() {
                                 {step === 0 ? "Survei Profil Risiko" : "Penilaian Risiko Berjenjang"}
                             </span>
                             <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">
-                                {step === 0 ? "Informasi Responden" : "Pencurian Intellectual Property"}
+                                {step === 0 ? "Informasi Responden" : riskTitle}
                             </h1>
                             {step === 1 && (
                                 <p className="mt-3 text-slate-500 text-sm sm:text-base max-w-2xl mx-auto">
-                                    Silakan evaluasi dan berikan estimasi dampak yang mungkin terjadi terkait perlindungan Hak Kekayaan Intelektual perusahaan Anda.
+                                    {riskDescription}
                                 </p>
                             )}
                         </motion.div>
@@ -240,14 +511,10 @@ export default function SurveiProfil() {
                                     <div className="relative z-10">
                                         <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white shadow-sm border border-blue-100/80 text-blue-700 font-semibold text-sm mb-6">
                                             <AlertTriangle className="w-4 h-4 text-amber-500" />
-                                            Risiko 1 dari 14
+                                            Risiko {currentRiskNumber}{typeof totalRiskCount === "number" ? ` dari ${totalRiskCount}` : ""}
                                         </div>
-                                        <p className="mb-4 text-slate-800 font-medium text-lg leading-snug">
-                                            Intellectual Property (Hak Kekayaan Intelektual) mencakup paten, hak cipta, merek dagang, desain industri, rahasia dagang, serta inovasi strategis perusahaan.
-                                        </p>
-                                        <p className="mb-4 text-[15px] opacity-90 leading-relaxed">
-                                            Di era Industri 4.0, informasi digital semakin rawan terhadap pencurian—baik melalui serangan siber, <span className="font-medium text-slate-700">insider threat</span>, maupun kebocoran tanpa sengaja.
-                                        </p>
+                                        <p className="mb-4 text-slate-800 font-medium text-lg leading-snug">{riskTitle}</p>
+                                        <p className="mb-4 text-[15px] opacity-90 leading-relaxed">{riskDescription}</p>
                                         <div className="bg-white/60 rounded-xl p-4 mt-6 border border-white">
                                             <p className="opacity-95 italic text-sm text-slate-600 flex gap-3 items-start">
                                                 <Info className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
@@ -258,11 +525,16 @@ export default function SurveiProfil() {
                                 </div>
 
                                 <div className="space-y-8">
+                                    {isFinished && (
+                                        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm font-medium text-emerald-800 shadow-sm">
+                                            Survei profil risiko sudah ditandai selesai. Anda masih dapat meninjau jawaban terakhir yang tersimpan.
+                                        </div>
+                                    )}
                                     {/* Question 1 */}
                                     <div className="bg-white/80 backdrop-blur-sm border border-slate-200/80 rounded-2xl p-6 sm:p-8 shadow-[0_4px_25px_rgb(0,0,0,0.02)] hover:shadow-[0_4px_25px_rgb(0,0,0,0.06)] transition-all duration-300">
                                         <p className="text-base font-semibold text-slate-800 mb-4 flex items-start gap-2">
                                             <span className="text-rose-500 mt-0.5">*</span>
-                                            <span>Apakah perusahaan Anda berpotensi mengalami atau pernah mengalami insiden <strong className="text-blue-700">pencurian Intellectual Property</strong>?</span>
+                                            <span>Apakah perusahaan Anda berpotensi mengalami atau pernah mengalami insiden <strong className="text-blue-700">{riskTitle}</strong>?</span>
                                         </p>
                                         
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
@@ -301,7 +573,7 @@ export default function SurveiProfil() {
                                         <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="bg-white/80 backdrop-blur-sm border border-slate-200/80 rounded-2xl p-6 sm:p-8 shadow-[0_4px_25px_rgb(0,0,0,0.02)]">
                                             <p className="text-base font-semibold text-slate-800 mb-4 flex items-start gap-2">
                                                 <span className="text-rose-500 mt-0.5">*</span>
-                                                <span>Mengapa perusahaan Anda tidak berpotensi mengalami atau tidak pernah mengalami insiden <strong className="text-blue-700">pencurian Intellectual Property</strong>?</span>
+                                                <span>Mengapa perusahaan Anda tidak berpotensi mengalami atau tidak pernah mengalami insiden <strong className="text-blue-700">{riskTitle}</strong>?</span>
                                             </p>
                                             <textarea
                                                 className={`${INPUT_CLS} min-h-[140px] resize-y`}
@@ -318,7 +590,7 @@ export default function SurveiProfil() {
                                             <div className="bg-white/80 backdrop-blur-sm border border-slate-200/80 rounded-2xl p-6 sm:p-8 shadow-[0_4px_25px_rgb(0,0,0,0.02)]">
                                                 <p className="text-base font-semibold text-slate-800 mb-6 flex items-start gap-2">
                                                     <span className="text-rose-500 mt-0.5">*</span>
-                                                    <span>Seberapa besar dampak dari <strong className="text-blue-700">pencurian Intellectual Property</strong> pada kriteria berikut?</span>
+                                                    <span>Seberapa besar dampak dari <strong className="text-blue-700">{riskTitle}</strong> pada kriteria berikut?</span>
                                                 </p>
                                                 <div className="overflow-hidden rounded-xl border border-slate-200/80">
                                                     <table className="w-full text-sm min-w-[700px]">
@@ -426,7 +698,7 @@ export default function SurveiProfil() {
                                                 <div className="bg-white/80 backdrop-blur-sm border border-slate-200/80 rounded-2xl p-6 shadow-[0_4px_25px_rgb(0,0,0,0.02)]">
                                                     <p className="text-[15px] font-semibold text-slate-800 mb-6 flex items-start gap-2">
                                                         <span className="text-rose-500 mt-0.5">*</span>
-                                                        <span>Seberapa sering dalam setahun risiko <strong className="text-blue-700">pencurian IP</strong> ini berpotensi terjadi?</span>
+                                                        <span>Seberapa sering dalam setahun risiko <strong className="text-blue-700">{riskTitle}</strong> ini berpotensi terjadi?</span>
                                                     </p>
                                                     <div className="space-y-3">
                                                         {[
@@ -455,7 +727,7 @@ export default function SurveiProfil() {
                                             <div className="bg-white/80 backdrop-blur-sm border border-slate-200/80 rounded-2xl p-6 sm:p-8 shadow-[0_4px_25px_rgb(0,0,0,0.02)]">
                                                 <p className="text-base font-semibold text-slate-800 mb-4 flex items-start gap-2">
                                                     <span className="text-rose-500 mt-0.5">*</span>
-                                                    <span>Apakah perusahaan Anda memiliki tindakan pengendalian terhadap risiko <strong className="text-blue-700">pencurian Intellectual Property</strong>?</span>
+                                                    <span>Apakah perusahaan Anda memiliki tindakan pengendalian terhadap risiko <strong className="text-blue-700">{riskTitle}</strong>?</span>
                                                 </p>
                                                 
                                                 <div className="flex gap-4 mt-5 mb-8">
@@ -504,20 +776,21 @@ export default function SurveiProfil() {
                         className="flex flex-col-reverse sm:flex-row items-center justify-between gap-4 mt-12 mb-10 pt-8 border-t border-slate-200/60 relative z-10"
                     >
                         <button
-                            onClick={handlePrev}
+                            onClick={() => { void handlePrev(); }}
                             className={`flex items-center justify-center gap-2 px-6 py-3 rounded-xl border ${step === 0 ? 'opacity-0 pointer-events-none' : 'opacity-100'} bg-white border-slate-200 text-slate-700 font-semibold text-sm hover:bg-slate-50 hover:border-slate-300 transition-all shadow-sm w-full sm:w-auto`}
                         >
                             <ArrowLeft className="w-4 h-4" />
-                            Sebelumnya
+                            {hasPreviousRisk(currentRisk, progressState as Record<string, any> | null) ? "Risiko Sebelumnya" : "Kembali ke Responden"}
                         </button>
                         
                         <button
-                            onClick={handleNext}
-                            disabled={step === 0 && !isStep0Valid}
+                            onClick={() => { void handleNext(); }}
+                            disabled={saving || isFinished || (step === 0 ? !isStep0Valid : !isStep1Valid)}
                             className="group flex items-center justify-center gap-2 px-8 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold text-[15px] transition-all shadow-lg hover:shadow-indigo-500/30 hover:-translate-y-0.5 disabled:opacity-50 disabled:pointer-events-none disabled:shadow-none w-full sm:w-auto cursor-pointer"
                         >
-                            Berikutnya
-                            <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                            {nextLabel}
+                            {!saving ? <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" /> : null}
                         </button>
                     </motion.div>
 

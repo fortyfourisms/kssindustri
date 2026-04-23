@@ -4,27 +4,27 @@ import {
     Monitor,
     Users,
     ClipboardList,
+    BookOpen,
     ChevronRight,
+    ArrowRight,
     ArrowUpRight,
     Mail,
     Phone,
     Globe,
     CheckCircle2,
+    CircleDashed,
     Briefcase,
     Calendar,
-    LucideIcon,
-    Sparkles,
-    Activity,
-    BadgeCheck,
-    FileCheck2,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { RadarChartIkas } from "@/components/RadarChartIkas";
 import { getMediaUrl } from "@/lib/utils";
 import { ikasService } from "@/services/ikas.service";
+import { csirtService } from "@/services/csirt.service";
+import { lmsService } from "@/features/lms/services/lms.service";
+import { surveyService } from "@/services/survey.service";
 import type {
     IkasData,
     JawabanDeteksi,
@@ -36,6 +36,7 @@ import type {
     PertanyaanIdentifikasi,
     PertanyaanProteksi,
 } from "@/types/ikas.types";
+import type { SurveyProgress, SurveyRespondent } from "@/types/survey.types";
 
 const moduleConfig = {
     IKAS: {
@@ -43,92 +44,136 @@ const moduleConfig = {
         fullName: "Indeks Keamanan Siber",
         description: "Ukur dan pantau tingkat keamanan siber organisasi Anda secara komprehensif.",
         href: "/dashboard/ikas",
-        icon: Shield,
-        cardBg: "bg-blue-50",
-        dotColor: "bg-blue-500",
         titleColor: "text-blue-900",
-        descColor: "text-blue-700/70",
         linkColor: "text-blue-700 hover:text-blue-900",
-        badgeBg: "bg-white/70",
         badgeText: "text-blue-700",
-        shapeColor: "text-blue-200",
-        shapeStyle: "circles",
         accentFrom: "from-blue-600",
         accentTo: "to-cyan-400",
-        panelBg: "bg-blue-500/10",
-        panelIcon: Shield,
     },
     KSE: {
         label: "KSE",
         fullName: "Kapasitas SDM & Ekosistem",
         description: "Evaluasi kapasitas sumber daya manusia dan ekosistem keamanan siber.",
         href: "/dashboard/kse",
-        icon: Monitor,
-        cardBg: "bg-violet-50",
-        dotColor: "bg-violet-500",
         titleColor: "text-violet-900",
-        descColor: "text-violet-700/70",
         linkColor: "text-violet-700 hover:text-violet-900",
-        badgeBg: "bg-white/70",
         badgeText: "text-violet-700",
-        shapeColor: "text-violet-200",
-        shapeStyle: "spiral",
         accentFrom: "from-violet-600",
         accentTo: "to-fuchsia-400",
-        panelBg: "bg-violet-500/10",
-        panelIcon: Monitor,
     },
     CSIRT: {
         label: "CSIRT",
         fullName: "Status Tim Respons Insiden",
         description: "Daftarkan dan kelola status tim respons insiden siber organisasi.",
         href: "/dashboard/csirt",
-        icon: Shield,
-        cardBg: "bg-teal-50",
-        dotColor: "bg-teal-500",
         titleColor: "text-teal-900",
-        descColor: "text-teal-700/70",
         linkColor: "text-teal-700 hover:text-teal-900",
-        badgeBg: "bg-white/70",
         badgeText: "text-teal-700",
-        shapeColor: "text-teal-200",
-        shapeStyle: "squares",
         accentFrom: "from-teal-600",
         accentTo: "to-emerald-400",
-        panelBg: "bg-teal-500/10",
-        panelIcon: BadgeCheck,
     },
     SURVEI: {
         label: "Survei Profil Resiko",
         fullName: "Profil Resiko Siber",
         description: "Isi survei profil risiko untuk mendapatkan gambaran kesiapan keamanan siber.",
         href: "/dashboard/survei",
-        icon: ClipboardList,
-        cardBg: "bg-amber-50",
-        dotColor: "bg-amber-500",
         titleColor: "text-amber-900",
-        descColor: "text-amber-700/70",
         linkColor: "text-amber-700 hover:text-amber-900",
-        badgeBg: "bg-white/70",
         badgeText: "text-amber-700",
-        shapeColor: "text-amber-200",
-        shapeStyle: "diamonds",
         accentFrom: "from-amber-500",
         accentTo: "to-orange-400",
-        panelBg: "bg-amber-500/10",
-        panelIcon: ClipboardList,
+    },
+    LMS: {
+        label: "LMS / Course",
+        fullName: "Learning Management System",
+        description: "Pantau kelas yang tersedia, progres belajar, dan status kelulusan kuis pembelajaran Anda.",
+        href: "/lms",
+        titleColor: "text-sky-900",
+        linkColor: "text-sky-700 hover:text-sky-900",
+        badgeText: "text-sky-700",
+        accentFrom: "from-sky-500",
+        accentTo: "to-cyan-400",
     },
 };
 
-function normalizeCollectionCount(data: unknown) {
-    if (Array.isArray(data)) return data.length;
-    if (data && typeof data === "object") return Object.keys(data as Record<string, unknown>).length;
-    return 0;
+function normalizeList<T>(data: unknown): T[] {
+    if (Array.isArray(data)) return data as T[];
+    if (!data || typeof data !== "object") return [];
+
+    const record = data as Record<string, unknown>;
+    if (Array.isArray(record.data)) return record.data as T[];
+    if (Array.isArray(record.csirt)) return record.csirt as T[];
+    if (Array.isArray(record.se)) return record.se as T[];
+    if (Array.isArray(record.sdm)) return record.sdm as T[];
+
+    if ("id" in record) return [record as T];
+    return [];
 }
 
-function formatModuleStatus(count: number, singular: string, plural = singular) {
-    if (count <= 0) return "Belum ada data";
-    return `${count} ${count === 1 ? singular : plural}`;
+function getLatestRecord<T extends Record<string, any>>(list: T[]): T | null {
+    if (list.length === 0) return null;
+    return [...list].sort((a, b) => {
+        const dateA = new Date(a.updated_at || a.created_at || a.tanggal || 0).getTime();
+        const dateB = new Date(b.updated_at || b.created_at || b.tanggal || 0).getTime();
+        return dateB - dateA;
+    })[0] ?? null;
+}
+
+const FIELD_TO_BOBOT: Record<string, Record<string, number>> = {
+    nilai_investasi: { A: 5, B: 2, C: 1 },
+    anggaran_operasional: { A: 5, B: 2, C: 1 },
+    kepatuhan_peraturan: { A: 5, B: 2, C: 1 },
+    teknik_kriptografi: { A: 5, B: 2, C: 1 },
+    jumlah_pengguna: { A: 5, B: 2, C: 1 },
+    data_pribadi: { A: 5, B: 2, C: 1 },
+    klasifikasi_data: { A: 5, B: 2, C: 1 },
+    kekritisan_proses: { A: 5, B: 2, C: 1 },
+    dampak_kegagalan: { A: 5, B: 2, C: 1 },
+    potensi_kerugian_dan_dampak_negatif: { A: 5, B: 2, C: 1 },
+};
+
+function computeKseScore(se: Record<string, any> | null | undefined) {
+    if (!se) return 0;
+    return Object.entries(FIELD_TO_BOBOT).reduce((sum, [field, bobotMap]) => {
+        const value = se[field];
+        return sum + (bobotMap[String(value)] || 0);
+    }, 0);
+}
+
+function getVerificationStatus(raw: Record<string, any> | null | undefined) {
+    const value = String(
+        raw?.status_verifikasi ??
+        raw?.verifikasi ??
+        raw?.validasi ??
+        raw?.status ??
+        ""
+    ).trim().toLowerCase();
+
+    if (!value) return "Belum diverifikasi";
+    if (value.includes("tolak") || value.includes("reject") || value.includes("revisi")) return "Perlu revisi";
+    if (value.includes("verif") || value.includes("valid") || value.includes("approve") || value.includes("setuju")) return "Terverifikasi";
+    return "Menunggu verifikasi";
+}
+
+function computeLearningProgress(materi: Array<Record<string, any>>, completedIds: string[]) {
+    if (!materi.length) return 0;
+    return Math.round((completedIds.length / materi.length) * 100);
+}
+
+function getSurveyStatus(progress: SurveyProgress | null, respondent: SurveyRespondent | null) {
+    if (!respondent) {
+        return "Belum mengisi survei";
+    }
+
+    if (progress?.completed || progress?.finished_at) {
+        return "Survei selesai";
+    }
+
+    if (typeof progress?.current_risk === "number") {
+        return "Sedang mengisi survei";
+    }
+
+    return "Data responden tersimpan";
 }
 
 export default function Dashboard() {
@@ -139,17 +184,29 @@ export default function Dashboard() {
     const { data: perusahaanResponse } = useQuery({
         queryKey: ["perusahaan", perusahaanId],
         queryFn: () => api.getPerusahaanById(String(perusahaanId)),
-        enabled: !!perusahaanId,
+        enabled: !!perusahaanId && !user?.perusahaan?.nama_perusahaan,
     });
     const perusahaan = perusahaanResponse ?? user?.perusahaan;
 
-    const { data: ikasListData } = useQuery({
-        queryKey: ["ikasList"],
-        queryFn: () => ikasService.getAll(),
+    const { data: myIkasData } = useQuery({
+        queryKey: ["my-ikas", perusahaanId || "unknown"],
+        queryFn: () => ikasService.getMyIkas(perusahaanId),
+        enabled: !!perusahaanId,
     });
     const { data: kseData } = useQuery({ queryKey: ["kse"], queryFn: api.getKse });
     const { data: csirtData } = useQuery({ queryKey: ["csirt"], queryFn: api.getCsirt });
-    const { data: surveiData } = useQuery({ queryKey: ["survei"], queryFn: api.getSurvei });
+    const { data: lmsCoursesData } = useQuery({ queryKey: ["lms-courses"], queryFn: () => lmsService.getCourses() });
+    const { data: lmsCertificatesData } = useQuery({ queryKey: ["lms-certificates"], queryFn: () => lmsService.getMySertifikats() });
+    const { data: surveyRespondent } = useQuery({
+        queryKey: ["survey-respondent", user?.email || "unknown"],
+        queryFn: () => surveyService.findRespondentByEmail(user?.email),
+        enabled: !!user?.email,
+    });
+    const { data: surveyProgress } = useQuery({
+        queryKey: ["survey-progress", surveyRespondent?.id || "unknown"],
+        queryFn: () => surveyService.getProgress(surveyRespondent?.id as number),
+        enabled: !!surveyRespondent?.id,
+    });
 
     const [
         pertanyaanIdentifikasiQuery,
@@ -173,17 +230,9 @@ export default function Dashboard() {
         ],
     });
 
-    // Fallback data structure for IKAS mirroring IKAS.tsx
-    const ikasDataFallback = {
-        total_rata_rata: 0,
-        total_kategori: "INPUT BELUM LENGKAP",
-        identifikasi: { nilai_identifikasi: 0, kategori_identifikasi: "INPUT BELUM LENGKAP", nilai_subdomain1: 0, nilai_subdomain2: 0, nilai_subdomain3: 0, nilai_subdomain4: 0, nilai_subdomain5: 0 },
-        proteksi: { nilai_proteksi: 0, kategori_proteksi: "INPUT BELUM LENGKAP", nilai_subdomain1: 0, nilai_subdomain2: 0, nilai_subdomain3: 0, nilai_subdomain4: 0, nilai_subdomain5: 0, nilai_subdomain6: 0 },
-        deteksi: { nilai_deteksi: 0, kategori_deteksi: "INPUT BELUM LENGKAP", nilai_subdomain1: 0, nilai_subdomain2: 0, nilai_subdomain3: 0 },
-        tanggulih: { nilai_tanggulih: 0, kategori_tanggulih: "INPUT BELUM LENGKAP", nilai_subdomain1: 0, nilai_subdomain2: 0, nilai_subdomain3: 0, nilai_subdomain4: 0 },
-    };
-
-    const ikasList = (ikasListData ?? []) as IkasData[];
+    const ikasList = (myIkasData
+        ? (Array.isArray(myIkasData) ? myIkasData : [myIkasData])
+        : []) as IkasData[];
     const latestIkas = [...ikasList].sort((a, b) => {
         const dateA = new Date(a.tanggal || a.updated_at || a.created_at).getTime();
         const dateB = new Date(b.tanggal || b.updated_at || b.created_at).getTime();
@@ -235,75 +284,121 @@ export default function Dashboard() {
         return "Menunggu verifikasi";
     })();
 
-    const hasilFinalIkas = latestIkas
-        ? `${Number(latestIkas.nilai_kematangan ?? 0).toFixed(2)} - ${latestIkas.kategori_kematangan_keamanan_siber ?? "-"}`
-        : "Belum tersedia";
-
     const isIkasFilled = totalJawabanIkas > 0 || ikasList.length > 0;
-    const activeIkasData = latestIkas
-        ? {
-            total_rata_rata: latestIkas.nilai_kematangan ?? 0,
-            total_kategori: latestIkas.kategori_kematangan_keamanan_siber ?? "INPUT BELUM LENGKAP",
-            identifikasi: {
-                nilai_identifikasi: latestIkas.identifikasi?.nilai_identifikasi ?? 0,
-                kategori_identifikasi: latestIkas.identifikasi?.kategori_tingkat_kematangan_domain ?? "INPUT BELUM LENGKAP",
-                nilai_subdomain1: latestIkas.identifikasi?.nilai_subdomain1 ?? 0,
-                nilai_subdomain2: latestIkas.identifikasi?.nilai_subdomain2 ?? 0,
-                nilai_subdomain3: latestIkas.identifikasi?.nilai_subdomain3 ?? 0,
-                nilai_subdomain4: latestIkas.identifikasi?.nilai_subdomain4 ?? 0,
-                nilai_subdomain5: latestIkas.identifikasi?.nilai_subdomain5 ?? 0,
-            },
-            proteksi: {
-                nilai_proteksi: latestIkas.proteksi?.nilai_proteksi ?? 0,
-                kategori_proteksi: latestIkas.proteksi?.kategori_tingkat_kematangan_domain ?? "INPUT BELUM LENGKAP",
-                nilai_subdomain1: latestIkas.proteksi?.nilai_subdomain1 ?? 0,
-                nilai_subdomain2: latestIkas.proteksi?.nilai_subdomain2 ?? 0,
-                nilai_subdomain3: latestIkas.proteksi?.nilai_subdomain3 ?? 0,
-                nilai_subdomain4: latestIkas.proteksi?.nilai_subdomain4 ?? 0,
-                nilai_subdomain5: latestIkas.proteksi?.nilai_subdomain5 ?? 0,
-                nilai_subdomain6: latestIkas.proteksi?.nilai_subdomain6 ?? 0,
-            },
-            deteksi: {
-                nilai_deteksi: latestIkas.deteksi?.nilai_deteksi ?? 0,
-                kategori_deteksi: latestIkas.deteksi?.kategori_tingkat_kematangan_domain ?? "INPUT BELUM LENGKAP",
-                nilai_subdomain1: latestIkas.deteksi?.nilai_subdomain1 ?? 0,
-                nilai_subdomain2: latestIkas.deteksi?.nilai_subdomain2 ?? 0,
-                nilai_subdomain3: latestIkas.deteksi?.nilai_subdomain3 ?? 0,
-            },
-            tanggulih: {
-                nilai_tanggulih: latestIkas.gulih?.nilai_gulih ?? 0,
-                kategori_tanggulih: latestIkas.gulih?.kategori_tingkat_kematangan_domain ?? "INPUT BELUM LENGKAP",
-                nilai_subdomain1: latestIkas.gulih?.nilai_subdomain1 ?? 0,
-                nilai_subdomain2: latestIkas.gulih?.nilai_subdomain2 ?? 0,
-                nilai_subdomain3: latestIkas.gulih?.nilai_subdomain3 ?? 0,
-                nilai_subdomain4: latestIkas.gulih?.nilai_subdomain4 ?? 0,
-            },
-        }
-        : ikasDataFallback;
-    const kseCount = normalizeCollectionCount(kseData);
-    const csirtCount = normalizeCollectionCount(csirtData);
-    const surveiCount = normalizeCollectionCount(surveiData);
+    const kseList = normalizeList<Record<string, any>>(kseData);
+    const lmsCourses = normalizeList<Record<string, any>>(lmsCoursesData).filter((course) => course.status !== "draft");
+    const lmsCertificates = normalizeList<Record<string, any>>(lmsCertificatesData);
+    const latestKse = getLatestRecord(kseList);
+    const latestCsirt = getLatestRecord(normalizeList<Record<string, any>>(csirtData));
+    const latestCsirtId = latestCsirt?.id ? String(latestCsirt.id) : null;
 
-    const isKseFilled = kseCount > 0;
-    const isCsirtFilled = csirtCount > 0;
-    const isSurveiFilled = surveiCount > 0;
+    const [sdmCsirtQuery, seCsirtQuery] = useQueries({
+        queries: [
+            {
+                queryKey: ["sdm_csirt", latestCsirtId],
+                queryFn: () => csirtService.getSdmByCsirtId(latestCsirtId as string),
+                enabled: !!latestCsirtId,
+            },
+            {
+                queryKey: ["se_csirt", latestCsirtId],
+                queryFn: () => csirtService.getSeByCsirtId(latestCsirtId as string),
+                enabled: !!latestCsirtId,
+            },
+        ],
+    });
+    const lmsCourseDetailsQueries = useQueries({
+        queries: lmsCourses.map((course) => ({
+            queryKey: ["lms-course-detail-card", course.id],
+            queryFn: () => lmsService.getCourseById(String(course.id)),
+            enabled: !!course.id,
+        })),
+    });
 
-    const kseMetrics = [
-        { label: "Data Tersimpan", value: formatModuleStatus(kseCount, "entri", "entri") },
-        { label: "Kondisi", value: isKseFilled ? "Siap ditinjau" : "Perlu pengisian" },
-        { label: "Aksi", value: isKseFilled ? "Lanjutkan pembaruan" : "Mulai isi data" },
+    const sdmCsirtList = normalizeList<Record<string, any>>(sdmCsirtQuery.data);
+    const seCsirtList = normalizeList<Record<string, any>>(seCsirtQuery.data);
+
+    const csirtChecklist = [
+        { label: "Data CSIRT", complete: !!latestCsirt },
+        { label: "SDM CSIRT", complete: sdmCsirtList.length > 0 },
+        { label: "SE CSIRT", complete: seCsirtList.length > 0 },
     ];
+    const csirtCompletedCount = csirtChecklist.filter((item) => item.complete).length;
+    const csirtProgressValue = Math.round((csirtCompletedCount / csirtChecklist.length) * 100);
+    const isCsirtComplete = csirtCompletedCount === csirtChecklist.length;
+
+    const latestKseScore = computeKseScore(latestKse);
+    const kseVerificationStatus = getVerificationStatus(latestKse);
+    const isKseFilled = kseList.length > 0;
+    const isSurveiFilled = Boolean(surveyRespondent);
+    const surveyCompleted = Boolean(surveyProgress?.completed || surveyProgress?.finished_at);
+    const surveyStatus = getSurveyStatus(surveyProgress ?? null, surveyRespondent ?? null);
+    const surveyCurrentRisk = typeof surveyProgress?.current_risk === "number" ? surveyProgress.current_risk + 1 : null;
+    const surveyTotalRisks = typeof surveyProgress?.total_risks === "number"
+        ? surveyProgress.total_risks
+        : typeof surveyProgress?.total_steps === "number"
+            ? surveyProgress.total_steps
+            : null;
+    const lmsProgressByCourse = lmsCourses.map((course, index) => {
+        const detail = lmsCourseDetailsQueries[index]?.data;
+        const materi = detail?.materi ?? [];
+        const completedIds = detail?.completedIds ?? [];
+        const hasCertificate = lmsCertificates.some((cert) => String(cert.id_kelas) === String(course.id));
+        const progress = hasCertificate ? 100 : computeLearningProgress(materi, completedIds);
+        return {
+            id: String(course.id),
+            label: String(course.judul ?? "Kelas"),
+            value: hasCertificate ? "LULUS" : `${progress}%`,
+            progress,
+            started: hasCertificate || completedIds.length > 0,
+        };
+    });
+    const followedCourses = lmsProgressByCourse.filter((item) => item.started);
+    const lmsDetailItems = (followedCourses.length > 0 ? followedCourses : lmsProgressByCourse)
+        .slice(0, 4)
+        .map((item) => ({
+            label: item.label,
+            value: item.value,
+            highlight: item.value === "LULUS",
+        }));
+    const lmsAvailableCount = lmsCourses.length;
+    const lmsFollowedCount = followedCourses.length;
+    const lmsPassedQuizCount = lmsCertificates.length;
+    const hasLmsData = lmsAvailableCount > 0;
 
     const csirtMetrics = [
-        { label: "Tim Terdaftar", value: formatModuleStatus(csirtCount, "tim", "tim") },
-        { label: "Status", value: isCsirtFilled ? "Aktif dipantau" : "Belum terdaftar" },
-        { label: "Aksi", value: isCsirtFilled ? "Kelola anggota" : "Daftarkan tim" },
+        { label: "Status", value: isCsirtComplete ? "Data sudah lengkap" : "Data belum lengkap" },
     ];
 
-    const surveiMetrics = [
-        { label: "Respons Masuk", value: formatModuleStatus(surveiCount, "respons", "respons") },
-        { label: "Kondisi", value: isSurveiFilled ? "Sudah tersedia" : "Belum diisi" },
-        { label: "Aksi", value: isSurveiFilled ? "Lihat hasil survei" : "Mulai survei" },
+    const kseMetrics = isKseFilled
+        ? [
+            { label: "Skor Terakhir", value: String(latestKseScore) },
+            { label: "Status Verifikasi", value: kseVerificationStatus },
+        ]
+        : [
+            { label: "Status", value: "Belum ada pengisian KSE" },
+            { label: "Aksi", value: "Isi KSE untuk melihat skor" },
+        ];
+
+    const surveiMetrics = isSurveiFilled
+        ? [
+            { label: "Status", value: surveyStatus },
+            {
+                label: "Progress Risiko",
+                value: surveyCompleted
+                    ? "Selesai"
+                    : surveyCurrentRisk !== null
+                        ? `Risiko ${surveyCurrentRisk}${surveyTotalRisks ? ` / ${surveyTotalRisks}` : ""}`
+                        : "Menunggu risiko pertama",
+            },
+        ]
+        : [
+            { label: "Status", value: "Belum mengisi survei" },
+            { label: "Aksi", value: "Isi survei untuk mulai asesmen risiko" },
+        ];
+    const lmsMetrics = [
+        { label: "Jumlah Kelas Tersedia", value: String(lmsAvailableCount) },
+        { label: "Jumlah Kelas Diikuti", value: String(lmsFollowedCount) },
+        { label: "Kuis Telah Lulus", value: String(lmsPassedQuizCount) },
     ];
 
     return (
@@ -316,7 +411,7 @@ export default function Dashboard() {
                     <motion.div
                         initial={{ opacity: 0, y: 16 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="relative rounded-[2rem] overflow-hidden group h-[180px] sm:h-[240px] md:h-[280px] shadow-2xl shadow-blue-900/10 border border-white/20"
+                        className="relative rounded-[2rem] overflow-hidden group h-[180px] sm:h-[240px] md:h-[280px] border border-white/20"
                     >
                         <img
                             src="/images/banner.png"
@@ -327,7 +422,7 @@ export default function Dashboard() {
 
                         <div className="absolute inset-0 p-5 md:p-10 flex flex-col justify-between">
                             <div className="flex items-center gap-3">
-                                <h1 className="text-2xl font-black text-white tracking-tight drop-shadow-md">
+                                <h1 className="text-2xl font-black text-white tracking-tight">
                                     {perusahaan?.nama_perusahaan ?? "Nama Perusahaan"}
                                 </h1>
                             </div>
@@ -338,44 +433,39 @@ export default function Dashboard() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <SocietyCard
                             {...moduleConfig.IKAS}
-                            status={isIkasFilled ? "Sudah Diisi" : "Belum Diisi"}
+                            className="sm:col-span-2"
+                            featured
                             metrics={[
                                 { label: "Progress Pengisian", value: progressPengisianIkas },
                                 { label: "Status Verifikasi", value: statusVerifikasiIkas },
-                                { label: "Hasil Final", value: hasilFinalIkas },
+                                { label: "Level IKAS", value: latestIkas?.kategori_kematangan_keamanan_siber ?? "Input Belum Lengkap" },
                             ]}
                         />
                         <SocietyCard
                             {...moduleConfig.KSE}
-                            status={isKseFilled ? "Sudah Diisi" : "Belum Diisi"}
                             metrics={kseMetrics}
+                            ctaLabel={!isKseFilled ? "Isi KSE Sekarang" : undefined}
                         />
                         <SocietyCard
                             {...moduleConfig.CSIRT}
-                            status={isCsirtFilled ? "Sudah Diisi" : "Belum Diisi"}
                             metrics={csirtMetrics}
+                            statusText={isCsirtComplete ? "Data sudah lengkap" : "Data belum lengkap"}
+                            checklistItems={csirtChecklist}
+                            ctaLabel={!isCsirtComplete ? "Lengkapi Data CSIRT" : undefined}
                         />
                         <SocietyCard
                             {...moduleConfig.SURVEI}
-                            status={isSurveiFilled ? "Sudah Diisi" : "Belum Diisi"}
                             metrics={surveiMetrics}
+                            ctaLabel={!isSurveiFilled ? "Isi Survei Sekarang" : !surveyCompleted ? "Lanjutkan Survei" : undefined}
+                        />
+                        <SocietyCard
+                            {...moduleConfig.LMS}
+                            metrics={lmsMetrics}
+                            detailItems={lmsDetailItems}
+                            ctaLabel={!hasLmsData || lmsFollowedCount === 0 ? "Mulai Belajar" : undefined}
                         />
                     </div>
 
-                    {/* Radar Charts Section */}
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="w-full"
-                    >
-                        <RadarChartIkas ikasDataDynamic={activeIkasData} />
-                    </motion.div>
-
-                    <div className="flex justify-end pr-4">
-                        <Link to="/dashboard/ikas" className="flex items-center gap-2 text-blue-600 font-black text-[10px] uppercase tracking-wider hover:gap-3 transition-all group">
-                            Lihat Detail Lengkap <ChevronRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
-                        </Link>
-                    </div>
                 </div>
 
                 {/* Right Column (Sidebar Content) */}
@@ -384,10 +474,10 @@ export default function Dashboard() {
                     <motion.div
                         initial={{ opacity: 0, x: 20 }}
                         animate={{ opacity: 1, x: 0 }}
-                        className="bg-white rounded-[2rem] p-6 shadow-xl shadow-slate-200/50 border border-slate-100 flex flex-col items-center justify-center text-center space-y-4 h-fit"
+                        className="bg-white rounded-[2rem] p-6 border border-slate-100 flex flex-col items-center justify-center text-center space-y-4 h-fit"
                     >
                         <div className="relative">
-                            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center overflow-hidden border-4 border-white shadow-lg">
+                            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center overflow-hidden border-4 border-white">
                                 <img
                                     src={getMediaUrl(user?.foto_profile)}
                                     alt="User Avatar"
@@ -421,7 +511,7 @@ export default function Dashboard() {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.2 }}
-                        className="bg-white rounded-[2rem] p-6 shadow-xl shadow-slate-200/50 border border-slate-100 flex flex-col justify-between h-fit"
+                        className="bg-white rounded-[2rem] p-6 border border-slate-100 flex flex-col justify-between h-fit"
                     >
                         <div className="space-y-4">
                             <h3 className="text-base font-black text-slate-800">Tentang Perusahaan</h3>
@@ -436,7 +526,7 @@ export default function Dashboard() {
                         <div className="grid grid-cols-1 gap-2 mt-8">
                             <InfoTile icon={Phone} label="TELEPON" value={perusahaan?.telepon || "-"} />
                             <InfoTile icon={Globe} label="WEBSITE" value={perusahaan?.website || "-"} />
-                            <InfoTile icon={Users} label="STATUS CSIRT" value={isCsirtFilled ? "Terdaftar" : "Belum Terdaftar"} />
+                            <InfoTile icon={Users} label="STATUS CSIRT" value={latestCsirt ? "Terdaftar" : "Belum Terdaftar"} />
                             <InfoTile icon={CheckCircle2} label="STATUS IKAS" value={isIkasFilled ? "Lengkap" : "Incomplete"} />
                         </div>
                     </motion.div>
@@ -447,50 +537,20 @@ export default function Dashboard() {
 
 }
 
-function DecorativeShape({ style, colorClass }: { style: string; colorClass: string }) {
-    if (style === "circles") return (
-        <div className={`absolute -right-6 -bottom-6 opacity-60 ${colorClass}`}>
-            <svg width="140" height="140" viewBox="0 0 140 140" fill="currentColor">
-                <circle cx="90" cy="50" r="48" opacity="0.5" />
-                <circle cx="60" cy="100" r="34" opacity="0.4" />
-                <circle cx="110" cy="110" r="24" opacity="0.3" />
-            </svg>
-        </div>
-    );
-    if (style === "spiral") return (
-        <div className={`absolute -right-4 -bottom-4 opacity-60 ${colorClass}`}>
-            <svg width="140" height="140" viewBox="0 0 140 140" fill="currentColor">
-                <circle cx="100" cy="100" r="50" opacity="0.35" />
-                <circle cx="100" cy="100" r="36" opacity="0.30" />
-                <circle cx="100" cy="100" r="22" opacity="0.25" />
-                <circle cx="100" cy="100" r="10" opacity="0.4" />
-            </svg>
-        </div>
-    );
-    if (style === "squares") return (
-        <div className={`absolute -right-4 -bottom-4 opacity-60 ${colorClass}`}>
-            <svg width="140" height="140" viewBox="0 0 140 140" fill="currentColor">
-                <rect x="60" y="10" width="60" height="60" rx="12" opacity="0.5" />
-                <rect x="30" y="60" width="55" height="55" rx="12" opacity="0.35" />
-                <rect x="80" y="75" width="45" height="45" rx="10" opacity="0.25" />
-            </svg>
-        </div>
-    );
-    if (style === "diamonds") return (
-        <div className={`absolute -right-4 -bottom-4 opacity-60 ${colorClass}`}>
-            <svg width="140" height="140" viewBox="0 0 140 140" fill="currentColor">
-                <polygon points="100,10 130,60 100,110 70,60" opacity="0.45" />
-                <polygon points="70,50 100,90 70,130 40,90" opacity="0.30" />
-                <polygon points="110,65 130,95 110,125 90,95" opacity="0.25" />
-            </svg>
-        </div>
-    );
-    return null;
-}
-
 type SocietyMetric = {
     label: string;
     value: string;
+};
+
+type ChecklistItem = {
+    label: string;
+    complete: boolean;
+};
+
+type DetailItem = {
+    label: string;
+    value: string;
+    highlight?: boolean;
 };
 
 type SocietyCardProps = {
@@ -498,21 +558,19 @@ type SocietyCardProps = {
     fullName: string;
     description: string;
     href: string;
-    cardBg: string;
-    dotColor: string;
     titleColor: string;
-    descColor: string;
     linkColor: string;
-    badgeBg: string;
     badgeText: string;
-    shapeColor: string;
-    shapeStyle: string;
     accentFrom: string;
     accentTo: string;
-    panelBg: string;
-    panelIcon: LucideIcon;
-    status: string;
     metrics?: SocietyMetric[];
+    statusText?: string;
+    checklistItems?: ChecklistItem[];
+    detailItems?: DetailItem[];
+    progressValue?: number;
+    ctaLabel?: string;
+    featured?: boolean;
+    className?: string;
 };
 
 function SocietyCard({
@@ -520,108 +578,225 @@ function SocietyCard({
     fullName,
     description,
     href,
-    cardBg,
-    dotColor,
     titleColor,
-    descColor,
     linkColor,
-    badgeBg,
     badgeText,
-    shapeColor,
-    shapeStyle,
     accentFrom,
     accentTo,
-    panelBg,
-    panelIcon: PanelIcon,
-    status,
     metrics = [],
+    statusText,
+    checklistItems = [],
+    detailItems = [],
+    progressValue: cardProgressValue,
+    ctaLabel,
+    featured = false,
+    className = "",
 }: SocietyCardProps) {
-    const isFilled = status === "Sudah Diisi";
+    const progressMetric = metrics.find((metric) => metric.label === "Progress Pengisian")?.value ?? "0%";
+    const verificationMetric = metrics.find((metric) => metric.label === "Status Verifikasi")?.value ?? "Belum diverifikasi";
+    const levelMetric = metrics.find((metric) => metric.label === "Level IKAS")?.value ?? "Input Belum Lengkap";
+    const featuredProgressValue = Math.max(0, Math.min(100, Number.parseInt(progressMetric.replace(/[^\d]/g, ""), 10) || 0));
+
+    if (featured) {
+        const progressRadius = 64;
+        const progressCircumference = 2 * Math.PI * progressRadius;
+        const progressOffset = progressCircumference - (featuredProgressValue / 100) * progressCircumference;
+        const verificationTextColor = verificationMetric === "Terverifikasi"
+            ? "text-emerald-600"
+            : verificationMetric === "Menunggu verifikasi"
+                ? "text-amber-500"
+                : "text-orange-500";
+
+        return (
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4 }}
+                whileHover={{ y: -6 }}
+                className={className}
+            >
+                <Link
+                    to={href}
+                    className="group relative block overflow-hidden rounded-[2rem] border border-slate-200 bg-white p-5 transition-all duration-300 sm:p-8"
+                >
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(34,197,94,0.05),_transparent_32%),radial-gradient(circle_at_bottom_right,_rgba(14,165,233,0.08),_transparent_30%)]" />
+
+                    <div className="relative z-10 flex flex-col gap-6 lg:flex-row lg:items-stretch">
+                        <div className="flex min-h-[320px] flex-col items-center justify-center px-6 py-8 text-center">
+                            <div className="relative flex h-44 w-44 items-center justify-center">
+                                <svg className="h-44 w-44 -rotate-90" viewBox="0 0 160 160" aria-hidden="true">
+                                    <circle
+                                        cx="80"
+                                        cy="80"
+                                        r={progressRadius}
+                                        stroke="rgb(226 232 240)"
+                                        strokeWidth="12"
+                                        fill="none"
+                                        strokeLinecap="round"
+                                    />
+                                    <circle
+                                        cx="80"
+                                        cy="80"
+                                        r={progressRadius}
+                                        stroke="rgb(34 197 229)"
+                                        strokeWidth="12"
+                                        fill="none"
+                                        strokeLinecap="round"
+                                        strokeDasharray={progressCircumference}
+                                        strokeDashoffset={progressOffset}
+                                    />
+                                </svg>
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                    <span className="text-3xl font-black tracking-tight text-sky-600">{progressMetric}</span>
+                                </div>
+                            </div>
+                            <p className="mt-5 text-center text-sm font-medium text-slate-700">Progress Pengisian</p>
+                        </div>
+
+                        <div className="flex min-w-0 flex-1 flex-col">
+                            <div className="flex items-start justify-between gap-4">
+                                <div className="max-w-xl">
+                                    <p className="text-[11px] font-black uppercase tracking-[0.3em] text-sky-600">{fullName}</p>
+                                    <h4 className="mt-2 text-3xl font-black tracking-tight text-slate-900 sm:text-4xl">{label}</h4>
+                                </div>
+                                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-600 transition-transform duration-300 group-hover:translate-x-1">
+                                    <ArrowRight className="h-7 w-7" />
+                                </div>
+                            </div>
+
+                            <p className="mt-4 max-w-[28rem] text-sm font-medium leading-relaxed text-slate-700 sm:text-base">
+                                {description}
+                            </p>
+
+                            <div className="mt-7 space-y-4">
+                                <div>
+                                    <p className="text-sm font-medium text-slate-500">Status Verifikasi</p>
+                                    <p className={`mt-1 text-sm font-bold ${verificationTextColor}`}>{verificationMetric}</p>
+                                </div>
+                                <div>
+                                    <p className="text-sm font-medium text-slate-500">Level IKAS</p>
+                                    <p className="mt-1 text-sm font-bold text-orange-500">{levelMetric}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </Link>
+            </motion.div>
+        );
+    }
+
+    const hasChecklist = checklistItems.length > 0;
+    const hasCta = Boolean(ctaLabel);
+    const hasDetailItems = detailItems.length > 0;
+
     return (
         <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
             whileHover={{ y: -6 }}
+            className={className}
         >
             <Link
                 to={href}
-                className={`relative block ${cardBg} rounded-[2rem] p-6 overflow-hidden group cursor-pointer border border-white/60 hover:shadow-2xl hover:shadow-slate-300/30 transition-all duration-300 backdrop-blur-sm`}
+                className="group relative block overflow-hidden rounded-[2rem] border border-slate-200 bg-white p-5 transition-all duration-300"
             >
-                <div className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${accentFrom} ${accentTo}`} />
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-white/20" />
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(34,197,94,0.05),_transparent_32%),radial-gradient(circle_at_bottom_right,_rgba(14,165,233,0.08),_transparent_30%)]" />
 
-                {/* Status badge */}
-                <div className="relative z-10 flex items-start justify-between gap-4">
-                    <div className="space-y-3">
-                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold ${badgeBg} ${badgeText} backdrop-blur-sm border border-black/5`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${isFilled ? dotColor : "bg-slate-400"}`} />
-                            {status}
-                        </span>
-                        <div className={`w-12 h-12 rounded-2xl ${panelBg} border border-white/60 shadow-inner flex items-center justify-center`}>
-                            <PanelIcon className={`w-6 h-6 ${titleColor}`} />
+                <div className="relative z-10 flex min-w-0 flex-col">
+                    <div className="flex min-w-0 flex-1 flex-col">
+                        <div className="flex items-start justify-between gap-4">
+                            <div className="max-w-xl">
+                                <p className={`text-[11px] font-black uppercase tracking-[0.3em] ${badgeText}`}>{fullName}</p>
+                                <h4 className="mt-2 text-3xl font-black tracking-tight text-slate-900">{label}</h4>
+                            </div>
+                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-600 transition-transform duration-300 group-hover:translate-x-1">
+                                <ArrowRight className="h-6 w-6" />
+                            </div>
                         </div>
-                    </div>
 
-                    <div className="flex flex-col items-end gap-2">
-                        <div className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.2em] bg-white/70 border border-black/5 ${titleColor}`}>
-                            <Sparkles className="w-3 h-3" />
-                            Modul
-                        </div>
-                        <div className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold bg-white/60 border border-black/5 ${badgeText}`}>
-                            <Activity className="w-3 h-3" />
-                            Interaktif
-                        </div>
-                    </div>
-                </div>
+                        <p className={`mt-4 max-w-[28rem] text-sm font-medium leading-relaxed text-slate-700 sm:text-base`}>{description}</p>
 
-                {/* Title & Description */}
-                <div className="relative z-10 mt-5">
-                    <div className="flex items-start justify-between gap-3">
-                        <div>
-                            <p className="text-[11px] uppercase tracking-[0.3em] text-slate-400 font-black">{fullName}</p>
-                            <h4 className={`text-2xl font-black tracking-tight mt-2 ${titleColor}`}>{label}</h4>
-                        </div>
-                        <div className={`rounded-2xl px-3 py-2 text-right bg-white/60 border border-black/5 ${titleColor}`}>
-                            <p className="text-[10px] uppercase tracking-wider text-slate-400 font-black">Ringkas</p>
-                            <p className="text-sm font-black">{metrics[0]?.value ?? status}</p>
-                        </div>
-                    </div>
-                    <p className={`text-sm mt-3 leading-relaxed font-medium ${descColor} max-w-[85%]`}>{description}</p>
-                </div>
-
-                {metrics.length > 0 && (
-                    <div className="relative z-10 mt-5 mb-6 grid grid-cols-1 gap-2.5">
-                        {metrics.map((metric) => (
-                            <div key={metric.label} className="rounded-[1.25rem] bg-white/75 backdrop-blur-md border border-white/70 px-3.5 py-3 shadow-sm shadow-slate-200/40 transition-transform duration-300 group-hover:translate-x-1">
-                                <div className="flex items-start justify-between gap-3">
-                                    <div>
-                                        <p className="text-[10px] font-black uppercase tracking-wider text-slate-500">{metric.label}</p>
-                                        <p className={`text-sm font-bold mt-1 leading-snug ${titleColor}`}>{metric.value || "-"}</p>
-                                    </div>
-                                    <div className={`mt-0.5 rounded-xl p-2 ${panelBg}`}>
-                                        <FileCheck2 className={`w-4 h-4 ${titleColor}`} />
-                                    </div>
+                        {typeof cardProgressValue === "number" && (
+                            <div className="mt-5">
+                                <div className="mb-2 flex items-center justify-between text-[10px] font-black uppercase tracking-wider text-slate-500">
+                                    <span>Progress</span>
+                                    <span>{cardProgressValue}%</span>
+                                </div>
+                                <div className="h-2 overflow-hidden rounded-full bg-slate-200/80">
+                                    <div
+                                        className={`h-full rounded-full bg-gradient-to-r ${accentFrom} ${accentTo}`}
+                                        style={{ width: `${Math.max(0, Math.min(100, cardProgressValue))}%` }}
+                                    />
                                 </div>
                             </div>
-                        ))}
+                        )}
+
+                        {statusText && (
+                            <div className="mt-6">
+                                <p className="text-sm font-medium text-slate-500">Status Utama</p>
+                                <p className={`mt-1 text-sm font-bold ${titleColor}`}>{statusText}</p>
+                            </div>
+                        )}
+
+                        {hasDetailItems && (
+                            <div className="mt-6 space-y-3">
+                                {detailItems.map((item) => (
+                                    <div key={item.label} className="flex items-center justify-between gap-3">
+                                        <p className="min-w-0 text-sm font-medium text-slate-600">{item.label}</p>
+                                        <p className={`shrink-0 text-sm font-bold ${item.highlight ? "text-emerald-600" : titleColor}`}>{item.value}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {!hasChecklist && metrics.length > 0 && (
+                            <div className="mt-6 space-y-4">
+                                {metrics.slice(0, hasDetailItems ? 3 : 2).map((metric) => (
+                                    <div key={metric.label}>
+                                        <p className="text-sm font-medium text-slate-500">{metric.label}</p>
+                                        <p className={`mt-1 text-sm font-bold ${titleColor}`}>{metric.value || "-"}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {hasChecklist && (
+                            <div className="mt-6 space-y-3">
+                                {checklistItems.map((item) => (
+                                    <div key={item.label} className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2.5">
+                                            {item.complete ? (
+                                                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                                            ) : (
+                                                <CircleDashed className="h-4 w-4 text-slate-400" />
+                                            )}
+                                            <span className="text-sm font-medium text-slate-700">{item.label}</span>
+                                        </div>
+                                        <span className={`text-xs font-bold ${item.complete ? "text-emerald-600" : "text-slate-500"}`}>
+                                            {item.complete ? "Lengkap" : "Belum"}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        <div className="mt-6 flex items-center justify-between gap-3">
+                            {hasCta ? (
+                                <span className="inline-flex items-center gap-2 rounded-full bg-amber-100 px-4 py-2 text-sm font-bold text-amber-700">
+                                    {ctaLabel}
+                                    <ChevronRight className="h-4 w-4" />
+                                </span>
+                            ) : (
+                                <span className={`text-sm font-bold ${linkColor}`}>Lihat Detail</span>
+                            )}
+                            <span className={`inline-flex items-center gap-1 text-[11px] font-black uppercase tracking-wider ${badgeText}`}>
+                                Buka Menu
+                                <ArrowUpRight className="w-3.5 h-3.5 transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+                            </span>
+                        </div>
                     </div>
-                )}
-
-                {/* CTA Link */}
-                <div className="relative z-10 flex items-center justify-between gap-3">
-                    <span className={`text-sm font-bold flex items-center gap-1 w-fit transition-all ${linkColor} group-hover:gap-2`}>
-                        {isFilled ? "Lihat Detail" : "Isi Sekarang"}
-                        <ChevronRight className="w-4 h-4" />
-                    </span>
-                    <span className={`inline-flex items-center gap-1 text-[11px] font-black uppercase tracking-wider ${titleColor}`}>
-                        Buka Menu
-                        <ArrowUpRight className="w-3.5 h-3.5 transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
-                    </span>
                 </div>
-
-                {/* Decorative shape */}
-                <DecorativeShape style={shapeStyle} colorClass={shapeColor} />
             </Link>
         </motion.div>
     );
@@ -645,7 +820,7 @@ function AccountItem({ icon: Icon, label, value }: any) {
 
 function InfoTile({ icon: Icon, label, value }: any) {
     return (
-        <div className="flex items-center justify-between p-3.5 rounded-2xl bg-white hover:bg-slate-50 transition-all duration-300 border border-slate-50 group hover:border-slate-100 hover:shadow-sm">
+        <div className="flex items-center justify-between p-3.5 rounded-2xl bg-white hover:bg-slate-50 transition-all duration-300 border border-slate-50 group hover:border-slate-100">
             <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center shrink-0 border border-slate-100 group-hover:scale-110 transition-transform duration-300">
                     <Icon className="w-4 h-4 text-slate-500" />

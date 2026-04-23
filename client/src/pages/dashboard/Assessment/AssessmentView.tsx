@@ -210,7 +210,7 @@ export default function AssessmentView({
               )}
               <button
                 type="button"
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors bg-slate-100 dark:bg-slate-800 p-1.5 rounded-full"
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors bg-slate-100 dark:bg-slate-800 p-1.5 rounded-xl"
                 onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
                 title={sidebarCollapsed ? 'Expand' : 'Collapse'}
               >
@@ -300,7 +300,7 @@ export default function AssessmentView({
                 {assessmentData.domains.map((domain) => (
                   <div key={domain.id} className="mb-2">
                     <button
-                      className={`w-full text-left px-3 py-2 rounded-lg flex items-center transition-all ${isCurrentDomain(domain.id) ? 'bg-slate-100 dark:bg-slate-800' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'}`}
+                      className={`w-full text-left px-3 py-2 rounded-xl flex items-center transition-all ${isCurrentDomain(domain.id) ? 'bg-slate-100 dark:bg-slate-800' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'}`}
                       onClick={() => {
                         if (!isCurrentDomain(domain.id)) {
                           jumpToSubCategory(domain.id, domain.categories[0]?.id, domain.categories[0]?.subCategories[0]?.id);
@@ -328,7 +328,7 @@ export default function AssessmentView({
                                 <button
                                   key={subCategory.id}
                                   onClick={() => jumpToSubCategory(domain.id, category.id, subCategory.id)}
-                                  className={`text-left px-3 py-2 rounded-lg text-sm transition-all flex justify-between items-center group ${isActive
+                                  className={`text-left px-3 py-2 rounded-xl text-sm transition-all flex justify-between items-center group ${isActive
                                     ? 'bg-white dark:bg-slate-900 shadow-sm border border-slate-200 dark:border-slate-700 font-semibold'
                                     : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500'
                                   }`}
@@ -364,7 +364,7 @@ export default function AssessmentView({
             <div className="flex justify-end mb-8">
               <button
                 onClick={onBack}
-                className="text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 text-sm font-semibold flex items-center transition-colors px-4 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+                className="text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 text-sm font-semibold flex items-center transition-colors px-4 py-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800"
                 title="Kembali ke Ringkasan IKAS"
               >
                 <i className="ri-arrow-left-line mr-2" />
