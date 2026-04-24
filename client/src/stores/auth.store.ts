@@ -61,9 +61,20 @@ export interface CurrentUser {
     id: string;
     username: string;
     name: string;
+    displayName: string;
     email: string;
     role: string;
+    roleId: string;
+    roleName: string;
+    jabatan: string;
+    companyId: string;
+    fotoProfile: string;
+    banner: string;
+    status: string;
+    mfaEnabled: boolean;
+    hasCompany: boolean | null;
     createdAt: string;
+    updatedAt: string;
 }
 
 interface AuthResult {
@@ -71,6 +82,7 @@ interface AuthResult {
     mfaSetup?: boolean;
     mfaVerify?: boolean;
     error?: string;
+    user?: CurrentUser;
 }
 
 interface AuthState {
@@ -127,13 +139,30 @@ interface AuthState {
 function mapToCurrentUser(data: unknown): CurrentUser {
     const u = (data as { user?: unknown })?.user ?? data;
     const user = u as Record<string, unknown>;
+    const rawHasCompany = user.has_company;
     return {
         id: String(user.id ?? ''),
         username: String(user.username ?? ''),
-        name: String(user.name ?? user.username ?? ''),
+        name: String(user.display_name ?? user.name ?? user.username ?? ''),
+        displayName: String(user.display_name ?? user.name ?? user.username ?? ''),
         email: String(user.email ?? ''),
         role: String(user.role ?? user.role_name ?? 'user'),
+        roleId: String(user.role_id ?? ''),
+        roleName: String(user.role_name ?? user.role ?? ''),
+        jabatan: String(user.jabatan ?? ''),
+        companyId: String(user.id_perusahaan ?? ''),
+        fotoProfile: String(user.foto_profile ?? ''),
+        banner: String(user.banner ?? ''),
+        status: String(user.status ?? ''),
+        mfaEnabled: Boolean(user.mfa_enabled),
+        hasCompany:
+            typeof rawHasCompany === 'boolean'
+                ? rawHasCompany
+                : user.id_perusahaan != null
+                    ? Boolean(String(user.id_perusahaan))
+                    : null,
         createdAt: String(user.created_at ?? user.createdAt ?? ''),
+        updatedAt: String(user.updated_at ?? user.updatedAt ?? ''),
     };
 }
 
@@ -190,7 +219,7 @@ export const useAuthStore = create<AuthState>()(
                 // Case 3: Backend set HTTP-only cookie → hydrate store dari response
                 const userData = mapToCurrentUser(response);
                 set({ authenticated: true, currentUser: userData, loading: false });
-                return { authenticated: true };
+                return { authenticated: true, user: userData };
             } catch (error: unknown) {
                 const msg = error instanceof Error ? error.message : 'Login failed';
                 set({

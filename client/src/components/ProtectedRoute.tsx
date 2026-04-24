@@ -19,7 +19,7 @@ interface ProtectedRouteProps {
  * Tidak ada localStorage atau sessionStorage yang digunakan untuk auth state.
  * Sumber kebenaran satu-satunya adalah HTTP-only cookie + server.
  */
-export function ProtectedRoute({ children }: ProtectedRouteProps) {
+export function AuthGuard({ children }: ProtectedRouteProps) {
     const authenticated = useAuthStore((s) => s.authenticated);
     const currentUser = useAuthStore((s) => s.currentUser);
     const rehydrateFromServer = useAuthStore((s) => s.rehydrateFromServer);
@@ -68,4 +68,8 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     }
 
     return <>{children}</>;
+}
+
+export function ProtectedRoute({ children }: ProtectedRouteProps) {
+    return <AuthGuard>{children}</AuthGuard>;
 }

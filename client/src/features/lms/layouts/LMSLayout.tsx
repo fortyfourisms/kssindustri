@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Outlet, useMatches } from "react-router-dom";
-import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { AuthGuard } from "@/components/ProtectedRoute";
 import { Topbar } from "@/components/dashboard/Topbar";
 import { LMSSidebar } from "../components/LMSSidebar";
 
@@ -17,7 +17,7 @@ export function LMSLayout() {
     const title = (matches.at(-1)?.handle as RouteHandle | undefined)?.title;
 
     return (
-        <ProtectedRoute>
+        <AuthGuard>
             <div className="min-h-screen bg-[#f5f7ff] flex">
                 {/* Background gradient */}
                 <div
@@ -43,6 +43,6 @@ export function LMSLayout() {
                     </main>
                 </div>
             </div>
-        </ProtectedRoute>
+        </AuthGuard>
     );
 }

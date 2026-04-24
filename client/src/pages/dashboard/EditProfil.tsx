@@ -4,6 +4,7 @@ import { apiClient } from "@/services/apiClient";
 import { perusahaanService } from "@/services/perusahaan.service";
 import { useUser } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { useAuthStore } from "@/stores/auth.store";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -106,13 +107,18 @@ function PicModal({
     );
 }
 
-export default function EditProfil() {
+interface EditProfilProps {
+    defaultTab?: "pengguna" | "perusahaan";
+}
+
+export default function EditProfil({ defaultTab = "pengguna" }: EditProfilProps) {
     const { toast } = useToast();
     const qc = useQueryClient();
+    const rehydrateFromServer = useAuthStore((state) => state.rehydrateFromServer);
     const [searchParams] = useSearchParams();
     const [isEditingPengguna, setIsEditingPengguna] = useState(false);
     const [isEditingPerusahaan, setIsEditingPerusahaan] = useState(false);
-    const initialTab = searchParams.get("tab") === "perusahaan" ? "perusahaan" : "pengguna";
+    const initialTab = searchParams.get("tab") === "perusahaan" ? "perusahaan" : defaultTab;
 
     const { data: user, isLoading: isUserLoading } = useUser();
 
@@ -224,9 +230,10 @@ export default function EditProfil() {
             }
             return apiClient.putForm<any>(`/api/perusahaan/${perusahaanId}`, formData);
         },
-        onSuccess: () => {
+        onSuccess: async () => {
             qc.invalidateQueries({ queryKey: ["perusahaan", perusahaanId] });
             qc.invalidateQueries({ queryKey: ["me"] });
+            await rehydrateFromServer();
             toast({ title: "Profil perusahaan diperbarui" });
             setIsEditingPerusahaan(false);
         },
@@ -251,9 +258,10 @@ export default function EditProfil() {
             if (!perusahaanId) throw new Error("ID perusahaan tidak ditemukan");
             return apiClient.putForm<any>(`/api/perusahaan/${perusahaanId}`, formData);
         },
-        onSuccess: () => {
+        onSuccess: async () => {
             qc.invalidateQueries({ queryKey: ["perusahaan", perusahaanId] });
             qc.invalidateQueries({ queryKey: ["me"] });
+            await rehydrateFromServer();
             toast({ title: "Foto/banner perusahaan berhasil diperbarui" });
         },
         onError: (e: any) => toast({ title: "Gagal mengunggah foto", description: e.message, variant: "destructive" }),

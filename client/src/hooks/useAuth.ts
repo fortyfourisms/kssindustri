@@ -13,6 +13,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/stores/auth.store";
 import { useProfileStore } from "@/stores/profile.store";
 import type { LoginPayload, RegisterPayload } from "@/types/auth.types";
+import { getDefaultAuthenticatedRoute } from "@/lib/access-control";
 
 // ─── Legacy compatibility (do NOT change — used by existing pages) ────────────
 
@@ -69,7 +70,7 @@ export function useMfaVerify() {
         },
         onSuccess: () => {
             qc.invalidateQueries({ queryKey: ["me"] });
-            navigate("/dashboard");
+            navigate(getDefaultAuthenticatedRoute(useAuthStore.getState().currentUser));
         },
     });
 }

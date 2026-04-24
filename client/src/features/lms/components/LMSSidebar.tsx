@@ -16,15 +16,12 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLogout } from "@/hooks/useAuth";
+import { useAuthStore } from "@/stores/auth.store";
+import { getUserRole, ROLE_USER_PIC } from "@/lib/access-control";
 import kssiLogo from "@/assets/KSSI.svg";
 import fortyfourLogo from "@/assets/d44.svg";
 import { computeProgress, useLmsStore } from "@/features/lms/stores/lms.store";
-
-const navItems = [
-    { label: "Dashboard LMS", href: "/lms", icon: LayoutDashboard },
-    { label: "Materi", href: "/lms/materi", icon: BookOpen, description: "Materi Pembelajaran" },
-    { label: "Progress / Penilaian", href: "/lms/progress", icon: TrendingUp },
-];
+import { getCourseLearnRoute, getCourseQuizRoute, getCoursesRoute } from "@/features/lms/lib/lms-routes";
 
 interface LMSSidebarProps {
     mobileOpen?: boolean;
@@ -36,9 +33,16 @@ export function LMSSidebar({ mobileOpen = false, onClose }: LMSSidebarProps) {
     const location = useLocation();
     const logout = useLogout();
     const navigate = useNavigate();
+    const currentUser = useAuthStore((state) => state.currentUser);
     const { courseMateri, courseQuizzes, completedMateriIds } = useLmsStore();
+    const role = getUserRole(currentUser);
+    const navItems = [
+        { label: role === ROLE_USER_PIC ? "LMS" : "LMS / My Learning", href: "/lms", icon: LayoutDashboard },
+        { label: "Courses", href: getCoursesRoute(), icon: BookOpen, description: "Materi Pembelajaran" },
+        { label: "Progress Belajar", href: "/lms/progress", icon: TrendingUp },
+    ];
 
-    const isCoursePlayerRoute = location.pathname.startsWith("/lms/materi/") && !collapsed;
+    const isCoursePlayerRoute = (location.pathname.startsWith("/lms/materi/") || location.pathname.startsWith("/course/")) && !collapsed;
     const sortedMateri = useMemo(() => [...courseMateri].sort((a, b) => a.urutan - b.urutan), [courseMateri]);
     const progressPercentage = computeProgress(sortedMateri, completedMateriIds);
     const desktopSidebarWidth = isCoursePlayerRoute ? "w-[320px]" : "w-64";
@@ -72,10 +76,12 @@ export function LMSSidebar({ mobileOpen = false, onClose }: LMSSidebarProps) {
             <nav className="flex-1 px-3 py-5 overflow-y-auto overflow-x-hidden">
                 <div className="space-y-2">
                 {navItems.map((item) => {
-                    // Exact match for /lms to prevent it from matching /lms/materi
+                    // Exact match for /lms to prevent it from matching nested LMS routes
                     const active = item.href === "/lms" 
                         ? location.pathname === "/lms" 
-                        : location.pathname.startsWith(item.href);
+                        : item.href === getCoursesRoute()
+                            ? location.pathname === getCoursesRoute() || location.pathname.startsWith("/course/") || location.pathname.startsWith("/lms/materi/")
+                            : location.pathname.startsWith(item.href);
                         
                     const Icon = item.icon;
                     return (
@@ -102,7 +108,7 @@ export function LMSSidebar({ mobileOpen = false, onClose }: LMSSidebarProps) {
                                 )}
                             </NavLink>
 
-                            {item.href === "/lms/materi" && isCoursePlayerRoute && (forMobile || !collapsed) && (
+                            {item.href === getCoursesRoute() && isCoursePlayerRoute && (forMobile || !collapsed) && (
                                 <div className="mt-3 ml-4 border-l border-slate-200 pl-4 pr-1">
                                     <div className="max-h-[calc(100vh-20rem)] overflow-y-auto session-scrollbar pr-2">
                                         <div className="flex items-center justify-between mb-3">
@@ -133,7 +139,7 @@ export function LMSSidebar({ mobileOpen = false, onClose }: LMSSidebarProps) {
                                                         ) : (
                                                             <button
                                                                 onClick={() => {
-                                                                    navigate(`/lms/materi/${materi.id_kelas}/learn/${materi.id}`);
+                                                                    navigate(getCourseLearnRoute(materi.id_kelas, materi.id));
                                                                     if (forMobile) onClose?.();
                                                                 }}
                                                                 className={cn(
@@ -181,7 +187,7 @@ export function LMSSidebar({ mobileOpen = false, onClose }: LMSSidebarProps) {
                                                                 key={kuis.id}
                                                                 onClick={() => {
                                                                     if (!isLocked && isDone) {
-                                                                        navigate(`/lms/materi/${kuis.id_kelas}/quiz/${kuis.id}`);
+                                                                        navigate(getCourseQuizRoute(kuis.id_kelas, kuis.id));
                                                                         if (forMobile) onClose?.();
                                                                     }
                                                                 }}
@@ -213,7 +219,7 @@ export function LMSSidebar({ mobileOpen = false, onClose }: LMSSidebarProps) {
                                                                 disabled={isFinalLocked}
                                                                 onClick={() => {
                                                                     if (!isFinalLocked) {
-                                                                        navigate(`/lms/materi/${kuis.id_kelas}/quiz/${kuis.id}`);
+                                                                        navigate(getCourseQuizRoute(kuis.id_kelas, kuis.id));
                                                                         if (forMobile) onClose?.();
                                                                     }
                                                                 }}
@@ -244,19 +250,21 @@ export function LMSSidebar({ mobileOpen = false, onClose }: LMSSidebarProps) {
             {/* Bottom Actions */}
             <div className={cn("px-3 pb-4 pt-3 border-t border-slate-100/80", (!forMobile && collapsed) ? "flex flex-col items-center" : "")}>
                 <div className="space-y-2">
-                <button
-                    onClick={() => navigate("/dashboard")}
-                    title={!forMobile && collapsed ? "Kembali ke Dashboard Utama" : ""}
-                    className={cn(
-                        "w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-slate-600 hover:text-slate-900 hover:bg-white border border-transparent hover:border-slate-200 transition group relative",
-                        !forMobile && collapsed ? "justify-center px-0" : ""
-                    )}
-                >
-                    <ArrowLeft className="w-5 h-5 flex-shrink-0" />
-                    {(forMobile || !collapsed) && (
-                        <span className="text-sm font-semibold truncate">Ke Dashboard Utama</span>
-                    )}
-                </button>
+                {role === ROLE_USER_PIC && (
+                    <button
+                        onClick={() => navigate("/dashboard")}
+                        title={!forMobile && collapsed ? "Kembali ke Dashboard Utama" : ""}
+                        className={cn(
+                            "w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-slate-600 hover:text-slate-900 hover:bg-white border border-transparent hover:border-slate-200 transition group relative",
+                            !forMobile && collapsed ? "justify-center px-0" : ""
+                        )}
+                    >
+                        <ArrowLeft className="w-5 h-5 flex-shrink-0" />
+                        {(forMobile || !collapsed) && (
+                            <span className="text-sm font-semibold truncate">Ke Dashboard Utama</span>
+                        )}
+                    </button>
+                )}
                 {(forMobile || !collapsed) && (
                     <button
                         onClick={() => logout.mutate()}

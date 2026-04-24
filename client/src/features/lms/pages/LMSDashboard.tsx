@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
-import { GraduationCap, BookOpen, Trophy } from "lucide-react";
+import { BookOpen, Trophy } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { getCoursesRoute } from "@/features/lms/lib/lms-routes";
 
 export function LMSDashboard() {
     const navigate = useNavigate();
@@ -22,7 +23,7 @@ export function LMSDashboard() {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.4 }}
-                        onClick={() => navigate("/lms/materi")}
+                        onClick={() => navigate(getCoursesRoute())}
                         className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm hover:shadow-lg hover:border-blue-300 transition-all cursor-pointer flex flex-col gap-4"
                     >
                         <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center">

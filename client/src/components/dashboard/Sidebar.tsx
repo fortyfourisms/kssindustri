@@ -11,20 +11,14 @@ import {
     ChevronRight,
     LogOut,
     X,
+    Building2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLogout } from "@/hooks/useAuth";
+import { useAuthStore } from "@/stores/auth.store";
+import { getUserRole, ROLE_USER } from "@/lib/access-control";
 import kssiLogo from "@/assets/KSSI.svg";
 import fortyfourLogo from "@/assets/d44.svg";
-
-const navItems = [
-    { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-    { label: "IKAS", href: "/dashboard/ikas", icon: Shield, description: "Instrumen Penilaian Kematangan Keamanan Siber" },
-    { label: "KSE", href: "/dashboard/kse", icon: Monitor, description: "Kategorisasi Sistem Elektronik" },
-    { label: "CSIRT", href: "/dashboard/csirt", icon: Users, description: "CSIRT" },
-    { label: "Survei Profil Risiko", href: "/dashboard/survei", icon: ClipboardList },
-    { label: "LMS", href: "/lms", icon: BookOpen, description: "Materi Pembelajaran" },
-];
 
 interface SidebarProps {
     mobileOpen?: boolean;
@@ -35,6 +29,23 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
     const [collapsed, setCollapsed] = useState(false);
     const location = useLocation();
     const logout = useLogout();
+    const currentUser = useAuthStore((state) => state.currentUser);
+    const role = getUserRole(currentUser);
+
+    const navItems = role === ROLE_USER
+        ? [
+            { label: "LMS / My Learning", href: "/lms", icon: BookOpen },
+            { label: "Courses", href: "/courses", icon: LayoutDashboard },
+        ]
+        : [
+            { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+            { label: "Data Perusahaan", href: "/perusahaan", icon: Building2 },
+            { label: "IKAS", href: "/ikas", icon: Shield, description: "Instrumen Penilaian Kematangan Keamanan Siber" },
+            { label: "KSE", href: "/kse", icon: Monitor, description: "Kategorisasi Sistem Elektronik" },
+            { label: "CSIRT", href: "/csirt", icon: Users, description: "CSIRT" },
+            { label: "Survei Risiko", href: "/survei-resiko", icon: ClipboardList },
+            { label: "LMS", href: "/lms", icon: BookOpen, description: "Materi Pembelajaran" },
+        ];
 
     const NavContent = ({ forMobile = false }: { forMobile?: boolean }) => (
         <>

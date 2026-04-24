@@ -18,6 +18,7 @@ import {
 import { useLmsStore } from "@/features/lms/stores/lms.store";
 import { lmsService } from "@/features/lms/services/lms.service";
 import { toast } from "sonner";
+import { getCourseRoute } from "@/features/lms/lib/lms-routes";
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
@@ -93,7 +94,7 @@ export default function LMSCertificate() {
         <div className="max-w-3xl mx-auto pb-12">
             {/* Back */}
             <button
-                onClick={() => navigate(`/lms/materi/${courseId}`)}
+                onClick={() => navigate(getCourseRoute(courseId!))}
                 className="flex items-center gap-2 text-sm font-bold text-slate-600 hover:text-slate-900 transition-colors mb-8"
             >
                 <ArrowLeft className="w-4 h-4" />

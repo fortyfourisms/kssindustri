@@ -1,11 +1,19 @@
-import { createBrowserRouter, RouterProvider } from "react-router-dom";
-import { queryClient } from "@/lib/queryClient";
+import { useEffect } from "react";
+import { createBrowserRouter, Navigate, RouterProvider } from "react-router-dom";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/sonner";
 import { Toaster as ShadcnToaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { queryClient } from "@/lib/queryClient";
+import { LoadingScreen } from "@/components/LoadingScreen";
+import { DashboardLayout } from "@/layouts/DashboardLayout";
+import { LMSLayout } from "@/features/lms/layouts/LMSLayout";
+import { AuthGuard } from "@/components/ProtectedRoute";
+import { RoleGuard } from "@/components/RoleGuard";
+import { ORGANIZATION_ALLOWED_ROLES } from "@/lib/access-control";
+import { bootstrapApp } from "@/lib/bootstrapApp";
+import { useAppStore } from "@/stores/useAppStore";
 
-// Public pages
 import Home from "@/pages/Home";
 import Login from "@/pages/Login";
 import Register from "@/pages/Register";
@@ -13,14 +21,8 @@ import MfaVerify from "@/pages/MfaVerify";
 import NotFound from "@/pages/not-found";
 import CoursePreview from "@/pages/CoursePreview";
 import BlogArticle from "@/pages/BlogArticle";
-import { LoadingScreen } from "@/components/LoadingScreen";
+import OnboardingPerusahaan from "@/pages/OnboardingPerusahaan";
 
-// Dashboard layout (App Shell – mounts once)
-import { DashboardLayout } from "@/layouts/DashboardLayout";
-import { ProtectedRoute } from "@/components/ProtectedRoute";
-import { Outlet } from "react-router-dom";
-
-// Dashboard pages
 import Dashboard from "@/pages/dashboard/Dashboard";
 import IKAS from "@/pages/dashboard/IKAS";
 import FormIkas from "@/pages/dashboard/FormIkas";
@@ -30,7 +32,7 @@ import CSIRT from "@/pages/dashboard/CSIRT";
 import SurveiProfil from "@/pages/dashboard/SurveiProfil";
 import EditProfil from "@/pages/dashboard/EditProfil";
 import PengaturanAkun from "@/pages/dashboard/PengaturanAkun";
-import { LMSLayout } from "@/features/lms/layouts/LMSLayout";
+
 import { LMSDashboard } from "@/features/lms/pages/LMSDashboard";
 import LMSMateri from "@/features/lms/pages/LMSMateri";
 import { LMSProgress } from "@/features/lms/pages/LMSProgress";
@@ -39,58 +41,153 @@ import LMSLearn from "@/features/lms/pages/LMSLearn";
 import LMSQuiz from "@/features/lms/pages/LMSQuiz";
 import LMSCertificate from "@/features/lms/pages/LMSCertificate";
 
-// App Bootstrap function
-import { bootstrapApp } from "@/lib/bootstrapApp";
-import { useAppStore } from "@/stores/useAppStore";
-import { useEffect } from "react";
+function OrganizationRoute({ children }: { children: React.ReactNode }) {
+  return (
+    <RoleGuard allow={ORGANIZATION_ALLOWED_ROLES} requireCompany>
+      {children}
+    </RoleGuard>
+  );
+}
 
-// ── Data Router (required for useMatches / handle) ───────────────────────────
 const router = createBrowserRouter([
-  // Public routes
   { path: "/", element: <Home /> },
   { path: "/login", element: <Login /> },
   { path: "/register", element: <Register /> },
   { path: "/mfa", element: <MfaVerify /> },
   { path: "/course-preview/:slug", element: <CoursePreview /> },
   { path: "/blog/:slug", element: <BlogArticle /> },
-
-  // Dashboard App Shell – DashboardLayout mounts ONCE per session
+  {
+    path: "/onboarding-perusahaan",
+    element: (
+      <AuthGuard>
+        <OnboardingPerusahaan />
+      </AuthGuard>
+    ),
+  },
   {
     element: <DashboardLayout />,
     children: [
-      { path: "/dashboard", element: <Dashboard />, handle: { title: "Dashboard" } },
-      { path: "/dashboard/ikas", element: <IKAS />, handle: { title: "IKAS" } },
-      { path: "/dashboard/form-ikas", element: <FormIkas />, handle: { title: "Input Data IKAS" } },
-      { path: "/dashboard/kse", element: <KSE />, handle: { title: "KSE" } },
-      { path: "/dashboard/form-kse", element: <FormKse />, handle: { title: "Form KSE" } },
-      { path: "/dashboard/csirt", element: <CSIRT />, handle: { title: "CSIRT" } },
-      { path: "/dashboard/survei", element: <SurveiProfil />, handle: { title: "Survei Profil Risiko" } },
+      {
+        path: "/dashboard",
+        element: (
+          <OrganizationRoute>
+            <Dashboard />
+          </OrganizationRoute>
+        ),
+        handle: { title: "Dashboard" },
+      },
+      {
+        path: "/perusahaan",
+        element: (
+          <OrganizationRoute>
+            <EditProfil defaultTab="perusahaan" />
+          </OrganizationRoute>
+        ),
+        handle: { title: "Data Perusahaan" },
+      },
+      {
+        path: "/ikas",
+        element: (
+          <OrganizationRoute>
+            <IKAS />
+          </OrganizationRoute>
+        ),
+        handle: { title: "IKAS" },
+      },
+      {
+        path: "/kse",
+        element: (
+          <OrganizationRoute>
+            <KSE />
+          </OrganizationRoute>
+        ),
+        handle: { title: "KSE" },
+      },
+      {
+        path: "/csirt",
+        element: (
+          <OrganizationRoute>
+            <CSIRT />
+          </OrganizationRoute>
+        ),
+        handle: { title: "CSIRT" },
+      },
+      {
+        path: "/survei-resiko",
+        element: (
+          <OrganizationRoute>
+            <SurveiProfil />
+          </OrganizationRoute>
+        ),
+        handle: { title: "Survei Risiko" },
+      },
+      {
+        path: "/dashboard/ikas",
+        element: <Navigate to="/ikas" replace />,
+      },
+      {
+        path: "/dashboard/kse",
+        element: <Navigate to="/kse" replace />,
+      },
+      {
+        path: "/dashboard/csirt",
+        element: <Navigate to="/csirt" replace />,
+      },
+      {
+        path: "/dashboard/survei",
+        element: <Navigate to="/survei-resiko" replace />,
+      },
+      {
+        path: "/dashboard/form-ikas",
+        element: (
+          <OrganizationRoute>
+            <FormIkas />
+          </OrganizationRoute>
+        ),
+        handle: { title: "Input Data IKAS" },
+      },
+      {
+        path: "/dashboard/form-kse",
+        element: (
+          <OrganizationRoute>
+            <FormKse />
+          </OrganizationRoute>
+        ),
+        handle: { title: "Form KSE" },
+      },
       { path: "/dashboard/profil", element: <EditProfil />, handle: { title: "Profil" } },
       { path: "/dashboard/pengaturan", element: <PengaturanAkun />, handle: { title: "Pengaturan Akun" } },
     ],
   },
-
-  // LMS Module Layout
   {
     element: <LMSLayout />,
     children: [
-      { path: "/lms", element: <LMSDashboard />, handle: { title: "Dashboard LMS" } },
-      { path: "/lms/materi", element: <LMSMateri />, handle: { title: "Materi Pembelajaran" } },
-      { path: "/lms/progress", element: <LMSProgress />, handle: { title: "Progress & Penilaian" } },
+      { path: "/lms", element: <LMSDashboard />, handle: { title: "LMS / My Learning" } },
+      { path: "/courses", element: <LMSMateri />, handle: { title: "Courses" } },
+      { path: "/lms/materi", element: <Navigate to="/courses" replace /> },
+      { path: "/lms/progress", element: <LMSProgress />, handle: { title: "Progress Belajar" } },
+      {
+        path: "/course/:courseId",
+        element: <LMSCourse />,
+        handle: { title: "Kelas Pembelajaran" },
+        children: [
+          { path: "learn/:materiId", element: <LMSLearn /> },
+          { path: "quiz/:quizId", element: <LMSQuiz /> },
+          { path: "certificate", element: <LMSCertificate /> },
+        ],
+      },
       {
         path: "/lms/materi/:courseId",
         element: <LMSCourse />,
         handle: { title: "Kelas Pembelajaran" },
         children: [
-            { path: "learn/:materiId", element: <LMSLearn /> },
-            { path: "quiz/:quizId", element: <LMSQuiz /> },
-            { path: "certificate", element: <LMSCertificate /> },
-        ]
+          { path: "learn/:materiId", element: <LMSLearn /> },
+          { path: "quiz/:quizId", element: <LMSQuiz /> },
+          { path: "certificate", element: <LMSCertificate /> },
+        ],
       },
     ],
   },
-
-  // 404
   { path: "*", element: <NotFound /> },
 ]);
 
@@ -99,7 +196,6 @@ function App() {
   const setAppReady = useAppStore((state) => state.setAppReady);
 
   useEffect(() => {
-    // Run bootstrapping sequence exactly once when the App mounts
     const initApp = async () => {
       await bootstrapApp();
       setAppReady(true);
@@ -108,8 +204,6 @@ function App() {
     initApp();
   }, [setAppReady]);
 
-  // Jika app masih booting (ngecek auth/session API), jangan mount router/children sama sekali.
-  // Ini menghindari component flash atau API call redudant yang disebabkan react tree setengah mount.
   if (!isAppReady) {
     return <LoadingScreen />;
   }

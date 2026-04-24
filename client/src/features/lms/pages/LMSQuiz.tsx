@@ -16,6 +16,7 @@ import {
 import { useLmsStore } from "@/features/lms/stores/lms.store";
 import { toast } from "sonner";
 import type { JawabanPayload, SoalWithPilihan } from "@/features/lms/types/lms.types";
+import { getCourseRoute } from "@/features/lms/lib/lms-routes";
 
 // ─── Stages ───────────────────────────────────────────────────────────────────
 type Stage = "start" | "questions" | "submitting" | "result";
@@ -385,7 +386,7 @@ export default function LMSQuiz() {
                             totalBenar={kuisResult.total_benar}
                             totalSoal={kuisResult.total_soal}
                             onRetry={handleRetry}
-                            onBack={() => navigate(`/lms/materi/${courseId}`)}
+                            onBack={() => navigate(getCourseRoute(courseId!))}
                         />
                     </motion.div>
                 )}

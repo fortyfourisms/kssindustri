@@ -21,6 +21,7 @@ import {
 import { toast } from "sonner";
 import { buildYoutubeEmbed } from "@/features/lms/services/lms.service";
 import { useLmsStore } from "@/features/lms/stores/lms.store";
+import { getCourseLearnRoute, getCourseQuizRoute, getCourseRoute, getCoursesRoute } from "@/features/lms/lib/lms-routes";
 
 const TABS = [
   { key: "materi", label: "Materi", icon: BookOpen },
@@ -256,9 +257,9 @@ export default function LMSLearn() {
       toast.success("Materi ditandai selesai");
     }
     if (linkedQuizzes.length > 0) {
-      navigate(`/lms/materi/${courseId}/quiz/${linkedQuizzes[0].id}`);
+      navigate(getCourseQuizRoute(courseId!, linkedQuizzes[0].id));
     } else if (nextMateri) {
-      navigate(`/lms/materi/${courseId}/learn/${nextMateri.id}`);
+      navigate(getCourseLearnRoute(courseId!, nextMateri.id));
     }
   };
 
@@ -267,11 +268,11 @@ export default function LMSLearn() {
       {materi && (
         <div className="px-6 lg:px-10 xl:px-12 flex items-center justify-between mb-8">
           <div className="flex-1 min-w-0 pr-4 text-sm font-medium text-slate-400 truncate">
-            <span className="hover:text-slate-600 cursor-pointer transition-colors" onClick={() => navigate("/lms/materi")}>
+            <span className="hover:text-slate-600 cursor-pointer transition-colors" onClick={() => navigate(getCoursesRoute())}>
               Kelas Saya
             </span>
             <span className="mx-2">/</span>
-            <span className="hover:text-slate-600 cursor-pointer transition-colors" onClick={() => navigate(`/lms/materi/${courseId}`)}>
+            <span className="hover:text-slate-600 cursor-pointer transition-colors" onClick={() => navigate(getCourseRoute(courseId!))}>
               {activeCourse?.judul || "Course"}
             </span>
             <span className="mx-2">/</span>
@@ -280,9 +281,9 @@ export default function LMSLearn() {
 
           <button
             onClick={() => {
-              if (linkedQuizzes.length > 0) navigate(`/lms/materi/${courseId}/quiz/${linkedQuizzes[0].id}`);
-              else if (nextMateri) navigate(`/lms/materi/${courseId}/learn/${nextMateri.id}`);
-              else navigate(`/lms/materi/${courseId}`);
+              if (linkedQuizzes.length > 0) navigate(getCourseQuizRoute(courseId!, linkedQuizzes[0].id));
+              else if (nextMateri) navigate(getCourseLearnRoute(courseId!, nextMateri.id));
+              else navigate(getCourseRoute(courseId!));
             }}
             className="text-teal-600 hover:text-teal-700 font-bold text-sm tracking-wide transition-colors whitespace-nowrap"
           >
@@ -444,9 +445,9 @@ export default function LMSLearn() {
             <div className="mt-6 flex justify-end">
               <button
                 onClick={() => {
-                  if (linkedQuizzes.length > 0) navigate(`/lms/materi/${courseId}/quiz/${linkedQuizzes[0].id}`);
-                  else if (nextMateri) navigate(`/lms/materi/${courseId}/learn/${nextMateri.id}`);
-                  else navigate(`/lms/materi/${courseId}`);
+                  if (linkedQuizzes.length > 0) navigate(getCourseQuizRoute(courseId!, linkedQuizzes[0].id));
+                  else if (nextMateri) navigate(getCourseLearnRoute(courseId!, nextMateri.id));
+                  else navigate(getCourseRoute(courseId!));
                 }}
                 className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-bold text-slate-700 border border-slate-200 shadow-sm hover:border-blue-200 hover:text-blue-700 transition-colors"
               >

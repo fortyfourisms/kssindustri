@@ -1,120 +1,21 @@
-import { useEffect, useRef, useState } from "react";
-import { Outlet, useMatches, useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { Outlet, useMatches } from "react-router-dom";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Topbar } from "@/components/dashboard/Topbar";
-import { ProtectedRoute } from "@/components/ProtectedRoute";
-import { isCompanyEmpty } from "@/components/RequireCompanyProfile";
-import { useUser } from "@/hooks/useAuth";
-import { useQuery } from "@tanstack/react-query";
-import { perusahaanService } from "@/services/perusahaan.service";
-import { Building2, ArrowRight, X } from "lucide-react";
+import { AuthGuard } from "@/components/ProtectedRoute";
 
-const COMPANY_CHECK_KEY = "company_prompt_shown";
-
-function CompanyModal({ onClose, onGo }: { onClose: () => void; onGo: () => void }) {
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            {/* Backdrop */}
-            <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={onClose} />
-            {/* Card */}
-            <div className="relative bg-white rounded-2xl shadow-2xl shadow-blue-900/20 p-8 max-w-sm w-full flex flex-col items-center text-center gap-4 border border-white/60">
-                <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition">
-                    <X className="w-5 h-5" />
-                </button>
-                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
-                    <Building2 className="w-8 h-8 text-white" />
-                </div>
-                <div>
-                    <h2 className="text-lg font-black text-slate-900 mb-1">Lengkapi Data Perusahaan Anda</h2>
-                    <p className="text-sm text-slate-500 leading-relaxed">
-                        Profil perusahaan Anda belum lengkap. Silakan isi informasi perusahaan agar semua fitur dapat berjalan optimal.
-                    </p>
-                </div>
-                <button
-                    onClick={onGo}
-                    className="w-full py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold text-sm shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 hover:scale-[1.01] transition-all flex items-center justify-center gap-2"
-                >
-                    Lengkapi Sekarang
-                    <ArrowRight className="w-4 h-4" />
-                </button>
-                <button onClick={onClose} className="text-xs text-slate-400 hover:text-slate-600 transition mt-1">
-                    Nanti saja
-                </button>
-            </div>
-        </div>
-    );
-}
-
-function CompanyGuard() {
-    const navigate = useNavigate();
-    const [showModal, setShowModal] = useState(false);
-    const checked = useRef(false);
-
-    const { data: meData, isSuccess: isUserSuccess } = useUser();
-
-    // Resolve company ID from user data
-    const perusahaanId = meData?.id_perusahaan || meData?.perusahaan?.id;
-    const embeddedPerusahaan = meData?.perusahaan ?? null;
-    const shouldFetchPerusahaan = !!perusahaanId && !embeddedPerusahaan?.nama_perusahaan;
-
-    // Fetch company data when we have an ID
-    const { data: perusahaan, isSuccess: isPerusahaanSuccess } = useQuery({
-        queryKey: ["perusahaan", perusahaanId],
-        queryFn: () => perusahaanService.getById(String(perusahaanId)),
-        enabled: shouldFetchPerusahaan,
-        staleTime: 1000 * 60 * 5,
-    });
-
-    // Wait until we have both user and company data (or know there's no company)
-    const isReady = isUserSuccess && (!shouldFetchPerusahaan || isPerusahaanSuccess);
-
-    useEffect(() => {
-        if (!isReady || checked.current) return;
-        checked.current = true;
-
-        const alreadyShown = sessionStorage.getItem(COMPANY_CHECK_KEY);
-        if (alreadyShown) return;
-
-        // Check company completeness: use fetched perusahaan or nested object from meData
-        const companyData = perusahaan ?? embeddedPerusahaan;
-        if (!perusahaanId || isCompanyEmpty(companyData)) {
-            sessionStorage.setItem(COMPANY_CHECK_KEY, "1");
-            setShowModal(true);
-        }
-    }, [isReady, perusahaan, meData, perusahaanId]);
-
-    const handleGo = () => {
-        setShowModal(false);
-        navigate("/dashboard/profil?tab=perusahaan");
-    };
-
-    if (!showModal) return null;
-    return <CompanyModal onClose={() => setShowModal(false)} onGo={handleGo} />;
-}
-
-/** Route handle type – matches what we put on each Route in App.tsx */
 interface RouteHandle {
     title?: string;
 }
 
-/**
- * DashboardLayout – persistent App Shell.
- *
- * Mounted ONCE at router level. Never remounts during navigation.
- * All dashboard pages render inside <Outlet />.
- * Title is read from the innermost matched route's `handle.title`.
- */
 export function DashboardLayout() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
-
-    // Read the page title from the active route's handle
     const matches = useMatches();
     const title = (matches.at(-1)?.handle as RouteHandle | undefined)?.title;
 
     return (
-        <ProtectedRoute>
+        <AuthGuard>
             <div className="min-h-screen bg-[#f5f7ff] flex">
-                {/* Background gradient */}
                 <div
                     className="fixed inset-0 pointer-events-none z-0"
                     style={{
@@ -125,13 +26,8 @@ export function DashboardLayout() {
                     }}
                 />
 
-                {/* Sidebar */}
                 <Sidebar mobileOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-                {/* Company incomplete guard – shows modal once per session */}
-                <CompanyGuard />
-
-                {/* Main area */}
                 <div className="flex-1 flex flex-col min-w-0 relative z-10">
                     <Topbar title={title} onMenuClick={() => setSidebarOpen(true)} />
                     <main className="flex-1 p-4 md:p-6 overflow-y-auto">
@@ -139,6 +35,6 @@ export function DashboardLayout() {
                     </main>
                 </div>
             </div>
-        </ProtectedRoute>
+        </AuthGuard>
     );
 }

@@ -5,6 +5,7 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import { useLmsStore } from "@/features/lms/stores/lms.store";
+import { getCourseLearnRoute, getCourseQuizRoute, getCoursesRoute, isCoursePath } from "@/features/lms/lib/lms-routes";
 
 function Skeleton() {
   return (
@@ -61,16 +62,16 @@ export default function LMSCourse() {
   const sortedMateri = [...courseMateri].sort((a, b) => a.urutan - b.urutan);
 
   useEffect(() => {
-    if (!isLoadingCourse && sortedMateri.length > 0 && location.pathname === `/lms/materi/${courseId}`) {
+    if (!isLoadingCourse && sortedMateri.length > 0 && courseId && isCoursePath(location.pathname, courseId)) {
       const firstUncompleted = sortedMateri.find((m) => !completedMateriIds.has(m.id));
       if (firstUncompleted) {
-        navigate(`/lms/materi/${courseId}/learn/${firstUncompleted.id}`, { replace: true });
+        navigate(getCourseLearnRoute(courseId, firstUncompleted.id), { replace: true });
       } else {
         const unlinkedQuizzes = courseQuizzes.filter((q) => !q.id_materi).sort((a, b) => a.urutan - b.urutan);
         if (unlinkedQuizzes.length > 0) {
-          navigate(`/lms/materi/${courseId}/quiz/${unlinkedQuizzes[0].id}`, { replace: true });
+          navigate(getCourseQuizRoute(courseId, unlinkedQuizzes[0].id), { replace: true });
         } else {
-          navigate(`/lms/materi/${courseId}/learn/${sortedMateri[sortedMateri.length - 1].id}`, { replace: true });
+          navigate(getCourseLearnRoute(courseId, sortedMateri[sortedMateri.length - 1].id), { replace: true });
         }
       }
     }
@@ -95,7 +96,7 @@ export default function LMSCourse() {
     <div className="h-screen w-full flex bg-[#f4f7fb] overflow-hidden">
       <div className="flex-1 flex flex-col h-full overflow-y-auto bg-transparent relative">
         <div className="lg:hidden flex items-center p-4 border-b border-slate-100 bg-white/90 backdrop-blur-xl sticky top-0 z-10">
-          <button onClick={() => navigate("/lms/materi")} className="p-2 hover:bg-slate-100 text-slate-600 rounded-lg transition-colors mr-3">
+          <button onClick={() => navigate(getCoursesRoute())} className="p-2 hover:bg-slate-100 text-slate-600 rounded-lg transition-colors mr-3">
             <ArrowLeft className="w-5 h-5" />
           </button>
           <span className="font-bold text-slate-800">Kembali ke Daftar Kelas</span>

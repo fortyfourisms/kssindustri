@@ -3,6 +3,7 @@ import { BookOpen, ChevronRight, GraduationCap, Shield, Calendar, AlertCircle, R
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useLmsStore } from "@/features/lms/stores/lms.store";
+import { getCourseRoute } from "@/features/lms/lib/lms-routes";
 
 // ─── Blob color palette (cycles through courses) ──────────────────────────────
 const BLOB_PAIRS = [
@@ -129,7 +130,7 @@ export default function LMS() {
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.4, delay: i * 0.05 }}
-                            onClick={() => navigate(`/lms/materi/${course.id}`)}
+                            onClick={() => navigate(getCourseRoute(course.id))}
                             className="group flex flex-col h-full bg-white border border-slate-200 hover:border-blue-200 rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer"
                         >
                             {/* Top Decorative Section */}

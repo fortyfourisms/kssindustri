@@ -7,7 +7,7 @@ import { motion } from "framer-motion";
 import { Eye, EyeOff, Loader2, ShieldCheck } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
-import { AnimatedPadlock } from "@/components/AnimatedPadlock";
+import { getDefaultAuthenticatedRoute } from "@/lib/access-control";
 import Logo from "@/assets/d44.svg";
 
 const LoginSchema = z.object({
@@ -57,7 +57,7 @@ export default function Login() {
         }
 
         if (result.authenticated) {
-            navigate("/dashboard");
+            navigate(getDefaultAuthenticatedRoute(result.user ?? null));
         }
     };
 
