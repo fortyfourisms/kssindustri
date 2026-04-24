@@ -12,6 +12,7 @@ import Register from "@/pages/Register";
 import MfaVerify from "@/pages/MfaVerify";
 import NotFound from "@/pages/not-found";
 import CoursePreview from "@/pages/CoursePreview";
+import BlogArticle from "@/pages/BlogArticle";
 import { LoadingScreen } from "@/components/LoadingScreen";
 
 // Dashboard layout (App Shell – mounts once)
@@ -51,6 +52,7 @@ const router = createBrowserRouter([
   { path: "/register", element: <Register /> },
   { path: "/mfa", element: <MfaVerify /> },
   { path: "/course-preview/:slug", element: <CoursePreview /> },
+  { path: "/blog/:slug", element: <BlogArticle /> },
 
   // Dashboard App Shell – DashboardLayout mounts ONCE per session
   {

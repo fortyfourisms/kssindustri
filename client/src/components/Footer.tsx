@@ -8,14 +8,33 @@ export function Footer() {
 
   const handleScrollTo = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
     e.preventDefault();
+
     if (href.startsWith("/")) {
-      navigate(href);
+      const [pathname, hash = ""] = href.split("#");
+      if (location.pathname !== pathname) {
+        navigate({
+          pathname,
+          hash: hash ? `#${hash}` : "",
+        });
+      } else if (!hash) {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      } else {
+        const element = document.querySelector(`#${hash}`);
+        if (element) {
+          element.scrollIntoView({ behavior: "smooth" });
+        }
+      }
       return;
     }
+
     if (location.pathname !== "/") {
-      navigate(href === "#" || href === "#home" ? "/" : `/${href}`);
+      navigate({
+        pathname: "/",
+        hash: href === "#" || href === "#home" ? "" : href,
+      });
       return;
     }
+
     if (href === "#" || href === "#home") {
       window.scrollTo({ top: 0, behavior: "smooth" });
       return;
@@ -38,6 +57,7 @@ export function Footer() {
                 { label: "About", href: "#about" },
                 { label: "Features", href: "#features" },
                 { label: "Courses", href: "#courses" },
+                { label: "Blog", href: "#blog" },
                 { label: "FAQ", href: "#faq" },
               ].map((item) => (
                 <a

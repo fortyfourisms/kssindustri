@@ -6,15 +6,36 @@ import { Features } from "@/components/Features";
 import { UsageFlow } from "@/components/UsageFlow";
 import { Security } from "@/components/Security";
 import { CourseShowcase } from "@/components/CourseShowcase";
+import { BlogSection } from "@/components/BlogSection";
 import { FAQ } from "@/components/FAQ";
 import { CTA } from "@/components/CTA";
 import { Footer } from "@/components/Footer";
 import { CyberBackground } from "@/components/CyberBackground";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { AnimatePresence, motion } from "framer-motion";
+import { useLocation } from "react-router-dom";
 
 export default function Home() {
   const [isLoading, setIsLoading] = useState(true);
+  const location = useLocation();
+
+  useEffect(() => {
+    if (isLoading) {
+      return;
+    }
+
+    if (!location.hash) {
+      window.scrollTo({ top: 0, behavior: "auto" });
+      return;
+    }
+
+    const element = document.querySelector(location.hash);
+    if (element) {
+      requestAnimationFrame(() => {
+        element.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    }
+  }, [isLoading, location.hash]);
 
   return (
     <div className="min-h-screen bg-background font-sans selection:bg-primary selection:text-white relative overflow-x-hidden">
@@ -38,6 +59,7 @@ export default function Home() {
           <UsageFlow />
           <Security />
           <CourseShowcase />
+          <BlogSection />
           <div className="relative overflow-hidden">
             {/* Mesh Gradient Background */}
             <div

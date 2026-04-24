@@ -1,0 +1,147 @@
+import { blogArticles } from "@/data/blog";
+import { motion } from "framer-motion";
+import { ArrowRight, CalendarDays, Clock3, Tag } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.08,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 24 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] },
+  },
+};
+
+export function BlogSection() {
+  const navigate = useNavigate();
+
+  return (
+    <section id="blog" className="relative py-16 md:py-28 overflow-hidden">
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,#ffffff_0%,#f7fbff_45%,#eef6ff_100%)]" />
+        <div className="absolute left-[8%] top-10 h-56 w-56 rounded-full bg-[#595cff]/10 blur-3xl" />
+        <div className="absolute right-[12%] top-24 h-64 w-64 rounded-full bg-[#60efff]/16 blur-3xl" />
+        <div className="absolute bottom-10 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-[#0061ff]/10 blur-3xl" />
+      </div>
+
+      <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_300px] lg:items-end">
+          <div className="max-w-3xl">
+            <h2 className="mt-5 text-4xl md:text-6xl font-display font-medium tracking-tight text-slate-900 leading-tight">
+              Artikel untuk memperkuat
+              <span className="block text-transparent bg-clip-text bg-gradient-to-r from-[#1f3c88] via-[#0061ff] to-[#60efff]">
+                pemahaman keamanan siber
+              </span>
+            </h2>
+            <p className="mt-5 max-w-2xl text-base md:text-lg leading-relaxed text-slate-600">
+              Kumpulan artikel singkat yang membantu tim memahami awareness, strategi, dan kesiapan operasional. Beberapa artikel juga terhubung langsung ke LMS agar pembaca bisa lanjut belajar tanpa putus konteks.
+            </p>
+          </div>
+
+          <div className="rounded-[2rem] border border-white/60 bg-white/80 p-6 shadow-[0_24px_80px_rgba(31,60,136,0.10)] backdrop-blur-xl">
+            <p className="text-sm font-semibold uppercase tracking-[0.22em] text-slate-400">Fokus minggu ini</p>
+            <p className="mt-4 text-2xl font-bold leading-snug text-slate-900">
+              {blogArticles.length} artikel pilihan untuk memperluas wawasan tim.
+            </p>
+            <p className="mt-3 text-sm leading-relaxed text-slate-600">
+              Dirancang agar mudah dibaca cepat, lalu dilanjutkan ke materi pembelajaran yang lebih terstruktur.
+            </p>
+          </div>
+        </div>
+
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-100px" }}
+          className="mt-12 grid grid-cols-1 gap-6 xl:grid-cols-3"
+        >
+          {blogArticles.map((article, index) => (
+            <motion.article
+              key={article.slug}
+              variants={itemVariants}
+              onClick={() => navigate(`/blog/${article.slug}`)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  navigate(`/blog/${article.slug}`);
+                }
+              }}
+              role="button"
+              tabIndex={0}
+              className={`group relative overflow-hidden rounded-[2rem] border border-white/60 bg-white/90 shadow-[0_20px_80px_rgba(31,60,136,0.10)] backdrop-blur-sm transition-all duration-500 hover:-translate-y-3 hover:border-[#0061ff]/20 hover:shadow-[0_28px_100px_rgba(31,60,136,0.18)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0061ff]/40 ${
+                index === 0 ? "xl:col-span-2" : ""
+              }`}
+            >
+              <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-500 group-hover:opacity-100">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(96,239,255,0.14),transparent_42%)]" />
+              </div>
+
+              <div className="relative border-b border-slate-100 p-6 md:p-7">
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="inline-flex rounded-full bg-slate-900 px-3 py-1.5 text-xs font-bold text-white">
+                    {article.category}
+                  </span>
+                  <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">
+                    <CalendarDays className="h-3.5 w-3.5 text-[#0061ff]" />
+                    {article.publishedAt}
+                  </span>
+                  <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600">
+                    <Clock3 className="h-3.5 w-3.5 text-cyan-600" />
+                    {article.readingTime}
+                  </span>
+                </div>
+
+                <div className="mt-6">
+                  <p className="text-xs font-semibold uppercase tracking-[0.26em] text-slate-400">
+                    {article.coverLabel}
+                  </p>
+                  <h3 className="mt-3 text-2xl md:text-3xl font-bold leading-tight text-slate-900">
+                    {article.title}
+                  </h3>
+                  <p className="mt-4 text-base leading-relaxed text-slate-600">
+                    {article.excerpt}
+                  </p>
+                </div>
+              </div>
+
+              <div className="relative p-6 md:p-7">
+                <div className="flex flex-wrap gap-2">
+                  {article.tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="inline-flex items-center gap-2 rounded-full border border-[#0061ff]/15 bg-[#eff6ff] px-3 py-1 text-xs font-semibold text-[#1f3c88]"
+                    >
+                      <Tag className="h-3 w-3" />
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+
+                <div className="mt-6 flex items-center justify-between gap-4">
+                  <p className="text-sm font-medium text-slate-500">
+                    Oleh {article.author}
+                  </p>
+                  <span className="inline-flex items-center gap-2 text-sm font-bold text-[#0061ff] transition-transform duration-500 group-hover:translate-x-1">
+                    Baca artikel
+                    <ArrowRight className="h-4 w-4" />
+                  </span>
+                </div>
+              </div>
+            </motion.article>
+          ))}
+        </motion.div>
+      </div>
+    </section>
+  );
+}

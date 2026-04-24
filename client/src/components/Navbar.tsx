@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 type NavbarMode = "landing" | "preview";
 
@@ -16,6 +16,7 @@ export function Navbar({ mode = "landing" }: NavbarProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [activeSection, setActiveSection] = useState("Home");
   const navigate = useNavigate();
+  const location = useLocation();
 
   const navLinks = useMemo(
     () =>
@@ -25,6 +26,7 @@ export function Navbar({ mode = "landing" }: NavbarProps) {
             { name: "About", href: "/#about" },
             { name: "Features", href: "/#features" },
             { name: "Courses", href: "/#courses" },
+            { name: "Blog", href: "/#blog" },
             { name: "FAQ", href: "/#faq" },
           ]
         : [
@@ -32,6 +34,7 @@ export function Navbar({ mode = "landing" }: NavbarProps) {
             { name: "About", href: "#about" },
             { name: "Features", href: "#features" },
             { name: "Courses", href: "#courses" },
+            { name: "Blog", href: "#blog" },
             { name: "FAQ", href: "#faq" },
           ],
     [mode]
@@ -42,7 +45,7 @@ export function Navbar({ mode = "landing" }: NavbarProps) {
       const handlePreviewScroll = () => {
         setScrolled(window.scrollY > 20);
         setIsAtBottom(false);
-        setActiveSection("CourseShowcase");
+        setActiveSection(location.pathname.startsWith("/blog/") ? "Blog" : "Courses");
       };
 
       window.addEventListener("scroll", handlePreviewScroll);
@@ -75,7 +78,7 @@ export function Navbar({ mode = "landing" }: NavbarProps) {
     window.addEventListener("scroll", handleScroll);
     handleScroll();
     return () => window.removeEventListener("scroll", handleScroll);
-  }, [mode, navLinks]);
+  }, [location.pathname, mode, navLinks]);
 
   // Prevent scrolling when mobile menu is open
   useEffect(() => {
@@ -93,19 +96,38 @@ export function Navbar({ mode = "landing" }: NavbarProps) {
 
   const handleScrollTo = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
     e.preventDefault();
+
     if (href.startsWith("/")) {
-      navigate(href);
+      const [pathname, hash = ""] = href.split("#");
+      if (location.pathname !== pathname) {
+        navigate({
+          pathname,
+          hash: hash ? `#${hash}` : "",
+        });
+      } else if (!hash) {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      } else {
+        const element = document.querySelector(`#${hash}`);
+        if (element) {
+          element.scrollIntoView({ behavior: "smooth" });
+        }
+      }
+
       setIsOpen(false);
       return;
     }
+
     if (href === "#") {
       window.scrollTo({ top: 0, behavior: "smooth" });
+      setIsOpen(false);
       return;
     }
+
     const element = document.querySelector(href);
     if (element) {
       element.scrollIntoView({ behavior: "smooth" });
     }
+    setIsOpen(false);
   };
 
   return (
