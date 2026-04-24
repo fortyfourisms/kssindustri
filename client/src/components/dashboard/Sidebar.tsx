@@ -11,7 +11,6 @@ import {
     ChevronRight,
     LogOut,
     X,
-    Building2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLogout } from "@/hooks/useAuth";
@@ -39,7 +38,6 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
         ]
         : [
             { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-            { label: "Data Perusahaan", href: "/perusahaan", icon: Building2 },
             { label: "IKAS", href: "/ikas", icon: Shield, description: "Instrumen Penilaian Kematangan Keamanan Siber" },
             { label: "KSE", href: "/kse", icon: Monitor, description: "Kategorisasi Sistem Elektronik" },
             { label: "CSIRT", href: "/csirt", icon: Users, description: "CSIRT" },
