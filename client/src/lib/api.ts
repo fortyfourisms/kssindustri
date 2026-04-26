@@ -66,6 +66,11 @@ export const api = {
     // ── KSE ──────────────────────────────────────────────────────────────────
     getKse: () => apiClient.get<any>("/api/se"),
     saveKse: (data: any) => apiClient.post<any>("/api/se", data),
+    getKseEditRequests: () => apiClient.get<any>("/api/se/edit-requests"),
+    requestKseEdit: (id: string | number, catatanUser: string) =>
+        apiClient.post<any>(`/api/se/${id}/request-edit`, {
+            catatan_user: catatanUser,
+        }),
 
     // ── CSIRT (delegates to csirtService) ────────────────────────────────────
     getCsirt: () => csirtService.getMembers(),
