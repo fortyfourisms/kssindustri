@@ -1015,8 +1015,9 @@ function SocietyCard({
     const hasBadges = badges.length > 0;
     const hasProgressItems = progressItems.length > 0;
     const hasPieSummary = Boolean(pieSummary);
-    const pieSafeValue = hasPieSummary ? Math.max(0, Math.min(pieSummary.total, pieSummary.value)) : 0;
-    const piePercent = hasPieSummary && pieSummary.total > 0 ? Math.round((pieSafeValue / pieSummary.total) * 100) : 0;
+    const pieSummaryData = hasPieSummary ? pieSummary : null;
+    const pieSafeValue = pieSummaryData ? Math.max(0, Math.min(pieSummaryData.total, pieSummaryData.value)) : 0;
+    const piePercent = pieSummaryData && pieSummaryData.total > 0 ? Math.round((pieSafeValue / pieSummaryData.total) * 100) : 0;
     const pieRadius = 34;
     const pieCircumference = 2 * Math.PI * pieRadius;
     const pieOffset = pieCircumference - (piePercent / 100) * pieCircumference;
@@ -1123,8 +1124,8 @@ function SocietyCard({
                                                     <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Selesai</span>
                                                 </div>
                                             </div>
-                                            <p className="mt-3 text-center text-xs font-bold text-slate-600">{pieSummary.label}</p>
-                                            <p className="mt-1 text-[11px] text-slate-400">{pieSafeValue}/{pieSummary.total}</p>
+                                            <p className="mt-3 text-center text-xs font-bold text-slate-600">{pieSummaryData?.label}</p>
+                                            <p className="mt-1 text-[11px] text-slate-400">{pieSafeValue}/{pieSummaryData?.total}</p>
                                         </div>
                                     )}
 

@@ -1,12 +1,18 @@
-import { useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
+import { useQueries, useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { getCoursesRoute, getCourseRoute } from "@/features/lms/lib/lms-routes";
+import {
+    buildLmsCourseInsight,
+    getCertificateCourseIds,
+    inferLmsCategory,
+    isPublishedCourse,
+} from "@/features/lms/lib/lms-dashboard";
+import { lmsService } from "@/features/lms/services/lms.service";
 import { useLmsStore } from "@/features/lms/stores/lms.store";
-import { useAuthStore } from "@/stores/auth.store";
 import { cn } from "@/lib/utils";
-
-const CATEGORY_FALLBACKS = ["All", "Network", "Awareness", "Policy", "Incident", "Cloud", "Defense"];
+import type { LmsCourseInsight } from "@/features/lms/lib/lms-dashboard";
 
 const CARD_THEMES = [
     { bg: "bg-[#b7f0ff]", text: "text-slate-900" },
@@ -20,72 +26,99 @@ const TAG_THEMES = [
     "bg-[#2563eb] text-white",
 ];
 
-function inferCategory(title: string, index: number): string {
-    const lower = title.toLowerCase();
-    if (lower.includes("network")) return "Network";
-    if (lower.includes("cloud")) return "Cloud";
-    if (lower.includes("incident") || lower.includes("csirt")) return "Incident";
-    if (lower.includes("policy") || lower.includes("governance")) return "Policy";
-    if (lower.includes("phishing") || lower.includes("awareness")) return "Awareness";
-    if (lower.includes("defense") || lower.includes("secure")) return "Defense";
-    return CATEGORY_FALLBACKS[(index % (CATEGORY_FALLBACKS.length - 1)) + 1];
-}
-
-function getInitials(name?: string) {
-    if (!name) return "LR";
-    return name.trim().split(/\s+/).slice(0, 2).map((p) => p[0]?.toUpperCase() ?? "").join("");
-}
-
-function getPseudoDuration(title: string, index: number) {
-    return 18 + ((title.length + index * 7) % 35);
-}
-
-function getProgressValue(index: number, total: number, certificateCount: number) {
-    if (total === 0) return 0;
-    const base = Math.max(24, 82 - index * 14);
-    return Math.min(96, base + (certificateCount > 0 ? 8 : 0));
-}
-
-const TEACHER_NAMES = ["Vanessa Douglas", "Aysha Hayes", "Ilyas Lamb", "Kobi Potts"];
-
 export function LMSDashboard() {
     const navigate = useNavigate();
-    const currentUser = useAuthStore((state) => state.currentUser);
-    const { courses, userCertificates, isLoadingCourses, coursesError, fetchCourses, fetchMyCertificates } = useLmsStore();
+    const { courses, isLoadingCourses, coursesError, fetchCourses } = useLmsStore();
+    const [selectedCategory, setSelectedCategory] = useState("All");
 
     useEffect(() => {
         fetchCourses();
-        fetchMyCertificates();
-    }, [fetchCourses, fetchMyCertificates]);
+    }, [fetchCourses]);
 
-    const categoryOptions = ["All", ...Array.from(new Set(courses.slice(0, 6).map((c, i) => inferCategory(c.judul, i))))];
-    const featuredCourses = courses.slice(0, 3);
-    const lessonRows = courses.slice(0, 5);
-    const learningItems = courses.slice(0, 3).map((course, index) => ({
-        id: course.id,
-        label: inferCategory(course.judul, index),
-        value: getProgressValue(index, courses.length, userCertificates.length),
-    }));
+    const publishedCourses = useMemo(
+        () => courses.filter(isPublishedCourse),
+        [courses]
+    );
+
+    const { data: userCertificates = [] } = useQuery({
+        queryKey: ["lms-my-certificates"],
+        queryFn: () => lmsService.getMySertifikats(),
+    });
+
+    const courseDetailQueries = useQueries({
+        queries: publishedCourses.map((course) => ({
+            queryKey: ["lms-dashboard-course-detail", course.id],
+            queryFn: () => lmsService.getCourseById(course.id),
+            enabled: !!course.id,
+        })),
+    });
+
+    const certificateCourseIds = useMemo(
+        () => getCertificateCourseIds(userCertificates),
+        [userCertificates]
+    );
+
+    const courseInsights = useMemo(
+        () =>
+            publishedCourses.map((course, index) => {
+                const detail = courseDetailQueries[index]?.data;
+                return buildLmsCourseInsight({
+                    course,
+                    materi: detail?.materi ?? [],
+                    completedIds: detail?.completedIds ?? [],
+                    hasCertificate: certificateCourseIds.has(String(course.id)),
+                    index,
+                });
+            }),
+        [publishedCourses, courseDetailQueries, certificateCourseIds]
+    );
+
+    const categoryOptions = useMemo(
+        () => ["All", ...Array.from(new Set(courseInsights.map((item, index) => inferLmsCategory(item.title, index))))],
+        [courseInsights]
+    );
+    const safeSelectedCategory = categoryOptions.includes(selectedCategory) ? selectedCategory : "All";
+    const filteredCourses = useMemo(
+        () => safeSelectedCategory === "All"
+            ? courseInsights
+            : courseInsights.filter((item) => item.category === safeSelectedCategory),
+        [courseInsights, safeSelectedCategory]
+    );
+    const featuredCourses = filteredCourses.slice(0, 3);
+    const lessonRows = filteredCourses.slice(0, 5);
+    const learningItems = filteredCourses
+        .filter((item) => item.started || item.passed)
+        .slice(0, 3)
+        .map((item) => ({
+            id: item.id,
+            label: item.category,
+            value: item.progress,
+        }));
+    const suggestedCourse = filteredCourses.find((item) => !item.started) ?? featuredCourses[0];
+    const featuredCourseSlots: Array<LmsCourseInsight | null> = isLoadingCourses ? Array.from({ length: 3 }, () => null) : featuredCourses;
+    const lessonRowSlots: Array<LmsCourseInsight | null> = isLoadingCourses ? Array.from({ length: 5 }, () => null) : lessonRows;
+
+    useEffect(() => {
+        if (!categoryOptions.includes(selectedCategory)) {
+            setSelectedCategory("All");
+        }
+    }, [categoryOptions, selectedCategory]);
 
     return (
         <div className="h-full overflow-y-auto bg-[#f8fafc]">
             <div className="mx-auto max-w-[1480px] px-6 py-6">
-                {/* Two-column layout */}
                 <div className="flex gap-8 xl:gap-10">
-
-                    {/* ── LEFT: Main content ── */}
                     <div className="min-w-0 flex-1">
-
-                        {/* Category Pills */}
                         <div className="mb-6 flex flex-wrap gap-2">
                             {categoryOptions.map((cat, i) => (
                                 <button
                                     key={cat}
+                                    onClick={() => setSelectedCategory(cat)}
                                     className={cn(
                                         "rounded-full px-5 py-2 text-sm font-semibold transition-all",
-                                        i === 0
+                                        cat === safeSelectedCategory
                                             ? "bg-slate-900 text-white shadow-md"
-                                            : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-100"
+                                            : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-100"
                                     )}
                                 >
                                     {cat}
@@ -93,21 +126,25 @@ export function LMSDashboard() {
                             ))}
                         </div>
 
-                        {/* Error banner */}
                         {coursesError && (
                             <div className="mb-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
                                 {coursesError}
                             </div>
                         )}
 
-                        {/* Featured Course Cards */}
+                        {!isLoadingCourses && !coursesError && filteredCourses.length === 0 && (
+                            <div className="mb-5 rounded-2xl border border-dashed border-slate-200 bg-white px-5 py-8 text-center text-sm text-slate-500">
+                                Belum ada kelas pada kategori <span className="font-bold text-slate-700">{safeSelectedCategory}</span>.
+                            </div>
+                        )}
+
                         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                            {(isLoadingCourses ? Array.from({ length: 3 }) : featuredCourses).map((course, index) => {
+                            {featuredCourseSlots.map((course, index) => {
                                 if (!course) {
                                     return (
                                         <div
                                             key={`sk-${index}`}
-                                            className="h-[200px] animate-pulse rounded-2xl bg-slate-100"
+                                            className="h-[220px] animate-pulse rounded-2xl bg-slate-100"
                                         />
                                     );
                                 }
@@ -120,27 +157,46 @@ export function LMSDashboard() {
                                         transition={{ duration: 0.4, delay: index * 0.07 }}
                                         onClick={() => navigate(getCourseRoute(course.id))}
                                         className={cn(
-                                            "group flex min-h-[200px] flex-col rounded-2xl p-5 text-left transition-all hover:-translate-y-1 hover:shadow-lg",
-                                            theme.bg, theme.text
+                                            "group flex min-h-[220px] flex-col rounded-2xl p-5 text-left transition-all hover:-translate-y-1 hover:shadow-lg",
+                                            theme.bg,
+                                            theme.text
                                         )}
                                     >
-                                        <span className={cn("inline-flex w-fit rounded-full px-3 py-1.5 text-xs font-bold", TAG_THEMES[index % TAG_THEMES.length])}>
-                                            {inferCategory(course.judul, index)}
-                                        </span>
+                                        <div className="flex items-start justify-between gap-3">
+                                            <span className={cn("inline-flex w-fit rounded-full px-3 py-1.5 text-xs font-bold", TAG_THEMES[index % TAG_THEMES.length])}>
+                                                {course.category}
+                                            </span>
+                                            <span className="rounded-full bg-white/70 px-3 py-1 text-[11px] font-bold text-slate-700">
+                                                {course.statusLabel}
+                                            </span>
+                                        </div>
                                         <div className="mt-auto">
                                             <h2 className="mt-4 text-lg font-black leading-tight tracking-tight text-slate-950">
-                                                {course.judul}
+                                                {course.title}
                                             </h2>
                                             <p className="mt-2 line-clamp-3 text-sm leading-relaxed text-slate-600">
-                                                {course.deskripsi || "Pelajari materi inti keamanan siber secara bertahap dengan konten yang mudah diikuti."}
+                                                {course.description}
                                             </p>
+                                            <div className="mt-4 grid grid-cols-3 gap-2 text-xs font-semibold text-slate-700">
+                                                <div className="rounded-xl bg-white/70 px-3 py-2">
+                                                    <div className="text-[10px] uppercase tracking-wider text-slate-500">Materi</div>
+                                                    <div className="mt-1 text-sm font-black">{course.totalMateri}</div>
+                                                </div>
+                                                <div className="rounded-xl bg-white/70 px-3 py-2">
+                                                    <div className="text-[10px] uppercase tracking-wider text-slate-500">Selesai</div>
+                                                    <div className="mt-1 text-sm font-black">{course.completedMateri}</div>
+                                                </div>
+                                                <div className="rounded-xl bg-white/70 px-3 py-2">
+                                                    <div className="text-[10px] uppercase tracking-wider text-slate-500">Progress</div>
+                                                    <div className="mt-1 text-sm font-black">{course.progress}%</div>
+                                                </div>
+                                            </div>
                                         </div>
                                     </motion.button>
                                 );
                             })}
                         </div>
 
-                        {/* My Lessons Table */}
                         <div className="mt-10">
                             <div className="mb-4 flex items-center justify-between">
                                 <h2 className="text-xl font-black tracking-tight text-slate-950">My lessons</h2>
@@ -153,20 +209,20 @@ export function LMSDashboard() {
                             </div>
 
                             <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-                                {/* Table Header */}
-                                <div className="grid grid-cols-[1fr,180px,100px] border-b border-slate-100 px-6 py-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
-                                    <span>Lesson</span>
-                                    <span>Teacher</span>
-                                    <span className="text-right">Duration</span>
+                                <div className="grid grid-cols-[1fr,140px,140px,120px] border-b border-slate-100 px-6 py-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
+                                    <span>Kelas</span>
+                                    <span>Materi</span>
+                                    <span>Durasi</span>
+                                    <span className="text-right">Progress</span>
                                 </div>
 
-                                {/* Table Rows */}
-                                {(isLoadingCourses ? Array.from({ length: 5 }) : lessonRows).map((course, index) => {
+                                {lessonRowSlots.map((course, index) => {
                                     if (!course) {
                                         return (
-                                            <div key={`lsk-${index}`} className="grid grid-cols-[1fr,180px,100px] border-b border-slate-100 px-6 py-4 last:border-b-0">
+                                            <div key={`lsk-${index}`} className="grid grid-cols-[1fr,140px,140px,120px] border-b border-slate-100 px-6 py-4 last:border-b-0">
                                                 <div className="h-9 w-3/4 animate-pulse rounded-xl bg-slate-100" />
-                                                <div className="h-9 w-32 animate-pulse rounded-xl bg-slate-100" />
+                                                <div className="h-9 w-20 animate-pulse rounded-xl bg-slate-100" />
+                                                <div className="h-9 w-20 animate-pulse rounded-xl bg-slate-100" />
                                                 <div className="ml-auto h-9 w-16 animate-pulse rounded-xl bg-slate-100" />
                                             </div>
                                         );
@@ -175,27 +231,25 @@ export function LMSDashboard() {
                                         <button
                                             key={course.id}
                                             onClick={() => navigate(getCourseRoute(course.id))}
-                                            className="grid w-full grid-cols-[1fr,180px,100px] items-center border-b border-slate-100 px-6 py-4 text-left transition hover:bg-slate-50 last:border-b-0"
+                                            className="grid w-full grid-cols-[1fr,140px,140px,120px] items-center border-b border-slate-100 px-6 py-4 text-left transition hover:bg-slate-50 last:border-b-0"
                                         >
-                                            {/* Lesson */}
                                             <div className="flex min-w-0 items-center gap-3">
                                                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-900 text-xs font-black text-white">
-                                                    {getInitials(course.judul)}
+                                                    {String(index + 1).padStart(2, "0")}
                                                 </div>
-                                                <span className="truncate text-sm font-medium text-slate-900">{course.judul}</span>
-                                            </div>
-                                            {/* Teacher */}
-                                            <div className="flex items-center gap-2.5">
-                                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-pink-200 to-rose-200 text-[10px] font-black text-slate-700">
-                                                    {getInitials(currentUser?.name || TEACHER_NAMES[index % TEACHER_NAMES.length])}
+                                                <div className="min-w-0">
+                                                    <span className="block truncate text-sm font-medium text-slate-900">{course.title}</span>
+                                                    <span className="block truncate text-xs text-slate-500">{course.lastItemLabel}</span>
                                                 </div>
-                                                <span className="truncate text-sm text-slate-700">
-                                                    {TEACHER_NAMES[index % TEACHER_NAMES.length]}
-                                                </span>
                                             </div>
-                                            {/* Duration */}
-                                            <div className="text-right text-sm font-medium text-slate-900">
-                                                {getPseudoDuration(course.judul, index)} min
+                                            <div className="text-sm font-medium text-slate-700">
+                                                {course.completedMateri}/{course.totalMateri}
+                                            </div>
+                                            <div className="text-sm font-medium text-slate-700">
+                                                {course.totalDurationLabel}
+                                            </div>
+                                            <div className="text-right text-sm font-bold text-slate-900">
+                                                {course.progress}%
                                             </div>
                                         </button>
                                     );
@@ -204,10 +258,7 @@ export function LMSDashboard() {
                         </div>
                     </div>
 
-                    {/* ── RIGHT: Sidebar ── */}
                     <aside className="hidden w-[320px] shrink-0 space-y-8 xl:block">
-
-                        {/* Learning Process */}
                         <section>
                             <div className="mb-4 flex items-center justify-between">
                                 <h2 className="text-lg font-black tracking-tight text-slate-950">Learning process</h2>
@@ -227,14 +278,11 @@ export function LMSDashboard() {
                                                 <span className="font-semibold text-slate-800">{item.label}</span>
                                                 <span className="font-bold text-slate-700">{item.value}%</span>
                                             </div>
-                                            {/* Progress bar with hatch overlay */}
                                             <div className="relative h-5 w-full overflow-hidden rounded-sm bg-slate-100">
-                                                {/* Filled bar */}
                                                 <div
                                                     className="absolute inset-y-0 left-0 rounded-sm bg-[#4f46e5] transition-all duration-700"
                                                     style={{ width: `${item.value}%` }}
                                                 />
-                                                {/* Hatch pattern overlay on the right portion */}
                                                 <div
                                                     className="absolute inset-y-0 right-0"
                                                     style={{
@@ -248,13 +296,12 @@ export function LMSDashboard() {
                                     ))
                                 ) : (
                                     <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-4 py-6 text-center text-sm text-slate-400">
-                                        Progress akan tampil setelah kelas tersedia.
+                                        Progress akan tampil setelah Anda mulai mempelajari kelas.
                                     </div>
                                 )}
                             </div>
                         </section>
 
-                        {/* You Might Like It */}
                         <section>
                             <div className="mb-4 flex items-center justify-between">
                                 <h2 className="text-lg font-black tracking-tight text-slate-950">You might like it</h2>
@@ -267,48 +314,42 @@ export function LMSDashboard() {
                             </div>
 
                             <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#3f3bf4] via-[#4f46e5] to-[#312e9e] p-5 text-white shadow-xl shadow-indigo-500/20">
-                                {/* Decorative radial glows */}
                                 <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_15%,rgba(255,255,255,0.18),transparent_45%)]" />
-                                {/* Wavy pattern */}
                                 <div className="pointer-events-none absolute bottom-0 right-0 h-48 w-48 translate-x-8 translate-y-8 rounded-full bg-white/5 blur-2xl" />
 
                                 <div className="relative">
-                                    {/* Tag */}
                                     <span className="inline-flex rounded-full bg-[#b7f0ff] px-3 py-1.5 text-xs font-bold text-slate-900">
-                                        {featuredCourses[0] ? inferCategory(featuredCourses[0].judul, 0) : "Design"}
+                                        {suggestedCourse?.category || "Kelas"}
                                     </span>
 
-                                    {/* Title */}
                                     <h3 className="mt-5 text-2xl font-black leading-tight">
-                                        {featuredCourses[0]?.judul || "Motion Design"}
+                                        {suggestedCourse?.title || "Belum ada kelas tersedia"}
                                     </h3>
 
-                                    {/* Description */}
                                     <p className="mt-3 text-sm leading-relaxed text-white/80">
-                                        {featuredCourses[0]?.deskripsi
-                                            ? featuredCourses[0].deskripsi.slice(0, 100) + "..."
+                                        {suggestedCourse?.description
+                                            ? `${suggestedCourse.description.slice(0, 100)}...`
                                             : "Jelajahi kelas pilihan yang dirancang agar proses belajar terasa lebih terarah dan engaging."}
                                     </p>
 
-                                    {/* Avatar row */}
-                                    <div className="mt-6 flex items-center gap-3 text-xs text-white/75">
-                                        <div className="flex -space-x-2">
-                                            {[0, 1, 2, 3].map((i) => (
-                                                <div
-                                                    key={i}
-                                                    className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-white/30 bg-white text-[10px] font-black text-[#4338ca]"
-                                                >
-                                                    {i === 3 ? "+8" : getInitials(currentUser?.name || `U${i + 1}`)}
-                                                </div>
-                                            ))}
+                                    <div className="mt-6 grid grid-cols-3 gap-2 text-xs text-white/80">
+                                        <div className="rounded-xl bg-white/10 px-3 py-2">
+                                            <div className="text-[10px] uppercase tracking-wider text-white/60">Materi</div>
+                                            <div className="mt-1 font-black text-white">{suggestedCourse?.totalMateri ?? 0}</div>
                                         </div>
-                                        <span>They are already learning</span>
+                                        <div className="rounded-xl bg-white/10 px-3 py-2">
+                                            <div className="text-[10px] uppercase tracking-wider text-white/60">Durasi</div>
+                                            <div className="mt-1 font-black text-white">{suggestedCourse?.totalDurationLabel ?? "0 min"}</div>
+                                        </div>
+                                        <div className="rounded-xl bg-white/10 px-3 py-2">
+                                            <div className="text-[10px] uppercase tracking-wider text-white/60">Status</div>
+                                            <div className="mt-1 font-black text-white">{suggestedCourse?.statusLabel ?? "-"}</div>
+                                        </div>
                                     </div>
 
-                                    {/* CTA Button */}
                                     <button
                                         onClick={() => {
-                                            if (featuredCourses[0]) navigate(getCourseRoute(featuredCourses[0].id));
+                                            if (suggestedCourse) navigate(getCourseRoute(suggestedCourse.id));
                                             else navigate(getCoursesRoute());
                                         }}
                                         className="mt-5 w-full rounded-xl bg-white py-3 text-sm font-bold text-slate-900 transition hover:bg-slate-50 active:scale-[0.98]"
