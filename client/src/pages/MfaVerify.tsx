@@ -7,6 +7,7 @@ import { authService } from "@/services/auth.service";
 import { useToast } from "@/hooks/use-toast";
 import { OTPInput, SlotProps } from "input-otp";
 import { cn } from "@/lib/utils";
+import { getDefaultAuthenticatedRoute } from "@/lib/access-control";
 import { useNavigate, Link } from "react-router-dom";
 
 // ─── OTP Slot ────────────────────────────────────────────────────────────────
@@ -137,7 +138,7 @@ export default function MfaVerify() {
             } else {
                 throw new Error("Token tidak ditemukan. Silakan login kembali.");
             }
-            navigate("/dashboard");
+            navigate(getDefaultAuthenticatedRoute(useAuthStore.getState().currentUser));
         } catch (err: unknown) {
             const axiosError = err as any;
             const apiMsg = axiosError?.response?.data?.message || axiosError?.response?.data?.error;

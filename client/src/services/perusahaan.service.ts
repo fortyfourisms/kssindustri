@@ -1,4 +1,4 @@
-import { apiClient } from './apiClient';
+import { apiClient } from '@/services/apiClient';
 import type { Perusahaan, CreatePerusahaanPayload, CreatePerusahaanResponse } from '@/types/perusahaan.types';
 
 /**

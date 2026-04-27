@@ -34,6 +34,15 @@ type RespondentFormValues = z.infer<typeof respondentSchema>;
 const INPUT_CLS = "w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white/80 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400 transition";
 const LABEL_CLS = "block text-sm font-semibold text-slate-700 mb-1.5";
 
+function resolveCompanyId(...candidates: Array<unknown>) {
+    for (const candidate of candidates) {
+        if (candidate === null || candidate === undefined) continue;
+        const value = String(candidate).trim();
+        if (value) return value;
+    }
+    return "";
+}
+
 export default function FormIkas() {
     const navigate = useNavigate();
     const { toast } = useToast();
@@ -59,13 +68,14 @@ export default function FormIkas() {
 
     // ── Company data ────────────────────────────────────────────────────────────
     const { data: meData } = useUser();
-    const perusahaanId = meData?.id_perusahaan;
+    const perusahaanId = resolveCompanyId(meData?.id_perusahaan, meData?.perusahaan?.id);
     const { data: perusahaan } = useQuery({
         queryKey: ["perusahaan", perusahaanId],
         queryFn: () => perusahaanService.getById(String(perusahaanId)),
-        enabled: !!perusahaanId,
+        enabled: !!perusahaanId && !meData?.perusahaan?.nama_perusahaan,
         staleTime: 1000 * 60 * 5,
     });
+    const perusahaanData = perusahaan ?? meData?.perusahaan ?? null;
 
     // ── Assessment setup from API (questions + existing answers) ───────────────
     const {
@@ -103,39 +113,57 @@ export default function FormIkas() {
     }, [initialized, initializeStore, setCurrentStakeholder]);
 
     // ── React Hook Form ─────────────────────────────────────────────────────────
-    const { register, handleSubmit, watch, reset, setValue, formState: { errors, isDirty } } = useForm<RespondentFormValues>({
+    const { register, handleSubmit, watch, reset, setValue, getValues, formState: { errors, isDirty } } = useForm<RespondentFormValues>({
         resolver: zodResolver(respondentSchema),
         defaultValues: {
             responden: respondentProfile()?.responden || "",
             telepon: respondentProfile()?.telepon || "",
             target_nilai: respondentProfile()?.target_nilai || 0,
             tanggal: respondentProfile()?.tanggal || new Date().toISOString().split('T')[0],
-            jabatan: "",
-            kategori_kematangan_keamanan_siber: "",
+            jabatan: respondentProfile()?.jabatan || "",
+            kategori_kematangan_keamanan_siber: respondentProfile()?.kategori_kematangan_keamanan_siber || "",
         }
     });
 
     // watchedTanggal used only to trigger UI updates
     const watchedTanggal = watch("tanggal");
     const watchedTargetNilai = watch("target_nilai");
+    const respondentCompanyId = resolveCompanyId(
+        perusahaanData?.id,
+        perusahaanId,
+        respondentProfile()?.id_perusahaan,
+    );
 
     useEffect(() => {
         const score = Number(watchedTargetNilai) || 0;
         const kategori = getKategoriKematangan(score);
-        setValue("kategori_kematangan_keamanan_siber", kategori, { shouldDirty: true, shouldValidate: true });
-    }, [watchedTargetNilai, setValue]);
+        if (getValues("kategori_kematangan_keamanan_siber") !== kategori) {
+            setValue("kategori_kematangan_keamanan_siber", kategori, { shouldDirty: false, shouldValidate: true });
+        }
+    }, [watchedTargetNilai, getValues, setValue]);
 
     // ── Fetch existing IKAS records from backend (for respondent pre-fill) ──────
-    const { data: ikasList, isLoading: listLoading } = useQuery({
-        queryKey: ["ikasList"],
-        queryFn: () => ikasService.getAll(),
+    const { data: myIkasData, isLoading: listLoading } = useQuery({
+        queryKey: ["my-ikas", respondentCompanyId || perusahaanId || "unknown"],
+        queryFn: () => ikasService.getMyIkas(respondentCompanyId || perusahaanId),
         staleTime: 1000 * 60 * 2,
+        enabled: !!(respondentCompanyId || perusahaanId),
     });
+
+    const myIkasList = myIkasData
+        ? (Array.isArray(myIkasData) ? myIkasData : [myIkasData])
+        : [];
+
+    const scopedIkasList = myIkasList.filter((item: any) => {
+            const itemCompanyId = resolveCompanyId(item?.id_perusahaan, item?.perusahaan?.id);
+            return !respondentCompanyId || itemCompanyId === respondentCompanyId;
+        })
+        ;
 
     // ── Detect existing record → set existingIkasId ────────────────────────────
     useEffect(() => {
-        if (listLoading || !ikasList) return;
-        const list = Array.isArray(ikasList) ? ikasList : [ikasList];
+        if (listLoading) return;
+        const list = scopedIkasList;
         if (list.length > 0 && list[0]?.id) {
             const latest = list.reduce((prev: any, curr: any) => {
                 const prevDate = new Date(prev.created_at ?? prev.tanggal ?? 0).getTime();
@@ -146,12 +174,12 @@ export default function FormIkas() {
         } else {
             setExistingIkasId(null);
         }
-    }, [ikasList, listLoading, setExistingIkasId]);
+    }, [listLoading, scopedIkasList, setExistingIkasId]);
 
     // ── Pre-fill respondent form from API data ─────────────────────────────────
     useEffect(() => {
-        if (listLoading || !ikasList) return;
-        const list = Array.isArray(ikasList) ? ikasList : [ikasList];
+        if (listLoading) return;
+        const list = scopedIkasList;
         if (list.length === 0) return;
         const latest = list.reduce((prev: any, curr: any) => {
             const prevDate = new Date(prev.created_at ?? prev.tanggal ?? 0).getTime();
@@ -172,7 +200,7 @@ export default function FormIkas() {
         });
         // Mark respondent as saved since record already exists
         setRespondentSaved(true);
-    }, [ikasList, listLoading, reset, setRespondentSaved]);
+    }, [listLoading, reset, scopedIkasList, setRespondentSaved]);
 
     // ── If existing answers found in DB, also mark respondent saved ───────────
     useEffect(() => {
@@ -190,7 +218,31 @@ export default function FormIkas() {
 
     // ── Submit: POST or PUT respondent data ────────────────────────────────────
     const onSubmit = async (data: RespondentFormValues) => {
-        const result = await saveRespondent(data, existingIkasId);
+        const resolvedPerusahaanId = resolveCompanyId(
+            perusahaanData?.id,
+            perusahaanId,
+            meData?.id_perusahaan,
+            meData?.perusahaan?.id,
+            respondentProfile()?.id_perusahaan,
+            scopedIkasList[0]?.id_perusahaan,
+            scopedIkasList[0]?.perusahaan?.id,
+        );
+
+        if (!resolvedPerusahaanId) {
+            toast({
+                title: "Data perusahaan belum siap",
+                description: "ID perusahaan tidak ditemukan. Lengkapi atau muat ulang profil perusahaan lalu coba lagi.",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        const respondentPayload = {
+            ...data,
+            id_perusahaan: resolvedPerusahaanId,
+        };
+
+        const result = await saveRespondent(respondentPayload, existingIkasId);
 
         if (!result.success) {
             toast({
@@ -203,12 +255,14 @@ export default function FormIkas() {
 
         // Sync to assessment store (for AssessmentView usage)
         saveRespondentProfile({
-            ...data,
+            ...respondentPayload,
             updated_at: new Date().toISOString(),
-            email: perusahaan?.email,
-            alamat: perusahaan?.alamat,
-            nama_perusahaan: perusahaan?.nama_perusahaan,
+            email: perusahaanData?.email,
+            alamat: perusahaanData?.alamat,
+            nama_perusahaan: perusahaanData?.nama_perusahaan,
         });
+
+        reset(data);
 
         // Update existingIkasId if this was a new record
         if (!existingIkasId && result.data?.id) {
@@ -216,7 +270,7 @@ export default function FormIkas() {
         }
 
         // Invalidate cache so pre-fill reflects the latest saved data
-        queryClient.invalidateQueries({ queryKey: ["ikasList"] });
+        await queryClient.invalidateQueries({ queryKey: ["my-ikas", resolvedPerusahaanId] });
 
         toast({
             title: "Berhasil disimpan",
@@ -224,11 +278,14 @@ export default function FormIkas() {
                 ? "Data responden berhasil diperbarui."
                 : "Data responden berhasil disimpan.",
         });
+
+        setStep(2);
     };
 
     // ── Derived UI state ───────────────────────────────────────────────────────
     const isEditMode = !!existingIkasId;
     const canProceed = respondentSaved && !isDirty;
+    const isCompanyReady = !!respondentCompanyId;
 
     return (
         <RequireCompanyProfile>
@@ -297,19 +354,19 @@ export default function FormIkas() {
                             {/* Read-only company fields */}
                             <div>
                                 <label className={LABEL_CLS}>Nama Perusahaan</label>
-                                <input type="text" value={perusahaan?.nama_perusahaan || ''} readOnly className={`${INPUT_CLS} bg-slate-50 text-slate-500`} />
+                                <input type="text" value={perusahaanData?.nama_perusahaan || ''} readOnly className={`${INPUT_CLS} bg-slate-50 text-slate-500`} />
                                 <p className="text-xs text-slate-400 mt-1">Data dari profil perusahaan</p>
                             </div>
 
                             <div>
                                 <label className={LABEL_CLS}>Email</label>
-                                <input type="email" value={perusahaan?.email || ''} readOnly className={`${INPUT_CLS} bg-slate-50 text-slate-500`} />
+                                <input type="email" value={perusahaanData?.email || ''} readOnly className={`${INPUT_CLS} bg-slate-50 text-slate-500`} />
                                 <p className="text-xs text-slate-400 mt-1">Data dari profil perusahaan</p>
                             </div>
 
                             <div className="col-span-1 md:col-span-2">
                                 <label className={LABEL_CLS}>Alamat Lengkap</label>
-                                <textarea rows={2} value={perusahaan?.alamat || ''} readOnly className={`${INPUT_CLS} bg-slate-50 text-slate-500`} />
+                                <textarea rows={2} value={perusahaanData?.alamat || ''} readOnly className={`${INPUT_CLS} bg-slate-50 text-slate-500`} />
                                 <p className="text-xs text-slate-400 mt-1">Data dari profil perusahaan</p>
                             </div>
 
@@ -404,26 +461,26 @@ export default function FormIkas() {
                                 {/* Save Button */}
                                 <button
                                     type="submit"
-                                    disabled={isLoading}
+                                    disabled={isLoading || !isCompanyReady}
                                     className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-500 text-white font-bold text-sm shadow-md shadow-indigo-500/25 hover:shadow-indigo-500/40 transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
                                 >
                                     {isLoading ? (
                                         <><Loader2 className="w-4 h-4 animate-spin" /> Menyimpan...</>
                                     ) : (
-                                        <><Save className="w-4 h-4" /> {isEditMode ? 'Perbarui Data Responden' : 'Simpan Data Responden'}</>
+                                        <><Save className="w-4 h-4" /> {canProceed ? 'Perbarui Data Responden' : 'Simpan & Lanjut ke Penilaian'}</>
                                     )}
                                 </button>
 
                                 {/* Continue Button — gated by respondentSaved */}
-                                <button
-                                    type="button"
-                                    onClick={() => setStep(2)}
-                                    disabled={!canProceed}
-                                    title={!canProceed ? 'Simpan data responden terlebih dahulu' : undefined}
-                                    className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 text-white font-bold text-sm shadow-md shadow-blue-500/25 hover:shadow-blue-500/40 transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
-                                >
-                                    Lanjut ke Penilaian <ArrowRight className="w-4 h-4" />
-                                </button>
+                                {canProceed && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setStep(2)}
+                                        className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 text-white font-bold text-sm shadow-md shadow-blue-500/25 hover:shadow-blue-500/40 transition-all flex items-center justify-center gap-2"
+                                    >
+                                        Lanjut ke Penilaian <ArrowRight className="w-4 h-4" />
+                                    </button>
+                                )}
                             </div>
                         </div>
                     </motion.form>

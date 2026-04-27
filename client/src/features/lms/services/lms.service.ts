@@ -1,4 +1,4 @@
-import { apiClient } from './apiClient';
+import { apiClient } from '@/services/apiClient';
 import type {
     Kelas,
     MateriItem,
@@ -11,7 +11,7 @@ import type {
     KuisAttempt,
     SubmitKuisPayload,
     SertifikatItem,
-} from '@/types/lms.types';
+} from '@/features/lms/types/lms.types';
 
 // ─── Normalize helpers ────────────────────────────────────────────────────────
 

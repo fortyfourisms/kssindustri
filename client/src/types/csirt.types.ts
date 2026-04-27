@@ -92,6 +92,36 @@ export interface SeCsirt {
     nilai_investasi?: string;
     potensi_kerugian_dan_dampak_negatif?: string;
     teknik_kriptografi?: string;
+    total_bobot?: number;
+    created_at?: string;
+    updated_at?: string;
+    edit_request_status?: string;
+    status_edit_request?: string;
+    request_edit_status?: string;
+    status_pengajuan_edit?: string;
+    latest_edit_request?: {
+        status?: string;
+        edit_status?: string;
+        request_status?: string;
+        id?: string | number;
+        id_se?: string | number;
+        id_user?: string | number;
+        nama_se?: string;
+        nama_user?: string;
+        created_at?: string;
+        updated_at?: string;
+        catatan?: string;
+        catatan_user?: string;
+        data_perubahan?: Record<string, any>;
+    };
+    perusahaan?: {
+        id?: string | number;
+        nama_perusahaan?: string;
+    };
+    sub_sektor?: {
+        id?: string | number;
+        nama_sub_sektor?: string;
+    };
 }
 
 export interface CreateSdmPayload {

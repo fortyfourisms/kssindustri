@@ -1,9 +1,40 @@
 import React from "react";
 import { Twitter, Mail, Instagram } from "lucide-react";
+import { useLocation, useNavigate } from "react-router-dom";
 
 export function Footer() {
+  const navigate = useNavigate();
+  const location = useLocation();
+
   const handleScrollTo = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
     e.preventDefault();
+
+    if (href.startsWith("/")) {
+      const [pathname, hash = ""] = href.split("#");
+      if (location.pathname !== pathname) {
+        navigate({
+          pathname,
+          hash: hash ? `#${hash}` : "",
+        });
+      } else if (!hash) {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      } else {
+        const element = document.querySelector(`#${hash}`);
+        if (element) {
+          element.scrollIntoView({ behavior: "smooth" });
+        }
+      }
+      return;
+    }
+
+    if (location.pathname !== "/") {
+      navigate({
+        pathname: "/",
+        hash: href === "#" || href === "#home" ? "" : href,
+      });
+      return;
+    }
+
     if (href === "#" || href === "#home") {
       window.scrollTo({ top: 0, behavior: "smooth" });
       return;
@@ -21,14 +52,21 @@ export function Footer() {
           <div className="p-6 md:p-12 lg:p-16">
             {/* Top Navigation */}
             <nav className="flex flex-wrap justify-center gap-4 md:gap-12 mb-8 md:mb-10">
-              {["Home", "About", "Features", "FAQ"].map((item) => (
+              {[
+                { label: "Home", href: "#home" },
+                { label: "About", href: "#about" },
+                { label: "Features", href: "#features" },
+                { label: "Courses", href: "#courses" },
+                { label: "Blog", href: "#blog" },
+                { label: "FAQ", href: "#faq" },
+              ].map((item) => (
                 <a
-                  key={item}
-                  href={`#${item.toLowerCase()}`}
-                  onClick={(e) => handleScrollTo(e, `#${item.toLowerCase()}`)}
+                  key={item.label}
+                  href={item.href}
+                  onClick={(e) => handleScrollTo(e, item.href)}
                   className="text-slate-900 font-bold text-lg hover:text-blue-600 transition-colors"
                 >
-                  {item}
+                  {item.label}
                 </a>
               ))}
             </nav>

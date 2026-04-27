@@ -1,14 +1,19 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { RequireCompanyProfile } from "@/components/RequireCompanyProfile";
+import { PageHeader } from "@/components/dashboard/PageHeader";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
-import { csirtService } from "@/services/csirt.service";
+import { exportKsePdf } from "@/lib/pdf-export";
 import { getKategoriSE } from "@/data/kse-data";
-import { Monitor, Plus, Edit2, Trash2, Loader2, ServerCrash } from "lucide-react";
-import { motion } from "framer-motion";
+import { getKseEditRequestStatus, getKseEditStatusMeta, getLatestKseEditRequest, type KseEditRequestRecord, type KseEditRequestStatus } from "@/lib/kse-edit-request";
+import { useUser } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { Building2, Download, Edit2, Loader2, Monitor, Plus, Send, ServerCrash } from "lucide-react";
+import { motion } from "framer-motion";
 
-// ── Helper: compute bobot total from SE record ────────────────────────────────
 const FIELD_TO_BOBOT: Record<string, Record<string, number>> = {
     nilai_investasi: { A: 5, B: 2, C: 1 },
     anggaran_operasional: { A: 5, B: 2, C: 1 },
@@ -22,31 +27,39 @@ const FIELD_TO_BOBOT: Record<string, Record<string, number>> = {
     potensi_kerugian_dan_dampak_negatif: { A: 5, B: 2, C: 1 },
 };
 
-function computeBobot(se: any): number {
+function computeBobot(se: Record<string, any>): number {
     return Object.entries(FIELD_TO_BOBOT).reduce((sum, [field, bobotMap]) => {
-        const val = se?.[field];
-        return sum + (bobotMap[val] || 0);
+        const value = se?.[field];
+        return sum + (bobotMap[value] || 0);
     }, 0);
 }
 
 function formatDate(dateStr?: string) {
-    if (!dateStr) return '—';
+    if (!dateStr) return "—";
     const d = new Date(dateStr);
-    return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' });
+    return d.toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" });
 }
 
-// ── Category badge ────────────────────────────────────────────────────────────
 function KategoriBadge({ kategori }: { kategori: string }) {
     const map: Record<string, { bg: string; text: string; dot: string }> = {
-        Strategis: { bg: 'bg-red-50 border border-red-200', text: 'text-red-600', dot: 'bg-red-500' },
-        Tinggi: { bg: 'bg-orange-50 border border-orange-200', text: 'text-orange-600', dot: 'bg-orange-500' },
-        Rendah: { bg: 'bg-emerald-50 border border-emerald-200', text: 'text-emerald-600', dot: 'bg-emerald-400' },
+        Strategis: { bg: "bg-red-50 border border-red-200", text: "text-red-600", dot: "bg-red-500" },
+        Tinggi: { bg: "bg-orange-50 border border-orange-200", text: "text-orange-600", dot: "bg-orange-500" },
+        Rendah: { bg: "bg-emerald-50 border border-emerald-200", text: "text-emerald-600", dot: "bg-emerald-400" },
     };
-    const style = map[kategori] || { bg: 'bg-slate-50 border border-slate-200', text: 'text-slate-500', dot: 'bg-slate-400' };
+    const style = map[kategori] || { bg: "bg-slate-50 border border-slate-200", text: "text-slate-500", dot: "bg-slate-400" };
     return (
         <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${style.bg} ${style.text}`}>
             <span className={`w-1.5 h-1.5 rounded-full ${style.dot}`} />
-            {kategori || 'Belum Lengkap'}
+            {kategori || "Belum Lengkap"}
+        </span>
+    );
+}
+
+function EditRequestBadge({ status }: { status: KseEditRequestStatus }) {
+    const meta = getKseEditStatusMeta(status);
+    return (
+        <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold ${meta.badgeClassName}`}>
+            {meta.label}
         </span>
     );
 }
@@ -55,66 +68,116 @@ export default function KSE() {
     const navigate = useNavigate();
     const { toast } = useToast();
     const queryClient = useQueryClient();
+    const { data: user } = useUser();
+    const [selectedSe, setSelectedSe] = useState<Record<string, any> | null>(null);
+    const [requestReason, setRequestReason] = useState("");
+
+    const perusahaanId = user?.id_perusahaan || user?.perusahaan?.id;
+    const { data: perusahaanResponse } = useQuery({
+        queryKey: ["perusahaan", perusahaanId],
+        queryFn: () => api.getPerusahaanById(String(perusahaanId)),
+        enabled: !!perusahaanId && !user?.perusahaan?.nama_perusahaan,
+    });
+    const perusahaan = perusahaanResponse ?? user?.perusahaan;
 
     const { data: seData, isLoading, isError, refetch } = useQuery<any>({
         queryKey: ["se"],
         queryFn: api.getKse,
     });
-
-    const deleteMutation = useMutation({
-        mutationFn: (id: number | string) => csirtService.deleteSe(id),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["se"] });
-            toast({ title: "Berhasil", description: "Sistem elektronik berhasil dihapus." });
-        },
-        onError: () => {
-            toast({ title: "Gagal", description: "Terjadi kesalahan saat menghapus data.", variant: "destructive" });
-        },
+    const { data: editRequestData } = useQuery<any>({
+        queryKey: ["se-edit-requests"],
+        queryFn: api.getKseEditRequests,
     });
 
-    const handleDelete = (se: any) => {
-        if (!window.confirm(`Hapus "${se.nama_se || 'SE ini'}"? Tindakan ini tidak dapat dibatalkan.`)) return;
-        deleteMutation.mutate(se.id);
-    };
+    const requestList = useMemo<KseEditRequestRecord[]>(() => {
+        if (Array.isArray(editRequestData?.data)) return editRequestData.data;
+        if (Array.isArray(editRequestData)) return editRequestData;
+        return [];
+    }, [editRequestData]);
 
-    // Normalise: API returns { data: [...], total_count: N }
     const seList: any[] = Array.isArray(seData?.data)
         ? seData.data
         : Array.isArray(seData)
             ? seData
-            : seData && typeof seData === 'object' && seData.id
+            : seData && typeof seData === "object" && seData.id
                 ? [seData]
                 : [];
+
+    const requestEditMutation = useMutation({
+        mutationFn: async ({ seId, catatanUser }: { seId: string | number; catatanUser: string }) =>
+            api.requestKseEdit(seId, catatanUser),
+        onSuccess: async () => {
+            await queryClient.invalidateQueries({ queryKey: ["se"] });
+            await queryClient.invalidateQueries({ queryKey: ["se-edit-requests"] });
+            setSelectedSe(null);
+            setRequestReason("");
+            toast({
+                title: "Pengajuan terkirim",
+                description: "Permohonan edit data berhasil dikirim dan menunggu persetujuan admin.",
+            });
+        },
+        onError: (error: any) => {
+            toast({
+                title: "Pengajuan gagal",
+                description: error?.message || "Permohonan edit data belum berhasil dikirim.",
+                variant: "destructive",
+            });
+        },
+    });
+
+    const selectedSeStatus = selectedSe ? getKseEditRequestStatus(selectedSe, requestList) : "no_request";
+    const selectedSeLatestRequest = selectedSe ? getLatestKseEditRequest(selectedSe, requestList) : null;
+    const canSubmitRequest = requestReason.trim().length > 0 && !!selectedSe && selectedSeStatus !== "pending_approval";
 
     return (
         <RequireCompanyProfile>
             <div className="max-w-7xl mx-auto space-y-6 pb-12">
+                <PageHeader
+                    icon={Building2}
+                    title={`Kategorisasi Sistem Elektronik - ${perusahaan?.nama_perusahaan || "Stakeholder"}`}
+                    subtitle="Daftar Sistem Elektronik yang telah dinilai beserta kategori, skor, dan status pengajuan edit datanya."
+                />
 
-                {/* ── Page Header ── */}
-                <div className="bg-white/70 backdrop-blur-sm border border-white/60 rounded-2xl p-4 md:p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4 shadow-sm">
-                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/25 shrink-0">
-                        <Monitor className="w-6 h-6 text-white" />
-                    </div>
-                    <div className="flex-1">
-                        <h1 className="font-black text-slate-900 text-xl">Kategorisasi Sistem Elektronik</h1>
-                        <p className="text-sm text-slate-500 mt-0.5">Daftar Sistem Elektronik yang telah dinilai beserta kategori dan skornya.</p>
-                    </div>
-                    <button
-                        onClick={() => navigate('/dashboard/form-kse')}
-                        className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold text-sm shadow-md shadow-blue-500/25
-                                hover:shadow-blue-500/40 hover:scale-[1.01] active:scale-[0.99] transition-all whitespace-nowrap"
-                    >
-                        <Plus className="w-4 h-4" /> Tambah SE
-                    </button>
-                </div>
-
-                {/* ── Table Card ── */}
                 <motion.div
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.3 }}
                     className="bg-white/80 backdrop-blur-sm border border-slate-200/60 rounded-2xl shadow-sm overflow-hidden"
                 >
+                    <div className="px-6 py-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div>
+                            <h3 className="font-bold text-slate-800 text-lg">Tabel KSE</h3>
+                            <p className="text-sm text-slate-500 mt-0.5">Daftar sistem elektronik, skor kategorisasi, dan status request edit.</p>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-3">
+                            {seList.length > 0 && (
+                                <button
+                                    type="button"
+                                    onClick={async () => {
+                                        try {
+                                            await exportKsePdf(perusahaan?.nama_perusahaan);
+                                        } catch (error: any) {
+                                            toast({
+                                                title: "Export PDF gagal",
+                                                description: error?.message || "Tidak dapat membuka jendela export.",
+                                                variant: "destructive",
+                                            });
+                                        }
+                                    }}
+                                    className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white shadow-md shadow-blue-500/25 transition-all hover:bg-blue-700 hover:shadow-blue-500/40 hover:scale-[1.01] active:scale-[0.99] whitespace-nowrap"
+                                >
+                                    <Download className="w-4 h-4" /> Export PDF
+                                </button>
+                            )}
+                            <button
+                                onClick={() => navigate("/dashboard/form-kse")}
+                                className="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-bold text-white shadow-md shadow-yellow-500/30 transition-all hover:bg-amber-600 hover:shadow-yellow-500/45 hover:scale-[1.01] active:scale-[0.99] whitespace-nowrap"
+                            >
+                                <Plus className="w-4 h-4" /> Tambah SE
+                            </button>
+                        </div>
+                    </div>
+
                     {isLoading ? (
                         <div className="flex flex-col items-center justify-center py-24 gap-3">
                             <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
@@ -127,7 +190,6 @@ export default function KSE() {
                             <button onClick={() => refetch()} className="text-blue-500 text-sm font-bold hover:underline">Coba Lagi</button>
                         </div>
                     ) : seList.length === 0 ? (
-                        /* ── Empty State ── */
                         <div className="flex flex-col items-center justify-center py-24 gap-4 px-8 text-center">
                             <div className="w-16 h-16 rounded-2xl bg-blue-50 flex items-center justify-center">
                                 <Monitor className="w-8 h-8 text-blue-400" />
@@ -137,14 +199,13 @@ export default function KSE() {
                                 <p className="text-sm text-slate-400 mt-1">Tambahkan sistem elektronik pertama Anda untuk memulai penilaian.</p>
                             </div>
                             <button
-                                onClick={() => navigate('/dashboard/form-kse')}
-                                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold text-sm shadow-md shadow-blue-500/20 hover:shadow-blue-500/35 transition-all"
+                                onClick={() => navigate("/dashboard/form-kse")}
+                                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500 text-white font-bold text-sm shadow-md shadow-yellow-500/30 hover:bg-amber-600 hover:shadow-yellow-500/45 hover:scale-[1.01] active:scale-[0.99] transition-all whitespace-nowrap"
                             >
                                 <Plus className="w-4 h-4" /> Tambah SE Sekarang
                             </button>
                         </div>
                     ) : (
-                        /* ── Data Table ── */
                         <div className="overflow-x-auto">
                             <table className="w-full text-sm">
                                 <thead>
@@ -152,6 +213,7 @@ export default function KSE() {
                                         <th className="text-left px-5 py-3.5 text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">No</th>
                                         <th className="text-left px-5 py-3.5 text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Nama Sistem Elektronik</th>
                                         <th className="text-left px-5 py-3.5 text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Kategori</th>
+                                        <th className="text-left px-5 py-3.5 text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Status Edit</th>
                                         <th className="text-center px-5 py-3.5 text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Skor</th>
                                         <th className="text-left px-5 py-3.5 text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Dibuat</th>
                                         <th className="text-left px-5 py-3.5 text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Diperbarui</th>
@@ -162,6 +224,15 @@ export default function KSE() {
                                     {seList.map((se, idx) => {
                                         const bobot = computeBobot(se);
                                         const kategori = se.kategori_se || getKategoriSE(bobot).kategori;
+                                        const editStatus = getKseEditRequestStatus(se, requestList);
+                                        const latestRequest = getLatestKseEditRequest(se, requestList);
+                                        const statusMeta = getKseEditStatusMeta(editStatus);
+                                        const isPendingApproval = editStatus === "pending_approval";
+                                        const isApproved = editStatus === "approved";
+                                        const requestButtonLabel = editStatus === "rejected" ? "Ajukan Ulang" : "Ajukan Perubahan Data";
+                                        const userNote = latestRequest?.catatan_user;
+                                        const adminNote = latestRequest?.catatan;
+
                                         return (
                                             <motion.tr
                                                 key={se.id ?? idx}
@@ -176,11 +247,23 @@ export default function KSE() {
                                                         <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center shrink-0">
                                                             <Monitor className="w-4 h-4 text-blue-500" />
                                                         </div>
-                                                        <span className="font-semibold text-slate-800 leading-tight">{se.nama_se || '—'}</span>
+                                                        <span className="font-semibold text-slate-800 leading-tight">{se.nama_se || "—"}</span>
                                                     </div>
                                                 </td>
                                                 <td className="px-5 py-4">
                                                     <KategoriBadge kategori={kategori} />
+                                                </td>
+                                                <td className="px-5 py-4">
+                                                    <div className="space-y-1">
+                                                        <EditRequestBadge status={editStatus} />
+                                                        <p className="text-[11px] text-slate-400">{statusMeta.description}</p>
+                                                        {userNote && (
+                                                            <p className="text-[11px] text-slate-500">Catatan user: {userNote}</p>
+                                                        )}
+                                                        {adminNote && (
+                                                            <p className="text-[11px] text-slate-500">Catatan admin: {adminNote}</p>
+                                                        )}
+                                                    </div>
                                                 </td>
                                                 <td className="px-5 py-4 text-center">
                                                     <span className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-slate-50 border border-slate-100 font-extrabold text-slate-800 text-base shadow-sm">
@@ -191,21 +274,28 @@ export default function KSE() {
                                                 <td className="px-5 py-4 text-slate-500 whitespace-nowrap">{formatDate(se.updated_at)}</td>
                                                 <td className="px-5 py-4 text-center">
                                                     <div className="flex items-center justify-center gap-1.5">
-                                                        <button
-                                                            onClick={() => navigate(`/dashboard/form-kse?id=${se.id}`)}
-                                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 border border-blue-100 text-blue-600 font-bold text-xs
-                                                                    hover:bg-blue-100 hover:border-blue-200 transition-colors group-hover:shadow-sm"
-                                                        >
-                                                            <Edit2 className="w-3.5 h-3.5" /> Edit
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleDelete(se)}
-                                                            disabled={deleteMutation.isPending}
-                                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 border border-red-100 text-red-500 font-bold text-xs
-                                                                    hover:bg-red-100 hover:border-red-200 transition-colors group-hover:shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                                                        >
-                                                            <Trash2 className="w-3.5 h-3.5" /> Hapus
-                                                        </button>
+                                                        {isApproved ? (
+                                                            <button
+                                                                onClick={() => navigate(`/dashboard/form-kse?id=${se.id}`)}
+                                                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500 text-white font-bold text-xs shadow-md shadow-emerald-500/30 transition-all hover:bg-emerald-600 hover:shadow-emerald-500/45 hover:scale-[1.01] active:scale-[0.99]"
+                                                            >
+                                                                <Edit2 className="w-3.5 h-3.5" /> Edit Data
+                                                            </button>
+                                                        ) : (
+                                                            <button
+                                                                onClick={() => {
+                                                                    setSelectedSe(se);
+                                                                    setRequestReason("");
+                                                                }}
+                                                                disabled={isPendingApproval}
+                                                                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold text-xs transition-all ${isPendingApproval
+                                                                    ? "bg-slate-100 text-slate-400 cursor-not-allowed"
+                                                                    : "bg-amber-500 text-white shadow-md shadow-yellow-500/30 hover:bg-amber-600 hover:shadow-yellow-500/45 hover:scale-[1.01] active:scale-[0.99]"
+                                                                    }`}
+                                                            >
+                                                                <Send className="w-3.5 h-3.5" /> {isPendingApproval ? "Menunggu Admin" : requestButtonLabel}
+                                                            </button>
+                                                        )}
                                                     </div>
                                                 </td>
                                             </motion.tr>
@@ -214,13 +304,71 @@ export default function KSE() {
                                 </tbody>
                             </table>
 
-                            {/* Table footer */}
                             <div className="px-5 py-3 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between">
-                                <p className="text-xs text-slate-400 font-medium">{seList.length} sistem elektronik terdaftar{seData?.total_count != null ? ` (total: ${seData.total_count})` : ''}</p>
+                                <p className="text-xs text-slate-400 font-medium">{seList.length} sistem elektronik terdaftar{seData?.total_count != null ? ` (total: ${seData.total_count})` : ""}</p>
                             </div>
                         </div>
                     )}
                 </motion.div>
+
+                <Dialog open={!!selectedSe} onOpenChange={(open) => !open && setSelectedSe(null)}>
+                    <DialogContent className="sm:max-w-lg rounded-3xl p-6">
+                        <DialogHeader>
+                            <DialogTitle className="text-xl font-bold text-slate-900">Ajukan Perubahan Data</DialogTitle>
+                            <DialogDescription className="text-sm text-slate-500">
+                                Jelaskan alasan perubahan data untuk <span className="font-semibold text-slate-700">{selectedSe?.nama_se || "SE ini"}</span>. Pengajuan akan direview admin terlebih dahulu.
+                            </DialogDescription>
+                        </DialogHeader>
+
+                        <div className="space-y-3 py-2">
+                            {selectedSe && (
+                                <div className={`rounded-2xl px-4 py-3 text-sm ${getKseEditStatusMeta(selectedSeStatus).badgeClassName}`}>
+                                    <p className="font-bold">{getKseEditStatusMeta(selectedSeStatus).label}</p>
+                                    {selectedSeLatestRequest?.catatan_user && (
+                                        <p className="mt-1 text-xs opacity-90">Catatan user terakhir: {selectedSeLatestRequest.catatan_user}</p>
+                                    )}
+                                    {selectedSeLatestRequest?.catatan && (
+                                        <p className="mt-1 text-xs opacity-90">Catatan admin: {selectedSeLatestRequest.catatan}</p>
+                                    )}
+                                </div>
+                            )}
+                            <div>
+                                <label className="block text-sm font-semibold text-slate-700 mb-2">Alasan Permohonan Edit</label>
+                                <Textarea
+                                    value={requestReason}
+                                    onChange={(e) => setRequestReason(e.target.value)}
+                                    placeholder="Contoh: ada perubahan IP SE, koreksi pengelola, atau pembaruan jawaban kategorisasi."
+                                    className="min-h-[130px] rounded-2xl border-slate-200 focus-visible:ring-blue-500"
+                                />
+                            </div>
+                        </div>
+
+                        <DialogFooter className="gap-2 sm:gap-0">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setSelectedSe(null);
+                                    setRequestReason("");
+                                }}
+                                className="inline-flex items-center justify-center rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-500 hover:bg-slate-100"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                disabled={!canSubmitRequest || requestEditMutation.isPending}
+                                onClick={() => {
+                                    if (!selectedSe || !requestReason.trim()) return;
+                                    requestEditMutation.mutate({ seId: selectedSe.id, catatanUser: requestReason.trim() });
+                                }}
+                                className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-blue-500/25 transition-all hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                {requestEditMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                                Submit Pengajuan
+                            </button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
             </div>
         </RequireCompanyProfile>
     );

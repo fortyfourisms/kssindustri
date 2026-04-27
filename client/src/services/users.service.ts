@@ -1,4 +1,4 @@
-import { apiClient } from './apiClient';
+import { apiClient } from '@/services/apiClient';
 import type { User, CreateUserPayload, UpdateUserPayload } from '@/types/user.types';
 
 /**

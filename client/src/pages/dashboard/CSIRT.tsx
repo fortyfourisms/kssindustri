@@ -5,7 +5,9 @@ import { api } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { csirtService } from "@/services/csirt.service";
 import { getMediaUrl } from "@/lib/utils";
-import { Loader2, Building2, Pencil, Phone, Globe, Mail, Server, Link as LinkIcon, Plus, User, ShieldCheck, Briefcase, Wrench, Award, Trash2, Hash, UserCheck, Settings, Tag, Eye, ChevronRight, Save, X, Download } from "lucide-react";
+import { exportCsirtPdf } from "@/lib/pdf-export";
+import { PageHeader } from "@/components/dashboard/PageHeader";
+import { Loader2, Building2, Pencil, Phone, Globe, Mail, Server, Link as LinkIcon, Plus, User, ShieldCheck, Briefcase, Wrench, Award, Trash2, Hash, UserCheck, Settings, Tag, Eye, Save, X, Download } from "lucide-react";
 import { RequireCompanyProfile } from "@/components/RequireCompanyProfile";
 import { motion, AnimatePresence } from "framer-motion";
 import { useCsirtProfile } from "@/hooks/useCsirtProfile";
@@ -14,6 +16,88 @@ import type { SdmCsirt, SeCsirt } from "@/types/csirt.types";
 
 const INPUT_CLS = "w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white/80 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400 transition";
 const LABEL_CLS = "block text-sm font-semibold text-slate-700 mb-1.5";
+const FILE_TRIGGER_CLS = "inline-flex shrink-0 cursor-pointer items-center justify-center rounded-xl bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 transition hover:bg-blue-100";
+const FILE_WRAPPER_CLS = "flex w-full items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm";
+
+function extractFileName(path?: string | null) {
+    if (!path) return "";
+    const cleanPath = path.split("?")[0];
+    const fileName = cleanPath.split("/").pop()?.split("\\").pop() || "";
+
+    try {
+        return decodeURIComponent(fileName);
+    } catch {
+        return fileName;
+    }
+}
+
+function hasAllowedExtension(fileName: string, allowedExtensions: string[]) {
+    const lowerName = fileName.toLowerCase();
+    return allowedExtensions.some((extension) => lowerName.endsWith(extension.toLowerCase()));
+}
+
+function RequiredMark() {
+    return <span className="text-red-500">*</span>;
+}
+
+type FileUploadFieldProps = {
+    label: React.ReactNode;
+    accept: string;
+    allowedExtensions: string[];
+    file: File | null;
+    existingFileName?: string | null;
+    placeholder: string;
+    onFileChange: (file: File | null) => void;
+};
+
+function FileUploadField({
+    label,
+    accept,
+    allowedExtensions,
+    file,
+    existingFileName,
+    placeholder,
+    onFileChange,
+}: FileUploadFieldProps) {
+    const { toast } = useToast();
+    const previewName = file?.name || existingFileName || "";
+
+    const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const selectedFile = event.target.files?.[0] || null;
+        if (!selectedFile) {
+            onFileChange(null);
+            return;
+        }
+
+        if (!hasAllowedExtension(selectedFile.name, allowedExtensions)) {
+            onFileChange(null);
+            event.target.value = "";
+            toast({
+                title: "Format file tidak didukung",
+                description: `File harus menggunakan format ${allowedExtensions.join(", ")}.`,
+                variant: "destructive",
+            });
+            return;
+        }
+
+        onFileChange(selectedFile);
+    };
+
+    return (
+        <div>
+            <label className={LABEL_CLS}>{label}</label>
+            <div className={FILE_WRAPPER_CLS}>
+                <label className={FILE_TRIGGER_CLS}>
+                    Pilih File
+                    <input type="file" accept={accept} onChange={handleChange} className="sr-only" />
+                </label>
+                <span className={`min-w-0 truncate ${previewName ? "text-slate-700" : "text-slate-400"}`}>
+                    {previewName || placeholder}
+                </span>
+            </div>
+        </div>
+    );
+}
 
 // ─── Modal: CSIRT Profile Create ──────────────────────────────────────────────
 function CreateCsirtModal({ onSubmit, onClose, loading, idPerusahaan }: any) {
@@ -43,44 +127,62 @@ function CreateCsirtModal({ onSubmit, onClose, loading, idPerusahaan }: any) {
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white rounded-3xl shadow-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto p-6">
                 <div className="flex items-center justify-between mb-6">
                     <h3 className="font-black text-slate-900 font-display text-xl">Tambah CSIRT</h3>
-                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition p-1 bg-slate-100 rounded-lg hover:bg-slate-200"><X className="w-5 h-5" /></button>
+                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition p-1 bg-slate-100 rounded-xl hover:bg-slate-200"><X className="w-5 h-5" /></button>
                 </div>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
-                        <label className={LABEL_CLS}>Nama CSIRT</label>
+                        <label className={LABEL_CLS}>Nama CSIRT <RequiredMark /></label>
                         <input value={formData.nama_csirt} onChange={(e) => setFormData({ ...formData, nama_csirt: e.target.value })} required className={INPUT_CLS} placeholder="Contoh: CSIRT-BSSN" />
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label className={LABEL_CLS}>Website CSIRT</label>
-                            <input value={formData.web_csirt} onChange={(e) => setFormData({ ...formData, web_csirt: e.target.value })} required className={INPUT_CLS} placeholder="www.csirt.go.id" />
+                            <label className={LABEL_CLS}>Website CSIRT <RequiredMark /></label>
+                            <input value={formData.web_csirt} onChange={(e) => setFormData({ ...formData, web_csirt: e.target.value })} required className={INPUT_CLS} placeholder="Contoh: https://csirt.perusahaan.go.id" />
                         </div>
                         <div>
-                            <label className={LABEL_CLS}>Telepon CSIRT</label>
-                            <input value={formData.telepon_csirt} onChange={(e) => setFormData({ ...formData, telepon_csirt: e.target.value })} required className={INPUT_CLS} placeholder="+62 21 xxxxxxx" />
+                            <label className={LABEL_CLS}>Telepon CSIRT <RequiredMark /></label>
+                            <input value={formData.telepon_csirt} onChange={(e) => setFormData({ ...formData, telepon_csirt: e.target.value })} required className={INPUT_CLS} placeholder="Contoh: +62 21 12345678" />
                         </div>
                         <div>
-                            <label className={LABEL_CLS}>Email CSIRT</label>
-                            <input value={formData.email_csirt} onChange={(e) => setFormData({ ...formData, email_csirt: e.target.value })} required className={INPUT_CLS} placeholder="[EMAIL_ADDRESS]" />
+                            <label className={LABEL_CLS}>Email CSIRT <RequiredMark /></label>
+                            <input value={formData.email_csirt} onChange={(e) => setFormData({ ...formData, email_csirt: e.target.value })} required className={INPUT_CLS} placeholder="Contoh: csirt@perusahaan.go.id" />
                         </div>
                     </div>
                     <div className="pt-2">
-                        <label className={LABEL_CLS}>Foto CSIRT <span className="text-xs font-normal text-slate-400">(Opsional)</span></label>
-                        <input type="file" accept="image/*" onChange={(e) => setPhotoCsirt(e.target.files?.[0] || null)} className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition border border-slate-200 bg-white" />
+                        <FileUploadField
+                            label={<>Foto CSIRT <span className="text-xs font-normal text-slate-400">(Opsional)</span></>}
+                            accept=".jpg,.jpeg,.png"
+                            allowedExtensions={[".jpg", ".jpeg", ".png"]}
+                            file={photoCsirt}
+                            placeholder="Belum ada file dipilih"
+                            onFileChange={setPhotoCsirt}
+                        />
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label className={LABEL_CLS}>Dokumen RFC2350 <span className="text-xs font-normal text-slate-400">(PDF, Opsional)</span></label>
-                            <input type="file" accept=".pdf" onChange={(e) => setFileRfc(e.target.files?.[0] || null)} className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition border border-slate-200 bg-white" />
-                        </div>
-                        <div>
-                            <label className={LABEL_CLS}>PGP Public Key <span className="text-xs font-normal text-slate-400">(.asc, Opsional)</span></label>
-                            <input type="file" accept=".asc" onChange={(e) => setFilePgp(e.target.files?.[0] || null)} className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition border border-slate-200 bg-white" />
-                        </div>
-                        <div>
-                            <label className={LABEL_CLS}>STR <span className="text-xs font-normal text-slate-400">(.pdf, Opsional)</span></label>
-                            <input type="file" accept=".pdf" onChange={(e) => setFileStr(e.target.files?.[0] || null)} className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition border border-slate-200 bg-white" />
-                        </div>
+                        <FileUploadField
+                            label={<>Dokumen RFC2350 <span className="text-xs font-normal text-slate-400">(Opsional)</span></>}
+                            accept=".pdf"
+                            allowedExtensions={[".pdf"]}
+                            file={fileRfc}
+                            placeholder="Upload dokumen RFC2350 (.pdf)"
+                            onFileChange={setFileRfc}
+                        />
+                        <FileUploadField
+                            label={<>PGP Public Key <span className="text-xs font-normal text-slate-400">(Opsional)</span></>}
+                            accept=".asc"
+                            allowedExtensions={[".asc"]}
+                            file={filePgp}
+                            placeholder="Upload public key (.asc)"
+                            onFileChange={setFilePgp}
+                        />
+                        <FileUploadField
+                            label={<>STR <span className="text-xs font-normal text-slate-400">(Opsional)</span></>}
+                            accept=".pdf"
+                            allowedExtensions={[".pdf"]}
+                            file={fileStr}
+                            placeholder="Upload STR (.pdf)"
+                            onFileChange={setFileStr}
+                        />
                     </div>
                     <div className="flex gap-3 pt-6">
                         <button type="button" onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 transition">Batal</button>
@@ -128,44 +230,66 @@ function EditCsirtModal({ initial, onSubmit, onClose, loading, idPerusahaan }: a
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white rounded-3xl shadow-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto p-6">
                 <div className="flex items-center justify-between mb-6">
                     <h3 className="font-black text-slate-900 font-display text-xl">Edit Profil CSIRT</h3>
-                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition p-1 bg-slate-100 rounded-lg hover:bg-slate-200"><X className="w-5 h-5" /></button>
+                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition p-1 bg-slate-100 rounded-xl hover:bg-slate-200"><X className="w-5 h-5" /></button>
                 </div>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
-                        <label className={LABEL_CLS}>Nama CSIRT</label>
+                        <label className={LABEL_CLS}>Nama CSIRT <RequiredMark /></label>
                         <input value={formData.nama_csirt} onChange={(e) => setFormData({ ...formData, nama_csirt: e.target.value })} required className={INPUT_CLS} placeholder="Contoh: CSIRT-BSSN" />
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label className={LABEL_CLS}>Website CSIRT</label>
-                            <input value={formData.web_csirt} onChange={(e) => setFormData({ ...formData, web_csirt: e.target.value })} required className={INPUT_CLS} placeholder="www.csirt.go.id" />
+                            <label className={LABEL_CLS}>Website CSIRT <RequiredMark /></label>
+                            <input value={formData.web_csirt} onChange={(e) => setFormData({ ...formData, web_csirt: e.target.value })} required className={INPUT_CLS} placeholder="Contoh: https://csirt.perusahaan.go.id" />
                         </div>
                         <div>
-                            <label className={LABEL_CLS}>Telepon CSIRT</label>
-                            <input value={formData.telepon_csirt} onChange={(e) => setFormData({ ...formData, telepon_csirt: e.target.value })} required className={INPUT_CLS} placeholder="+62 21 xxxxxxx" />
+                            <label className={LABEL_CLS}>Telepon CSIRT <RequiredMark /></label>
+                            <input value={formData.telepon_csirt} onChange={(e) => setFormData({ ...formData, telepon_csirt: e.target.value })} required className={INPUT_CLS} placeholder="Contoh: +62 21 12345678" />
                         </div>
                         <div>
-                            <label className={LABEL_CLS}>Email CSIRT</label>
-                            <input value={formData.email_csirt} onChange={(e) => setFormData({ ...formData, email_csirt: e.target.value })} required className={INPUT_CLS} placeholder="[EMAIL_ADDRESS]" />
+                            <label className={LABEL_CLS}>Email CSIRT <RequiredMark /></label>
+                            <input value={formData.email_csirt} onChange={(e) => setFormData({ ...formData, email_csirt: e.target.value })} required className={INPUT_CLS} placeholder="Contoh: csirt@perusahaan.go.id" />
                         </div>
                     </div>
                     <div className="pt-2">
-                        <label className={LABEL_CLS}>Foto CSIRT <span className="text-xs font-normal text-slate-400">(Opsional)</span></label>
-                        <input type="file" accept="image/*" onChange={(e) => setPhotoCsirt(e.target.files?.[0] || null)} className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition border border-slate-200 bg-white" />
+                        <FileUploadField
+                            label={<>Foto CSIRT <span className="text-xs font-normal text-slate-400">(JPG, JPEG, PNG, Opsional)</span></>}
+                            accept=".jpg,.jpeg,.png"
+                            allowedExtensions={[".jpg", ".jpeg", ".png"]}
+                            file={photoCsirt}
+                            existingFileName={extractFileName(initial?.photo_csirt)}
+                            placeholder="Belum ada file dipilih"
+                            onFileChange={setPhotoCsirt}
+                        />
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label className={LABEL_CLS}>Dokumen RFC2350 <span className="text-xs font-normal text-slate-400">(PDF, Opsional)</span></label>
-                            <input type="file" accept=".pdf" onChange={(e) => setFileRfc(e.target.files?.[0] || null)} className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition border border-slate-200 bg-white" />
-                        </div>
-                        <div>
-                            <label className={LABEL_CLS}>PGP Public Key <span className="text-xs font-normal text-slate-400">(.asc, Opsional)</span></label>
-                            <input type="file" accept=".asc" onChange={(e) => setFilePgp(e.target.files?.[0] || null)} className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition border border-slate-200 bg-white" />
-                        </div>
-                        <div>
-                            <label className={LABEL_CLS}>STR <span className="text-xs font-normal text-slate-400">(.pdf, Opsional)</span></label>
-                            <input type="file" accept=".pdf" onChange={(e) => setFileStr(e.target.files?.[0] || null)} className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition border border-slate-200 bg-white" />
-                        </div>
+                        <FileUploadField
+                            label={<>Dokumen RFC2350 <span className="text-xs font-normal text-slate-400">(PDF, Opsional)</span></>}
+                            accept=".pdf"
+                            allowedExtensions={[".pdf"]}
+                            file={fileRfc}
+                            existingFileName={extractFileName(initial?.file_rfc2350)}
+                            placeholder="Upload dokumen RFC2350 (.pdf)"
+                            onFileChange={setFileRfc}
+                        />
+                        <FileUploadField
+                            label={<>PGP Public Key <span className="text-xs font-normal text-slate-400">(.asc, Opsional)</span></>}
+                            accept=".asc"
+                            allowedExtensions={[".asc"]}
+                            file={filePgp}
+                            existingFileName={extractFileName(initial?.file_public_key_pgp)}
+                            placeholder="Upload public key (.asc)"
+                            onFileChange={setFilePgp}
+                        />
+                        <FileUploadField
+                            label={<>STR <span className="text-xs font-normal text-slate-400">(.pdf, Opsional)</span></>}
+                            accept=".pdf"
+                            allowedExtensions={[".pdf"]}
+                            file={fileStr}
+                            existingFileName={extractFileName(initial?.file_str)}
+                            placeholder="Upload STR (.pdf)"
+                            onFileChange={setFileStr}
+                        />
                     </div>
                     <div className="flex gap-3 pt-6">
                         <button type="button" onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 transition">Batal</button>
@@ -211,7 +335,7 @@ function CreateSdmModal({ csirtId, onSave, onClose, loading }: {
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6">
                 <div className="flex items-center justify-between mb-6">
                     <h3 className="font-black text-slate-900 font-display text-xl">Tambah SDM</h3>
-                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition p-1 bg-slate-100 rounded-lg hover:bg-slate-200"><X className="w-5 h-5" /></button>
+                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition p-1 bg-slate-100 rounded-xl hover:bg-slate-200"><X className="w-5 h-5" /></button>
                 </div>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
@@ -302,7 +426,7 @@ function EditSdmModal({ initial, csirtId, onSave, onClose, loading }: {
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6">
                 <div className="flex items-center justify-between mb-6">
                     <h3 className="font-black text-slate-900 font-display text-xl">Edit SDM</h3>
-                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition p-1 bg-slate-100 rounded-lg hover:bg-slate-200"><X className="w-5 h-5" /></button>
+                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition p-1 bg-slate-100 rounded-xl hover:bg-slate-200"><X className="w-5 h-5" /></button>
                 </div>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
@@ -370,7 +494,7 @@ function SeDetailModal({ se, onClose }: { se: SeCsirt; onClose: () => void }) {
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white rounded-3xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto p-6">
                 <div className="flex items-center justify-between mb-6">
                     <h3 className="font-black text-slate-900 font-display text-xl">Detail SE</h3>
-                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition p-1 bg-slate-100 rounded-lg hover:bg-slate-200"><X className="w-5 h-5" /></button>
+                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition p-1 bg-slate-100 rounded-xl hover:bg-slate-200"><X className="w-5 h-5" /></button>
                 </div>
                 <div className="space-y-3">
                     {rows.map(({ label, value }) => (
@@ -437,7 +561,7 @@ function DownloadDocModal({ fileUrl, fileName, csirtName, onClose }: { fileUrl: 
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white rounded-3xl shadow-2xl w-full max-w-sm max-h-[90vh] overflow-y-auto p-6 text-center">
                 <div className="flex justify-end mb-2">
-                    <button onClick={onClose} disabled={isDownloading} className="text-slate-400 hover:text-slate-600 transition p-1 bg-slate-100 rounded-lg hover:bg-slate-200"><X className="w-5 h-5" /></button>
+                    <button onClick={onClose} disabled={isDownloading} className="text-slate-400 hover:text-slate-600 transition p-1 bg-slate-100 rounded-xl hover:bg-slate-200"><X className="w-5 h-5" /></button>
                 </div>
                 <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Download className="w-8 h-8" />
@@ -461,7 +585,7 @@ export default function CSIRT() {
     const { toast } = useToast();
 
     // ── Hook ────────────────────────────────────────────────────────────────
-    const { createMutation, updateMutation, deleteMutation } = useCsirtProfile();
+    const { createMutation, updateMutation } = useCsirtProfile();
 
     // ── Modal state ─────────────────────────────────────────────────────────
     const [showForm, setShowForm] = useState(false);
@@ -473,9 +597,10 @@ export default function CSIRT() {
 
     // ── Queries ─────────────────────────────────────────────────────────────
     const { data: user } = useUser();
+    const userData = user as any;
     const idPerusahaan: string = String(
-        (user as any)?.id_perusahaan ||
-        (user as any)?.perusahaan?.id ||
+        userData?.id_perusahaan ||
+        userData?.perusahaan?.id ||
         ""
     );
 
@@ -488,6 +613,10 @@ export default function CSIRT() {
         if (!csirtData) return null;
         return Array.isArray(csirtData) ? csirtData[0] : csirtData;
     }, [csirtData]);
+    const companyName =
+        userData?.perusahaan?.nama_perusahaan ||
+        csirt?.perusahaan?.nama_perusahaan ||
+        "Stakeholder";
 
     const activeCsirtId = csirt?.id;
 
@@ -556,14 +685,11 @@ export default function CSIRT() {
     return (
         <RequireCompanyProfile>
             <div className="max-w-7xl mx-auto space-y-6">
-                <div className="flex items-center justify-between mb-2">
-                    <h1 className="text-2xl font-bold font-display text-slate-900">CSIRT</h1>
-                    <div className="flex items-center gap-2 text-sm text-slate-500">
-                        <span className="font-medium text-blue-600 hover:underline cursor-pointer">Dashboards</span>
-                        <ChevronRight className="w-3.5 h-3.5" />
-                        <span className="font-semibold text-slate-900">CSIRT</span>
-                    </div>
-                </div>
+                <PageHeader
+                    icon={Building2}
+                    title={`CSIRT - ${companyName}`}
+                    subtitle="Detail informasi dan manajemen tim respons insiden siber perusahaan."
+                />
 
                 {isLoading ? (
                     <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-blue-600" /></div>
@@ -574,7 +700,7 @@ export default function CSIRT() {
                         <p className="text-sm mt-1 text-slate-500 mb-6">Silakan daftarkan tim CSIRT perusahaan Anda terlebih dahulu.</p>
                         <button
                             onClick={() => { setEditing(null); setShowForm(true); }}
-                            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-blue-600 text-white font-bold shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 hover:scale-105 active:scale-95 transition-all"
+                            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-l from-yellow-400 to-amber-500 text-white font-bold shadow-md shadow-yellow-500/30 hover:shadow-yellow-500/45 hover:scale-[1.01] active:scale-[0.99] transition-all whitespace-nowrap"
                         >
                             <Plus className="w-5 h-5" /> Buat Profil CSIRT
                         </button>
@@ -583,29 +709,36 @@ export default function CSIRT() {
                     <>
                         {/* Main Card */}
                         <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden mb-6">
-                            <div className="bg-[#203db0] p-6 flex items-start justify-between text-white">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 rounded-xl border border-white/20 flex items-center justify-center backdrop-blur-sm">
-                                        <Building2 className="w-6 h-6 text-white" />
-                                    </div>
+                            <div className="px-6 py-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                <div className="flex items-center gap-3">
                                     <div>
-                                        <h2 className="text-xl font-bold">{csirt.nama_csirt || "Nama CSIRT"}</h2>
-                                        <p className="text-blue-100 text-sm mt-0.5">Detail informasi dan manajemen CSIRT</p>
+                                        <h3 className="font-bold text-slate-800 text-lg">Profil CSIRT</h3>
+                                        <p className="text-sm text-slate-500">Detail informasi dan manajemen CSIRT</p>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 self-end sm:self-auto">
                                     <button
-                                        onClick={() => { setEditing(csirt); setShowForm(true); }}
-                                        className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm"
+                                        type="button"
+                                        onClick={async () => {
+                                            try {
+                                                await exportCsirtPdf(companyName);
+                                            } catch (error: any) {
+                                                toast({
+                                                    title: "Export PDF gagal",
+                                                    description: error?.message || "Tidak dapat membuka jendela export.",
+                                                    variant: "destructive",
+                                                });
+                                            }
+                                        }}
+                                        className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-l from-blue-500 to-blue-600 text-white font-bold text-sm shadow-md shadow-blue-500/25 hover:shadow-blue-500/40 hover:scale-[1.01] active:scale-[0.99] transition-all whitespace-nowrap"
                                     >
-                                        <Pencil className="w-4 h-4" /> Edit CSIRT
+                                        <Download className="w-4 h-4" /> Export PDF
                                     </button>
                                     <button
-                                        onClick={() => { if (confirm("Hapus profil CSIRT ini?")) deleteMutation.mutate(activeCsirtId); }}
-                                        className="p-2 transition-colors hover:bg-red-500/20 text-red-200 hover:text-red-100 rounded-lg shrink-0"
-                                        title="Hapus CSIRT"
+                                        onClick={() => { setEditing(csirt); setShowForm(true); }}
+                                        className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-l from-yellow-400 to-amber-500 text-white font-bold text-sm shadow-md shadow-yellow-500/30 hover:shadow-yellow-500/45 hover:scale-[1.01] active:scale-[0.99] transition-all whitespace-nowrap"
                                     >
-                                        <Trash2 className="w-5 h-5" />
+                                        <Pencil className="w-4 h-4" /> Edit CSIRT
                                     </button>
                                 </div>
                             </div>
@@ -711,7 +844,7 @@ export default function CSIRT() {
                         <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden mb-6">
                             <div className="px-6 py-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                 <h3 className="font-bold text-slate-800 text-lg">Tabel Daftar SDM CSIRT</h3>
-                                <button onClick={() => { setEditingSdm(null); setShowSdmModal(true); }} className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold text-sm shadow-md shadow-blue-500/25 hover:shadow-blue-500/40 hover:scale-[1.01] active:scale-[0.99] transition-all whitespace-nowrap">
+                                <button onClick={() => { setEditingSdm(null); setShowSdmModal(true); }} className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-l from-yellow-400 to-amber-500 text-white font-bold text-sm shadow-md shadow-yellow-500/30 hover:shadow-yellow-500/45 hover:scale-[1.01] active:scale-[0.99] transition-all whitespace-nowrap">
                                     <Plus className="w-4 h-4" /> Tambah SDM
                                 </button>
                             </div>
@@ -753,8 +886,8 @@ export default function CSIRT() {
                                                 </td>
                                                 <td className="px-6 py-4">
                                                     <div className="flex items-center justify-center gap-2">
-                                                        <button onClick={() => { setEditingSdm(sdm); setShowSdmModal(true); }} className="p-2 text-emerald-500 bg-emerald-50 rounded-lg hover:bg-emerald-100 transition-colors"><Pencil className="w-4 h-4" /></button>
-                                                        <button onClick={() => handleDeleteSdm(sdm)} disabled={deleteSdmMutation.isPending} className="p-2 text-red-500 bg-red-50 rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50"><Trash2 className="w-4 h-4" /></button>
+                                                        <button onClick={() => { setEditingSdm(sdm); setShowSdmModal(true); }} className="p-2 text-emerald-500 bg-emerald-50 rounded-xl hover:bg-emerald-100 transition-colors"><Pencil className="w-4 h-4" /></button>
+                                                        <button onClick={() => handleDeleteSdm(sdm)} disabled={deleteSdmMutation.isPending} className="p-2 text-red-500 bg-red-50 rounded-xl hover:bg-red-100 transition-colors disabled:opacity-50"><Trash2 className="w-4 h-4" /></button>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -800,7 +933,7 @@ export default function CSIRT() {
                                                 </td>
                                                 <td className="px-6 py-4">
                                                     <div className="flex items-center justify-center gap-2">
-                                                        <button onClick={() => setViewingSe(se)} className="p-2 text-blue-500 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"><Eye className="w-4 h-4" /></button>
+                                                        <button onClick={() => setViewingSe(se)} className="p-2 text-blue-500 bg-blue-50 rounded-xl hover:bg-blue-100 transition-colors"><Eye className="w-4 h-4" /></button>
                                                     </div>
                                                 </td>
                                             </tr>

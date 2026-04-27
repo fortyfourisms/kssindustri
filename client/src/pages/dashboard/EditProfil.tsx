@@ -4,6 +4,7 @@ import { apiClient } from "@/services/apiClient";
 import { perusahaanService } from "@/services/perusahaan.service";
 import { useUser } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { useAuthStore } from "@/stores/auth.store";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -78,7 +79,7 @@ function PicModal({
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden p-6">
                 <div className="flex items-center justify-between mb-6">
                     <h3 className="font-black text-slate-900 text-xl">{initialData ? "Edit PIC" : "Tambah PIC"}</h3>
-                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition p-1 bg-slate-100 rounded-lg"><X className="w-5 h-5" /></button>
+                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition p-1 bg-slate-100 rounded-xl"><X className="w-5 h-5" /></button>
                 </div>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
@@ -106,13 +107,18 @@ function PicModal({
     );
 }
 
-export default function EditProfil() {
+interface EditProfilProps {
+    defaultTab?: "pengguna" | "perusahaan";
+}
+
+export default function EditProfil({ defaultTab = "pengguna" }: EditProfilProps) {
     const { toast } = useToast();
     const qc = useQueryClient();
+    const rehydrateFromServer = useAuthStore((state) => state.rehydrateFromServer);
     const [searchParams] = useSearchParams();
     const [isEditingPengguna, setIsEditingPengguna] = useState(false);
     const [isEditingPerusahaan, setIsEditingPerusahaan] = useState(false);
-    const initialTab = searchParams.get("tab") === "perusahaan" ? "perusahaan" : "pengguna";
+    const initialTab = searchParams.get("tab") === "perusahaan" ? "perusahaan" : defaultTab;
 
     const { data: user, isLoading: isUserLoading } = useUser();
 
@@ -224,9 +230,10 @@ export default function EditProfil() {
             }
             return apiClient.putForm<any>(`/api/perusahaan/${perusahaanId}`, formData);
         },
-        onSuccess: () => {
+        onSuccess: async () => {
             qc.invalidateQueries({ queryKey: ["perusahaan", perusahaanId] });
             qc.invalidateQueries({ queryKey: ["me"] });
+            await rehydrateFromServer();
             toast({ title: "Profil perusahaan diperbarui" });
             setIsEditingPerusahaan(false);
         },
@@ -251,9 +258,10 @@ export default function EditProfil() {
             if (!perusahaanId) throw new Error("ID perusahaan tidak ditemukan");
             return apiClient.putForm<any>(`/api/perusahaan/${perusahaanId}`, formData);
         },
-        onSuccess: () => {
+        onSuccess: async () => {
             qc.invalidateQueries({ queryKey: ["perusahaan", perusahaanId] });
             qc.invalidateQueries({ queryKey: ["me"] });
+            await rehydrateFromServer();
             toast({ title: "Foto/banner perusahaan berhasil diperbarui" });
         },
         onError: (e: any) => toast({ title: "Gagal mengunggah foto", description: e.message, variant: "destructive" }),
@@ -305,7 +313,7 @@ export default function EditProfil() {
                             >
                                 {isEditingPengguna && (
                                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                        <button onClick={() => userBannerInputRef.current?.click()} className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 backdrop-blur text-white text-sm font-medium rounded-lg transition-all">
+                                        <button onClick={() => userBannerInputRef.current?.click()} className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 backdrop-blur text-white text-sm font-medium rounded-xl transition-all">
                                             <ImageIcon className="w-4 h-4" /> Ganti Banner
                                         </button>
                                     </div>
@@ -316,7 +324,7 @@ export default function EditProfil() {
                                 {!isEditingPengguna ? (
                                     <button 
                                         onClick={() => setIsEditingPengguna(true)}
-                                        className="flex items-center gap-2 px-4 py-2 bg-white/90 backdrop-blur hover:bg-white text-slate-700 text-sm font-semibold rounded-full shadow-sm transition-all"
+                                        className="flex items-center gap-2 px-4 py-2 bg-white/90 backdrop-blur hover:bg-white text-slate-700 text-sm font-semibold rounded-xl shadow-sm transition-all"
                                     >
                                         <Edit2 className="w-4 h-4" />
                                         Edit Data
@@ -324,7 +332,7 @@ export default function EditProfil() {
                                 ) : (
                                     <button 
                                         onClick={() => setIsEditingPengguna(false)}
-                                        className="flex items-center gap-2 px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 text-sm font-semibold rounded-full shadow-sm transition-all"
+                                        className="flex items-center gap-2 px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 text-sm font-semibold rounded-xl shadow-sm transition-all"
                                     >
                                         <X className="w-4 h-4" />
                                         Batal
@@ -516,7 +524,7 @@ export default function EditProfil() {
                             >
                                 {isEditingPerusahaan && (
                                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                        <button onClick={() => perusahaanBannerInputRef.current?.click()} className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 backdrop-blur text-white text-sm font-medium rounded-lg transition-all">
+                                        <button onClick={() => perusahaanBannerInputRef.current?.click()} className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 backdrop-blur text-white text-sm font-medium rounded-xl transition-all">
                                             <ImageIcon className="w-4 h-4" /> Ganti Foto/Banner Perusahaan
                                         </button>
                                     </div>
@@ -527,7 +535,7 @@ export default function EditProfil() {
                                 {!isEditingPerusahaan ? (
                                     <button 
                                         onClick={() => setIsEditingPerusahaan(true)}
-                                        className="flex items-center gap-2 px-4 py-2 bg-white/90 backdrop-blur hover:bg-white text-slate-700 text-sm font-semibold rounded-full shadow-sm transition-all"
+                                        className="flex items-center gap-2 px-4 py-2 bg-white/90 backdrop-blur hover:bg-white text-slate-700 text-sm font-semibold rounded-xl shadow-sm transition-all"
                                     >
                                         <Edit2 className="w-4 h-4" />
                                         Edit Data
@@ -535,7 +543,7 @@ export default function EditProfil() {
                                 ) : (
                                     <button 
                                         onClick={() => setIsEditingPerusahaan(false)}
-                                        className="flex items-center gap-2 px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 text-sm font-semibold rounded-full shadow-sm transition-all"
+                                        className="flex items-center gap-2 px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 text-sm font-semibold rounded-xl shadow-sm transition-all"
                                     >
                                         <X className="w-4 h-4" />
                                         Batal
@@ -798,10 +806,10 @@ export default function EditProfil() {
                                                         {isEditingPerusahaan && (
                                                             <td className="px-6 py-4">
                                                                 <div className="flex items-center justify-center gap-2">
-                                                                    <button onClick={() => { setEditingPic(p); setShowPicModal(true); }} className="p-2 text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors tooltip" title="Edit">
+                                                                    <button onClick={() => { setEditingPic(p); setShowPicModal(true); }} className="p-2 text-blue-600 bg-blue-50 rounded-xl hover:bg-blue-100 transition-colors tooltip" title="Edit">
                                                                         <Edit2 className="w-4 h-4" />
                                                                     </button>
-                                                                    <button onClick={() => handleDeletePic(p.id, p.nama)} className="p-2 text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors tooltip" title="Hapus">
+                                                                    <button onClick={() => handleDeletePic(p.id, p.nama)} className="p-2 text-red-600 bg-red-50 rounded-xl hover:bg-red-100 transition-colors tooltip" title="Hapus">
                                                                         <Trash2 className="w-4 h-4" />
                                                                     </button>
                                                                 </div>

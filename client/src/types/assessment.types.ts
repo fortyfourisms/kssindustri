@@ -87,11 +87,14 @@ export interface RespondentProfile {
     updatedAt?: number;
     
     responden?: string;
+    jabatan?: string;
     tanggal?: string;
     target_nilai?: number;
+    kategori_kematangan_keamanan_siber?: string;
     telepon?: string;
     updated_at?: string;
     nama_perusahaan?: string;
+    id_perusahaan?: string | number;
 }
 
 // ─── Results ──────────────────────────────────────────────────────────────────

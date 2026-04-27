@@ -34,9 +34,17 @@ export interface AuthResponse {
 export interface AuthUser {
     id: string;
     username: string;
+    display_name?: string;
     email: string;
     name?: string;
     id_jabatan?: string;
+    jabatan?: string;
+    id_perusahaan?: string;
+    foto_profile?: string;
+    banner?: string;
+    status?: string;
+    mfa_enabled?: boolean;
+    has_company?: boolean;
     role_id?: string;
     role_name?: string;
     role?: string;

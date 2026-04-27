@@ -1,5 +1,14 @@
 // ─── Perusahaan Types ─────────────────────────────────────────────────────────
 
+export interface SubSektorPerusahaan {
+    id: string;
+    id_sektor?: string;
+    nama_sektor?: string;
+    nama_sub_sektor: string;
+    created_at?: string;
+    updated_at?: string;
+}
+
 export interface Perusahaan {
     id: string;
     slug: string;
@@ -10,6 +19,8 @@ export interface Perusahaan {
     telepon: string;
     email: string;
     website: string;
+    id_sub_sektor?: string;
+    sub_sektor?: SubSektorPerusahaan;
     created_at?: string;
     updated_at?: string;
 }

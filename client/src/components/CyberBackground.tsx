@@ -130,16 +130,33 @@ export const CyberBackground: React.FC = () => {
         const iconMaterial = new THREE.LineBasicMaterial({
             color: 0x00ffff,
             transparent: true,
-            opacity: 0.5,
+            opacity: 0.7,
             blending: THREE.AdditiveBlending
         });
 
         const iconGroup = new THREE.Group();
-        const icons: { mesh: THREE.Line; speed: number; floatOffset: number; initialOpacity: number }[] = [];
+        const icons: { mesh: THREE.Group; speed: number; floatOffset: number; initialOpacity: number }[] = [];
         const shieldGeo = createShieldShape();
 
         for (let i = 0; i < 8; i++) {
-            const icon = new THREE.Line(shieldGeo, iconMaterial.clone());
+            const icon = new THREE.Group();
+
+            const outerLine = new THREE.Line(
+                shieldGeo,
+                new THREE.LineBasicMaterial({
+                    color: 0x00ffff,
+                    transparent: true,
+                    opacity: 0.35,
+                    blending: THREE.AdditiveBlending
+                })
+            );
+            outerLine.scale.setScalar(1.08);
+
+            const innerLine = new THREE.Line(shieldGeo, iconMaterial.clone());
+
+            icon.add(outerLine);
+            icon.add(innerLine);
+
             icon.position.set(
                 (Math.random() - 0.5) * 110,
                 Math.random() * 20 - 2,
@@ -295,7 +312,10 @@ export const CyberBackground: React.FC = () => {
             icons.forEach((icon) => {
                 icon.mesh.position.y += Math.sin(frame + icon.floatOffset) * 0.01;
                 icon.mesh.rotation.y += 0.005;
-                (icon.mesh.material as THREE.LineBasicMaterial).opacity = icon.initialOpacity * animProps.iconOpacityMult;
+                icon.mesh.children.forEach((child, index) => {
+                    const material = (child as THREE.Line).material as THREE.LineBasicMaterial;
+                    material.opacity = icon.initialOpacity * animProps.iconOpacityMult * (index === 0 ? 0.6 : 1);
+                });
             });
 
             gridMaterial.opacity = animProps.horizonOpacity;
@@ -430,6 +450,11 @@ export const CyberBackground: React.FC = () => {
             tex1.dispose();
             shieldGeo.dispose();
             iconMaterial.dispose();
+            iconGroup.traverse((child) => {
+                if (child instanceof THREE.Line) {
+                    child.material.dispose();
+                }
+            });
             renderer.dispose();
 
             if (mountRef.current && renderer.domElement.parentNode === mountRef.current) {

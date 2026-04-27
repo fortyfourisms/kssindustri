@@ -10,9 +10,10 @@ import KseQuestionCard from "@/components/assessment/KseQuestionCard";
 import ProgressBar from "@/components/assessment/ProgressBar";
 import PaginationControl from "@/components/assessment/PaginationControl";
 import { kseCategories, getKategoriSE } from "@/data/kse-data";
+import { getKseEditRequestStatus, getKseEditStatusMeta, getLatestKseEditRequest, type KseEditRequestRecord } from "@/lib/kse-edit-request";
 import {
     Monitor, ChevronRight, ArrowLeft, Save, CheckCircle2, Edit2,
-    BarChart3, Scale, Loader2, AlertCircle, FileText, Server
+    BarChart3, Scale, Loader2, AlertCircle, FileText, Lock, Server
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -42,7 +43,7 @@ interface KseRespondentProfile {
 }
 
 // ── Constants ────────────────────────────────────────────────────────────────
-const QUESTIONS_PER_PAGE = 5;
+const QUESTIONS_PER_PAGE = 10;
 const MAX_SCORE = 50;
 
 const QUESTION_TO_FIELD: Record<string, string> = {
@@ -90,6 +91,11 @@ export default function FormKse() {
         queryFn: () => csirtService.getSeById(editId),
         enabled: !!user && !!editId,
     });
+    const { data: editRequestData } = useQuery<any>({
+        queryKey: ["se-edit-requests"],
+        queryFn: api.getKseEditRequests,
+        enabled: !!user,
+    });
 
     // Fetch the company's own CSIRT record to get id_csirt for new SE records
     const { data: csirtData } = useQuery<any>({
@@ -113,6 +119,15 @@ export default function FormKse() {
     //   Edit mode → seById (fetched above)
     //   Add mode  → null  (always blank)
     const existingSe = editId ? (seById ?? null) : null;
+    const editRequests = useMemo<KseEditRequestRecord[]>(() => {
+        if (Array.isArray(editRequestData?.data)) return editRequestData.data;
+        if (Array.isArray(editRequestData)) return editRequestData;
+        return [];
+    }, [editRequestData]);
+    const editRequestStatus = useMemo(() => getKseEditRequestStatus(existingSe, editRequests), [existingSe, editRequests]);
+    const editRequestMeta = useMemo(() => getKseEditStatusMeta(editRequestStatus), [editRequestStatus]);
+    const latestEditRequest = useMemo(() => getLatestKseEditRequest(existingSe, editRequests), [existingSe, editRequests]);
+    const isEditLocked = !!editId && editRequestStatus !== 'approved';
 
     // ── Step state ───────────────────────────────────────────────────────────
     const [currentStep, setCurrentStep] = useState(1);
@@ -315,6 +330,7 @@ export default function FormKse() {
 
     // ── Handlers ─────────────────────────────────────────────────────────────
     const handleRespondentChange = (field: keyof KseRespondentProfile, value: string) => {
+        if (isEditLocked) return;
         setRespondent(prev => ({ ...prev, [field]: value }));
         if (formErrors[field]) {
             setFormErrors(prev => { const n = { ...prev }; delete n[field]; return n; });
@@ -331,6 +347,7 @@ export default function FormKse() {
 
     const handleRespondentSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        if (isEditLocked) return;
         if (!validateRespondentForm()) return;
         localStorage.setItem(PROFILE_KEY, JSON.stringify(respondent));
         setCurrentStep(2);
@@ -373,14 +390,22 @@ export default function FormKse() {
 
     useEffect(() => { setCurrentPage(1); }, [currentCategoryId]);
 
-    const handleEditData = () => { setCurrentStep(1); };
+    const handleEditData = () => {
+        if (isEditLocked) return;
+        setCurrentStep(1);
+    };
 
     const handleEditAnswers = () => {
+        if (isEditLocked) return;
         setIsSubmitted(false);
         toast({ title: "Mode edit aktif", description: "Silakan ubah jawaban Anda." });
     };
 
     const handleSaveAndExit = async () => {
+        if (isEditLocked) {
+            toast({ title: editRequestMeta.label, description: editRequestMeta.description, variant: "destructive" });
+            return;
+        }
         setIsSaving(true);
         try {
             const penilaianPayload: Record<string, string> = {};
@@ -422,6 +447,7 @@ export default function FormKse() {
                 }
                 // Invalidate the SE list so the score table on /dashboard/kse shows updated values
                 await queryClient.invalidateQueries({ queryKey: ["se"] });
+                await queryClient.invalidateQueries({ queryKey: ["se-edit-requests"] });
                 setIsSubmitted(true);
                 toast({ title: "Berhasil!", description: "Assessment berhasil diselesaikan dan disimpan." });
                 setTimeout(() => navigate('/dashboard/kse'), 1200);
@@ -518,9 +544,25 @@ export default function FormKse() {
                                         <AlertCircle className="w-4 h-4 text-blue-500 shrink-0" />
                                         <span className="text-[13px] text-blue-700">Data instansi diambil otomatis dari profil perusahaan.</span>
                                     </div>
+                                    {editId && (
+                                        <div className={`flex items-start gap-3 rounded-xl px-4 py-3 mb-5 ${editRequestMeta.badgeClassName}`}>
+                                            <Lock className="w-4 h-4 mt-0.5 shrink-0" />
+                                            <div>
+                                                <p className="text-sm font-bold">{editRequestMeta.label}</p>
+                                                <p className="text-[13px] opacity-90">{editRequestMeta.description}</p>
+                                                {latestEditRequest?.catatan_user && (
+                                                    <p className="text-[13px] opacity-90 mt-1">Catatan user: {latestEditRequest.catatan_user}</p>
+                                                )}
+                                                {latestEditRequest?.catatan && (
+                                                    <p className="text-[13px] opacity-90 mt-1">Catatan admin: {latestEditRequest.catatan}</p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
 
                                     <form onSubmit={handleRespondentSubmit} noValidate>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <fieldset disabled={isEditLocked} className={isEditLocked ? 'opacity-80' : ''}>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             {/* Nama Instansi */}
                                             <div>
                                                 <label className="block text-sm font-semibold text-slate-600 mb-1.5">Nama Instansi / Perusahaan</label>
@@ -592,26 +634,28 @@ export default function FormKse() {
                                             </div>
 
 
-                                        </div>
+                                            </div>
 
-                                        {/* Actions */}
-                                        <div className="flex flex-col-reverse sm:flex-row justify-between items-stretch sm:items-center gap-3 mt-6 pt-4 border-t border-slate-100">
-                                            <button
-                                                type="button"
-                                                onClick={() => navigate('/dashboard/kse')}
-                                                className="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 transition-colors flex items-center gap-2"
-                                            >
-                                                <ArrowLeft className="w-4 h-4" /> Kembali
-                                            </button>
-                                            <button
-                                                type="submit"
-                                                className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold text-sm shadow-md shadow-blue-500/25
-                                                        hover:shadow-blue-500/40 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2"
-                                            >
-                                                Mulai Kategorisasi
-                                                <ChevronRight className="w-4 h-4" />
-                                            </button>
-                                        </div>
+                                            {/* Actions */}
+                                            <div className="flex flex-col-reverse sm:flex-row justify-between items-stretch sm:items-center gap-3 mt-6 pt-4 border-t border-slate-100">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => navigate('/dashboard/kse')}
+                                                    className="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 transition-colors flex items-center gap-2"
+                                                >
+                                                    <ArrowLeft className="w-4 h-4" /> Kembali
+                                                </button>
+                                                <button
+                                                    type="submit"
+                                                    disabled={isEditLocked}
+                                                    className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold text-sm shadow-md shadow-blue-500/25
+                                                        hover:shadow-blue-500/40 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:hover:scale-100"
+                                                >
+                                                    Mulai Kategorisasi
+                                                    <ChevronRight className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        </fieldset>
                                     </form>
                                 </div>
                             </div>
@@ -622,13 +666,13 @@ export default function FormKse() {
                     {currentStep === 2 && (
                         <motion.div
                             key="step2"
-                            initial={{ opacity: 0, y: 16 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -16 }}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
                             transition={{ duration: 0.3 }}
                         >
                             {/* Progress Bar */}
-                            <div className="sticky top-[74px] z-[99] -mt-2.5 mb-6">
+                            <div className="sticky top-0 z-[99] mb-6 pt-2 pb-2 -mt-2 bg-[#f5f7ff]">
                                 <div className="bg-white/80 backdrop-blur-md border border-slate-200/60 rounded-2xl p-4 shadow-sm">
                                     <ProgressBar
                                         answered={answeredCount}
@@ -640,10 +684,26 @@ export default function FormKse() {
                                 </div>
                             </div>
 
+                            {editId && (
+                                <div className={`mb-5 flex items-start gap-3 rounded-2xl px-4 py-3 ${editRequestMeta.badgeClassName}`}>
+                                    <Lock className="w-4 h-4 mt-0.5 shrink-0" />
+                                    <div>
+                                        <p className="text-sm font-bold">{editRequestMeta.label}</p>
+                                        <p className="text-[13px] opacity-90">{editRequestMeta.description}</p>
+                                        {latestEditRequest?.catatan_user && (
+                                            <p className="text-[13px] opacity-90 mt-1">Catatan user: {latestEditRequest.catatan_user}</p>
+                                        )}
+                                        {latestEditRequest?.catatan && (
+                                            <p className="text-[13px] opacity-90 mt-1">Catatan admin: {latestEditRequest.catatan}</p>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
                             <div className="grid grid-cols-1 lg:grid-cols-4 gap-5">
                                 {/* ── Sidebar ── */}
                                 <div className="lg:col-span-1">
-                                    <div className="lg:sticky lg:top-[200px] space-y-4">
+                                    <div className="lg:sticky lg:top-[90px] space-y-4">
 
                                         {/* Score / Gauge Card */}
                                         <div className="bg-white rounded-2xl border border-slate-100/50 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 overflow-hidden">
@@ -691,7 +751,7 @@ export default function FormKse() {
                                                 <>
                                                     <button
                                                         onClick={handleSaveAndExit}
-                                                        disabled={isSaving}
+                                                        disabled={isSaving || isEditLocked}
                                                         className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-[14px] font-bold text-[13px] text-white transition-all duration-300 relative overflow-hidden
                                                                 ${isAllAnswered
                                                                 ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 shadow-md shadow-emerald-500/30 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-emerald-500/40'
@@ -709,8 +769,9 @@ export default function FormKse() {
                                                     </button>
                                                     <button
                                                         onClick={handleEditData}
+                                                        disabled={isEditLocked}
                                                         className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-[14px] font-bold text-[13px] text-blue-600 bg-blue-50 border border-blue-100
-                                                                hover:bg-blue-100/80 hover:-translate-y-0.5 transition-all duration-300"
+                                                                hover:bg-blue-100/80 hover:-translate-y-0.5 transition-all duration-300 disabled:opacity-60 disabled:hover:translate-y-0"
                                                     >
                                                         <Edit2 className="w-4 h-4" /> Edit Data Responden
                                                     </button>
@@ -718,8 +779,9 @@ export default function FormKse() {
                                             ) : (
                                                 <button
                                                     onClick={handleEditAnswers}
+                                                    disabled={isEditLocked}
                                                     className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-[14px] font-bold text-[13px] text-amber-600 bg-amber-50 border border-amber-100
-                                                            hover:bg-amber-100/80 hover:-translate-y-0.5 transition-all duration-300"
+                                                            hover:bg-amber-100/80 hover:-translate-y-0.5 transition-all duration-300 disabled:opacity-60 disabled:hover:translate-y-0"
                                                 >
                                                     <Edit2 className="w-4 h-4" /> Edit Data
                                                 </button>
@@ -781,22 +843,24 @@ export default function FormKse() {
                                                     key={q.no}
                                                     question={q}
                                                     selectedOption={answers[q.no]?.selectedOption}
-                                                    readonly={isSubmitted}
+                                                    readonly={isSubmitted || isEditLocked}
                                                     onAnswer={handleAnswer}
                                                 />
                                             ))}
 
                                             {/* Pagination */}
-                                            <div className="mt-8 pt-5 border-t border-slate-200">
-                                                <PaginationControl
-                                                    currentPage={currentPage}
-                                                    totalPages={totalPagesInCategory}
-                                                    canGoPrevious={canGoPrevious}
-                                                    canGoNext={canGoNext}
-                                                    onPrevious={prevPage}
-                                                    onNext={nextPage}
-                                                />
-                                            </div>
+                                            {totalPagesInCategory > 1 && (
+                                                <div className="mt-8 pt-5 border-t border-slate-200">
+                                                    <PaginationControl
+                                                        currentPage={currentPage}
+                                                        totalPages={totalPagesInCategory}
+                                                        canGoPrevious={canGoPrevious}
+                                                        canGoNext={canGoNext}
+                                                        onPrevious={prevPage}
+                                                        onNext={nextPage}
+                                                    />
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 </div>

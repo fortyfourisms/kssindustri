@@ -1,4 +1,4 @@
-import { apiClient } from './apiClient';
+import { apiClient } from '@/services/apiClient';
 import type {
     IkasData, CreateIkasPayload, UpdateIkasPayload,
     DomainSlug, SaveJawabanPayload,
@@ -41,10 +41,17 @@ export const ikasService = {
         return normalizeList<IkasData>(res);
     },
 
-    /** GET /api/ikas — Fetch IKAS record(s) for the currently logged-in user */
-    async getMyIkas(): Promise<IkasData | IkasData[] | null> {
+    /** GET /api/maturity/ikas — Fetch IKAS record(s) for the currently logged-in user */
+    async getMyIkas(idPerusahaan?: string | number): Promise<IkasData | IkasData[] | null> {
         try {
-            const res = await apiClient.get<any>('/api/ikas');
+            const params = new URLSearchParams();
+            if (idPerusahaan !== null && idPerusahaan !== undefined && String(idPerusahaan).trim()) {
+                params.set('id_perusahaan', String(idPerusahaan).trim());
+            }
+            const path = params.size > 0
+                ? `/api/maturity/ikas?${params.toString()}`
+                : '/api/maturity/ikas';
+            const res = await apiClient.get<any>(path);
             return res ?? null;
         } catch {
             return null;
