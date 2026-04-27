@@ -65,7 +65,7 @@ export default function Login() {
         <div
             ref={containerRef}
             onMouseMove={handleMouseMove}
-            className="min-h-screen grid lg:grid-cols-2 relative selection:bg-blue-100 font-sans overflow-hidden bg-[#5046e5]"
+            className="min-h-screen grid lg:grid-cols-2 relative selection:bg-blue-100 font-sans overflow-hidden bg-white"
         >
             {/* Interactive Mouse-Following Gradient Background */}
             <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
@@ -73,13 +73,13 @@ export default function Login() {
                 <div
                     className="absolute inset-0 z-10 transition-opacity duration-300 mix-blend-overlay"
                     style={{
-                        background: `radial-gradient(800px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(255, 255, 255, 0.4), transparent 60%)`
+                        background: `radial-gradient(800px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(59, 130, 246, 0.12), transparent 60%)`
                     }}
                 />
                 <div
                     className="absolute inset-0 z-10 transition-opacity duration-300 pointer-events-none"
                     style={{
-                        background: `radial-gradient(400px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(255, 255, 255, 0.6), transparent 80%)`
+                        background: `radial-gradient(400px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(255, 255, 255, 0.85), transparent 80%)`
                     }}
                 />
 
@@ -98,14 +98,14 @@ export default function Login() {
                     }
                     `}
                 </style>
-                <div className="absolute top-[20%] left-[-20%] w-[100%] h-[100%] bg-[#0000FF] rounded-full blur-[120px] opacity-90" style={{ animation: 'blob-float-1 15s ease-in-out infinite' }} />
-                <div className="absolute top-[10%] right-[-10%] w-[80%] h-[90%] bg-[#E0F2FE] rounded-full blur-[100px] opacity-80" style={{ animation: 'blob-float-2 18s ease-in-out infinite' }} />
-                <div className="absolute top-[-10%] right-[-5%] w-[50%] h-[50%] bg-[#C084FC] rounded-full blur-[80px] opacity-60" style={{ animation: 'blob-float-1 22s ease-in-out infinite reverse' }} />
-                <div className="absolute bottom-[-20%] right-[10%] w-[70%] h-[60%] bg-[#818CF8] rounded-full blur-[110px] opacity-70" style={{ animation: 'blob-float-2 16s ease-in-out infinite reverse' }} />
+                <div className="absolute top-[20%] left-[-20%] w-[100%] h-[100%] bg-[#DBEAFE] rounded-full blur-[120px] opacity-90" style={{ animation: 'blob-float-1 15s ease-in-out infinite' }} />
+                <div className="absolute top-[10%] right-[-10%] w-[80%] h-[90%] bg-[#FFFFFF] rounded-full blur-[100px] opacity-95" style={{ animation: 'blob-float-2 18s ease-in-out infinite' }} />
+                <div className="absolute top-[-10%] right-[-5%] w-[50%] h-[50%] bg-[#BFDBFE] rounded-full blur-[80px] opacity-70" style={{ animation: 'blob-float-1 22s ease-in-out infinite reverse' }} />
+                <div className="absolute bottom-[-20%] right-[10%] w-[70%] h-[60%] bg-[#93C5FD] rounded-full blur-[110px] opacity-65" style={{ animation: 'blob-float-2 16s ease-in-out infinite reverse' }} />
 
                 {/* Noise/Texture Overlay */}
                 <div className="absolute inset-0 bg-[url('/noise.svg')] opacity-[0.03] mix-blend-overlay z-20" />
-                <div className="absolute inset-0 bg-gradient-to-tr from-black/10 via-transparent to-white/10 z-20" />
+                <div className="absolute inset-0 bg-gradient-to-tr from-blue-100/50 via-transparent to-white/80 z-20" />
             </div>
 
             {/* Left Side */}
@@ -125,9 +125,9 @@ export default function Login() {
                     </div>
 
                     {/* Bottom Section: Text Content */}
-                    <div className="mt-auto max-w-lg text-white">
-                        <div className="bg-white/10 backdrop-blur-md border border-white/20 p-6 rounded-2xl mb-8">
-                            <p className="text-white/90 text-sm leading-relaxed italic">
+                    <div className="mt-auto max-w-lg text-slate-900">
+                        <div className="bg-white/80 backdrop-blur-md border border-blue-100 p-6 rounded-2xl mb-8 shadow-lg shadow-blue-100/50">
+                            <p className="text-slate-700 text-sm leading-relaxed italic">
                                 "Cybersecurity is not just about protecting your devices. It's about protecting yourself." - Anonymous
                             </p>
                         </div>
@@ -153,8 +153,8 @@ export default function Login() {
                     <div className="mb-10 lg:hidden flex justify-center">
                         <Link to="/">
                             <div className="flex items-center gap-2 cursor-pointer group">
-                                <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-600/20 group-hover:scale-105 transition-transform">
-                                    <ShieldCheck className="w-6 h-6 text-white" />
+                                <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg shadow-blue-600/20 group-hover:scale-105 transition-transform">
+                                    <img src={Logo} alt="Logo" className="w-6 h-6 object-contain" />
                                 </div>
                                 <span className="text-xl font-display font-black tracking-tight text-slate-900">
                                     FortyFour
@@ -200,15 +200,6 @@ export default function Login() {
                             {errors.password && (
                                 <p className="text-red-500 text-xs font-semibold mt-1 ml-1">{errors.password.message}</p>
                             )}
-                        </div>
-
-                        <div className="flex items-center justify-between text-xs font-semibold px-1 mt-2">
-                            <label className="flex items-center gap-2 cursor-pointer group">
-                                <input type="checkbox" className="rounded bg-slate-200 border-none text-blue-600 focus:ring-blue-500/20 w-4 h-4 cursor-pointer" />
-                                <span className="text-slate-500 group-hover:text-slate-700 transition-colors tracking-wide">
-                                    Remember me
-                                </span>
-                            </label>
                         </div>
 
                         <button

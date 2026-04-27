@@ -5,6 +5,9 @@ import { Menu, X } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 type NavbarMode = "landing" | "preview";
+type LandingScrollState = {
+  scrollTarget?: string;
+};
 
 type NavbarProps = {
   mode?: NavbarMode;
@@ -26,6 +29,7 @@ export function Navbar({ mode = "landing" }: NavbarProps) {
             { name: "About", href: "/#about" },
             { name: "Features", href: "/#features" },
             { name: "Courses", href: "/#courses" },
+            { name: "Events", href: "/#events" },
             { name: "Blog", href: "/#blog" },
             { name: "FAQ", href: "/#faq" },
           ]
@@ -34,6 +38,7 @@ export function Navbar({ mode = "landing" }: NavbarProps) {
             { name: "About", href: "#about" },
             { name: "Features", href: "#features" },
             { name: "Courses", href: "#courses" },
+            { name: "Events", href: "#events" },
             { name: "Blog", href: "#blog" },
             { name: "FAQ", href: "#faq" },
           ],
@@ -45,7 +50,17 @@ export function Navbar({ mode = "landing" }: NavbarProps) {
       const handlePreviewScroll = () => {
         setScrolled(window.scrollY > 20);
         setIsAtBottom(false);
-        setActiveSection(location.pathname.startsWith("/blog/") ? "Blog" : "Courses");
+        if (location.pathname.startsWith("/blog/")) {
+          setActiveSection("Blog");
+          return;
+        }
+
+        if (location.pathname.startsWith("/events")) {
+          setActiveSection("Events");
+          return;
+        }
+
+        setActiveSection("Courses");
       };
 
       window.addEventListener("scroll", handlePreviewScroll);
@@ -100,9 +115,8 @@ export function Navbar({ mode = "landing" }: NavbarProps) {
     if (href.startsWith("/")) {
       const [pathname, hash = ""] = href.split("#");
       if (location.pathname !== pathname) {
-        navigate({
-          pathname,
-          hash: hash ? `#${hash}` : "",
+        navigate(pathname, {
+          state: hash ? ({ scrollTarget: hash } satisfies LandingScrollState) : undefined,
         });
       } else if (!hash) {
         window.scrollTo({ top: 0, behavior: "smooth" });

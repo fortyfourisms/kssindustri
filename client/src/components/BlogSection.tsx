@@ -37,25 +37,12 @@ export function BlogSection() {
       <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_300px] lg:items-end">
           <div className="max-w-3xl">
-            <h2 className="mt-5 text-4xl md:text-6xl font-display font-medium tracking-tight text-slate-900 leading-tight">
+            <h2 className="text-5xl md:text-6xl font-display font-medium text-slate-900 tracking-tight leading-tight">
               Artikel untuk memperkuat
-              <span className="block text-transparent bg-clip-text bg-gradient-to-r from-[#1f3c88] via-[#0061ff] to-[#60efff]">
+              <span className="block text-slate-400">
                 pemahaman keamanan siber
               </span>
             </h2>
-            <p className="mt-5 max-w-2xl text-base md:text-lg leading-relaxed text-slate-600">
-              Kumpulan artikel singkat yang membantu tim memahami awareness, strategi, dan kesiapan operasional. Beberapa artikel juga terhubung langsung ke LMS agar pembaca bisa lanjut belajar tanpa putus konteks.
-            </p>
-          </div>
-
-          <div className="rounded-[2rem] border border-white/60 bg-white/80 p-6 shadow-[0_24px_80px_rgba(31,60,136,0.10)] backdrop-blur-xl">
-            <p className="text-sm font-semibold uppercase tracking-[0.22em] text-slate-400">Fokus minggu ini</p>
-            <p className="mt-4 text-2xl font-bold leading-snug text-slate-900">
-              {blogArticles.length} artikel pilihan untuk memperluas wawasan tim.
-            </p>
-            <p className="mt-3 text-sm leading-relaxed text-slate-600">
-              Dirancang agar mudah dibaca cepat, lalu dilanjutkan ke materi pembelajaran yang lebih terstruktur.
-            </p>
           </div>
         </div>
 

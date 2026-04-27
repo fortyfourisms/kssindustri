@@ -35,16 +35,13 @@ export function CourseShowcase() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        <div className="max-w-3xl mb-12 md:mb-16">
-          <h2 className="mt-5 text-4xl md:text-6xl font-display font-medium tracking-tight text-slate-900 leading-tight">
-            Program pembelajaran
-            <span className="block text-transparent bg-clip-text bg-gradient-to-r from-[#1f3c88] via-[#0061ff] to-[#60efff]">
-              keamanan siber
+        <div className="mb-12 text-center md:mb-16 mx-auto max-w-3xl">
+          <h2 className="text-5xl md:text-6xl font-display font-medium text-slate-900 tracking-tight leading-tight">
+            Program Pembelajaran
+            <span className="block text-transparent bg-clip-text bg-gradient-to-r from-[#0061ff] to-[#60efff]">
+              Keamanan Siber
             </span>
           </h2>
-          <p className="mt-5 max-w-2xl text-base md:text-lg leading-relaxed text-slate-600">
-            Rangkaian kelas untuk memperkuat awareness, tata kelola, dan kapabilitas teknis keamanan siber dengan tampilan yang selaras dengan identitas visual landing page.
-          </p>
         </div>
 
         <motion.div

@@ -21,6 +21,8 @@ import MfaVerify from "@/pages/MfaVerify";
 import NotFound from "@/pages/not-found";
 import CoursePreview from "@/pages/CoursePreview";
 import BlogArticle from "@/pages/BlogArticle";
+import Events from "@/pages/Events";
+import EventDetail from "@/pages/EventDetail";
 import OnboardingPerusahaan from "@/pages/OnboardingPerusahaan";
 
 import Dashboard from "@/pages/dashboard/Dashboard";
@@ -56,6 +58,8 @@ const router = createBrowserRouter([
   { path: "/mfa", element: <MfaVerify /> },
   { path: "/course-preview/:slug", element: <CoursePreview /> },
   { path: "/blog/:slug", element: <BlogArticle /> },
+  { path: "/events", element: <Events /> },
+  { path: "/events/:eventId", element: <EventDetail /> },
   {
     path: "/onboarding-perusahaan",
     element: (

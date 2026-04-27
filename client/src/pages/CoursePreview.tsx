@@ -4,7 +4,6 @@ import { getCourseShowcaseBySlug } from "@/data/courseShowcase";
 import { motion } from "framer-motion";
 import {
   ArrowLeft,
-  BadgeCheck,
   BookOpen,
   ChevronRight,
   ClipboardList,
@@ -86,10 +85,6 @@ export default function CoursePreview() {
                   <div className="inline-flex items-center gap-2">
                     <UserRound className="h-4 w-4 text-blue-600" />
                     {course.provider}
-                  </div>
-                  <div className="inline-flex items-center gap-2">
-                    <BadgeCheck className="h-4 w-4 text-cyan-600" />
-                    Preview kelas cyber security
                   </div>
                 </div>
 

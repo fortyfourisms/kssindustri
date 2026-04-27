@@ -6,6 +6,7 @@ import { Features } from "@/components/Features";
 import { UsageFlow } from "@/components/UsageFlow";
 import { Security } from "@/components/Security";
 import { CourseShowcase } from "@/components/CourseShowcase";
+import { EventSection } from "@/components/EventSection";
 import { BlogSection } from "@/components/BlogSection";
 import { FAQ } from "@/components/FAQ";
 import { CTA } from "@/components/CTA";
@@ -15,27 +16,34 @@ import { LoadingScreen } from "@/components/LoadingScreen";
 import { AnimatePresence, motion } from "framer-motion";
 import { useLocation } from "react-router-dom";
 
+type LandingScrollState = {
+  scrollTarget?: string;
+};
+
 export default function Home() {
   const [isLoading, setIsLoading] = useState(true);
   const location = useLocation();
+  const scrollTarget = (location.state as LandingScrollState | null)?.scrollTarget;
 
   useEffect(() => {
     if (isLoading) {
       return;
     }
 
-    if (!location.hash) {
+    const selector = scrollTarget ? `#${scrollTarget}` : location.hash;
+
+    if (!selector) {
       window.scrollTo({ top: 0, behavior: "auto" });
       return;
     }
 
-    const element = document.querySelector(location.hash);
+    const element = document.querySelector(selector);
     if (element) {
       requestAnimationFrame(() => {
         element.scrollIntoView({ behavior: "smooth", block: "start" });
       });
     }
-  }, [isLoading, location.hash]);
+  }, [isLoading, location.hash, scrollTarget]);
 
   return (
     <div className="min-h-screen bg-background font-sans selection:bg-primary selection:text-white relative overflow-x-hidden">
@@ -59,6 +67,7 @@ export default function Home() {
           <UsageFlow />
           <Security />
           <CourseShowcase />
+          <EventSection />
           <BlogSection />
           <div className="relative overflow-hidden">
             {/* Mesh Gradient Background */}

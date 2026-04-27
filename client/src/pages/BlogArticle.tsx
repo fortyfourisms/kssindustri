@@ -58,7 +58,7 @@ export default function BlogArticle() {
             transition={{ duration: 0.6 }}
             className="mt-6 overflow-hidden rounded-[2rem] border border-white/60 bg-white/85 shadow-[0_24px_100px_rgba(31,60,136,0.10)] backdrop-blur-xl"
           >
-            <div className="grid gap-8 p-6 md:p-8 lg:grid-cols-[minmax(0,1fr)_320px]">
+            <div className="p-6 md:p-8">
               <div>
                 <div className="flex flex-wrap items-center gap-3">
                   <span className="inline-flex rounded-full bg-slate-900 px-3 py-1.5 text-xs font-bold text-white">
@@ -73,32 +73,10 @@ export default function BlogArticle() {
                     {article.readingTime}
                   </span>
                 </div>
-
                 <h1 className="mt-5 text-3xl md:text-5xl font-display font-semibold tracking-tight text-slate-900 leading-tight">
                   {article.title}
                 </h1>
-
-                <p className="mt-5 max-w-3xl text-lg leading-relaxed text-slate-600">
-                  {article.excerpt}
-                </p>
-
-                <div className="mt-8 rounded-[2rem] bg-gradient-to-br from-[#1f3c88] via-[#0061ff] to-[#60efff] p-8 md:p-10 text-white shadow-[0_24px_80px_rgba(0,97,255,0.25)]">
-                  <div className="flex items-center gap-3 text-sm font-semibold uppercase tracking-[0.24em] text-white/75">
-                    <BookOpen className="h-4 w-4" />
-                    Insight utama
-                  </div>
-                  <p className="mt-5 max-w-3xl text-2xl md:text-3xl font-semibold leading-snug">
-                    {article.highlight}
-                  </p>
-                </div>
-              </div>
-
-              <aside className="lg:pt-16">
-                <div className="sticky top-28 rounded-[1.75rem] border border-[#0061ff]/10 bg-white/90 p-6 shadow-[0_20px_60px_rgba(0,97,255,0.10)] backdrop-blur-sm">
-                  <p className="text-sm font-semibold uppercase tracking-[0.22em] text-slate-400">
-                    Metadata
-                  </p>
-                  <div className="mt-5 space-y-4 text-sm text-slate-600">
+                <div className="mt-5 space-y-4 text-sm text-slate-600">
                     <div>
                       <p className="font-semibold text-slate-900">Penulis</p>
                       <p className="mt-1">{article.author}</p>
@@ -118,8 +96,7 @@ export default function BlogArticle() {
                       </div>
                     </div>
                   </div>
-                </div>
-              </aside>
+              </div>
             </div>
           </motion.section>
 
@@ -153,27 +130,6 @@ export default function BlogArticle() {
                   ))}
                 </div>
               </section>
-
-              {article.cta && (
-                <section className="overflow-hidden rounded-[2rem] border border-[#0061ff]/10 bg-gradient-to-r from-[#1f3c88] via-[#0061ff] to-[#22d3ee] p-6 md:p-8 text-white shadow-[0_24px_80px_rgba(0,97,255,0.24)]">
-                  <p className="text-sm font-semibold uppercase tracking-[0.22em] text-white/75">
-                    CTA LMS
-                  </p>
-                  <h2 className="mt-3 text-2xl md:text-3xl font-bold leading-tight">
-                    {article.cta.title}
-                  </h2>
-                  <p className="mt-4 max-w-2xl text-base leading-relaxed text-white/85">
-                    {article.cta.description}
-                  </p>
-                  <button
-                    onClick={() => navigate(article.cta!.href)}
-                    className="mt-6 inline-flex items-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-bold text-[#1f3c88] transition-transform hover:scale-[1.02]"
-                  >
-                    {article.cta.label}
-                    <ArrowRight className="h-4 w-4" />
-                  </button>
-                </section>
-              )}
             </div>
 
             <aside className="space-y-6">
