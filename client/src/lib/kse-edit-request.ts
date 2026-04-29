@@ -103,19 +103,19 @@ export function getKseEditStatusMeta(status: KseEditRequestStatus) {
         case 'pending_approval':
             return {
                 label: 'Menunggu Persetujuan Admin',
-                description: 'Data KSE terkunci sampai admin meninjau pengajuan.',
+                description: 'Pengajuan perubahan sedang direview admin. Data utama belum berubah.',
                 badgeClassName: 'bg-amber-50 border border-amber-200 text-amber-700',
             };
         case 'approved':
             return {
-                label: 'Edit Disetujui',
-                description: 'User dapat membuka kembali form dan mengubah data KSE.',
+                label: 'Perubahan Disetujui',
+                description: 'Pengajuan terakhir sudah disetujui admin dan perubahan telah diterapkan.',
                 badgeClassName: 'bg-emerald-50 border border-emerald-200 text-emerald-700',
             };
         case 'rejected':
             return {
                 label: 'Pengajuan Ditolak',
-                description: 'Data tetap terkunci sampai ada pengajuan baru yang disetujui.',
+                description: 'Pengajuan terakhir ditolak. Data utama tetap sama sampai ada pengajuan baru yang disetujui.',
                 badgeClassName: 'bg-rose-50 border border-rose-200 text-rose-700',
             };
         default:
