@@ -1,12 +1,19 @@
-import { useEffect, useRef, useState } from "react";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
 
 type TurnstileWidgetProps = {
     siteKey: string;
     onVerify: (token: string) => void;
     onExpire?: () => void;
     onError?: (error?: unknown) => void;
+    onTimeout?: () => void;
     theme?: "light" | "dark" | "auto";
     size?: "normal" | "flexible" | "compact";
+    retry?: "auto" | "never";
+    retryInterval?: number;
+};
+
+export type TurnstileWidgetHandle = {
+    reset: () => void;
 };
 
 declare global {
@@ -19,8 +26,11 @@ declare global {
                     callback?: (token: string) => void;
                     "expired-callback"?: () => void;
                     "error-callback"?: (error?: unknown) => void;
+                    "timeout-callback"?: () => void;
                     theme?: "light" | "dark" | "auto";
                     size?: "normal" | "flexible" | "compact";
+                    retry?: "auto" | "never";
+                    "retry-interval"?: number;
                 }
             ) => string;
             remove?: (widgetId: string) => void;
@@ -124,17 +134,31 @@ function loadTurnstileScript(): Promise<NonNullable<Window["turnstile"]>> {
     });
 }
 
-export function TurnstileWidget({
+export const TurnstileWidget = forwardRef<TurnstileWidgetHandle, TurnstileWidgetProps>(function TurnstileWidget({
     siteKey,
     onVerify,
     onExpire,
     onError,
+    onTimeout,
     theme = "light",
     size = "flexible",
-}: TurnstileWidgetProps) {
+    retry = "auto",
+    retryInterval = 8000,
+}, ref) {
     const containerRef = useRef<HTMLDivElement>(null);
     const widgetIdRef = useRef<string | null>(null);
     const [loadError, setLoadError] = useState<string | null>(null);
+
+    const resetWidget = useCallback(() => {
+        setLoadError(null);
+        if (widgetIdRef.current && window.turnstile?.reset) {
+            window.turnstile.reset(widgetIdRef.current);
+        }
+    }, []);
+
+    useImperativeHandle(ref, () => ({
+        reset: resetWidget,
+    }), [resetWidget]);
 
     useEffect(() => {
         if (!siteKey) {
@@ -154,6 +178,8 @@ export function TurnstileWidget({
                     sitekey: siteKey,
                     theme,
                     size,
+                    retry,
+                    "retry-interval": retryInterval,
                     callback: (token: string) => {
                         onVerify(token);
                         setLoadError(null);
@@ -161,10 +187,19 @@ export function TurnstileWidget({
                     "expired-callback": () => {
                         setLoadError("Turnstile verification expired. Please verify again.");
                         onExpire?.();
+                        window.setTimeout(() => resetWidget(), 300);
                     },
                     "error-callback": (error?: unknown) => {
                         setLoadError("Turnstile verification failed. Please retry.");
                         onError?.(error);
+                        if (retry === "never") {
+                            window.setTimeout(() => resetWidget(), 300);
+                        }
+                    },
+                    "timeout-callback": () => {
+                        setLoadError("Turnstile timed out. Please complete the challenge again.");
+                        onTimeout?.();
+                        window.setTimeout(() => resetWidget(), 300);
                     },
                 });
             })
@@ -188,7 +223,7 @@ export function TurnstileWidget({
             }
             widgetIdRef.current = null;
         };
-    }, [onError, onExpire, onVerify, siteKey, size, theme]);
+    }, [onError, onExpire, onTimeout, onVerify, resetWidget, retry, retryInterval, siteKey, size, theme]);
 
     return (
         <div className="space-y-2">
@@ -199,4 +234,4 @@ export function TurnstileWidget({
             {loadError && <p className="text-xs font-semibold text-red-500">{loadError}</p>}
         </div>
     );
-}
+});
