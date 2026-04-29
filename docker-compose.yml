@@ -6,6 +6,11 @@ services:
       args:
         # Injected from .env file or CI secrets — never hardcode
         VITE_API_BASE_URL: ${VITE_API_BASE_URL}
+        TURNSTILE_SITE_KEY: ${TURNSTILE_SITE_KEY}
+    environment:
+      # Runtime overrides for env-config.js generation in the container.
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL}
+      TURNSTILE_SITE_KEY: ${TURNSTILE_SITE_KEY}
     container_name: kssindustri
     restart: unless-stopped
     ports:
