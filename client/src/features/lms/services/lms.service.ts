@@ -73,6 +73,11 @@ interface RawKelasDetail extends Kelas {
     materi?: RawMateriWithProgress[];
 }
 
+interface TrackProgressPayload {
+    is_completed?: boolean;
+    last_watched_seconds?: number;
+}
+
 // ─── Parsed result dari getCourseById ────────────────────────────────────────
 
 export interface KelasDetailResult {
@@ -143,7 +148,11 @@ export const lmsService = {
     },
 
     // ── POST /api/materi/{id}/progress ───────────────────────────────────────
-    async trackProgress(materiId: string) {
+    async trackProgress(materiId: string, payload: TrackProgressPayload = { is_completed: false }) {
+        return apiClient.post(`/api/materi/${materiId}/progress`, payload);
+    },
+
+    async markMateriCompleted(materiId: string) {
         return apiClient.post(`/api/materi/${materiId}/progress`, { is_completed: true });
     },
 
@@ -215,7 +224,11 @@ export const lmsService = {
 
     // ── POST /api/kuis/attempt/{attempt_id}/submit ───────────────────────────
     async submitKuis(attemptId: string, payload: SubmitKuisPayload): Promise<KuisAttempt> {
-        const res = await apiClient.post<any>(`/api/kuis/attempt/${attemptId}/submit`, payload);
+        const submitPayload = {
+            answers: payload.answers,
+            jawaban: payload.jawaban ?? payload.answers,
+        };
+        const res = await apiClient.post<any>(`/api/kuis/attempt/${attemptId}/submit`, submitPayload);
         return normalizeOne<KuisAttempt>(res);
     },
 

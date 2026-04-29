@@ -3,6 +3,7 @@ import { Outlet, useMatches } from "react-router-dom";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Topbar } from "@/components/dashboard/Topbar";
 import { AuthGuard } from "@/components/ProtectedRoute";
+import { useNotificationStream } from "@/hooks/useNotifications";
 
 interface RouteHandle {
     title?: string;
@@ -12,6 +13,7 @@ export function DashboardLayout() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const matches = useMatches();
     const title = (matches.at(-1)?.handle as RouteHandle | undefined)?.title;
+    useNotificationStream(true);
 
     return (
         <AuthGuard>

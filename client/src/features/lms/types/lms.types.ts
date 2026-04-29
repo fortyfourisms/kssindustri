@@ -53,6 +53,10 @@ export interface KuisItem {
     durasi_menit?: number;
     passing_grade: number;
     is_final: boolean;
+    is_passed?: boolean;
+    latest_score?: number;
+    attempt_count?: number;
+    passed_at?: string;
     urutan: number;
     created_at: string;
     updated_at: string;
@@ -161,6 +165,7 @@ export interface JawabanPayload {
 
 export interface SubmitKuisPayload {
     answers: JawabanPayload[];
+    jawaban?: JawabanPayload[];
 }
 
 export interface PostDiskusiPayload {

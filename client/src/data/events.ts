@@ -4,7 +4,7 @@ export const industrySectorOptions = [
   "IKFT",
   "ILMATE",
   "AGRO",
-  "Kawawan Industri",
+  "Kawasan Industri",
 ] as const;
 
 export const eventItems: EventItem[] = [

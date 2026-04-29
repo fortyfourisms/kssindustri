@@ -7,10 +7,15 @@ import { create } from 'zustand';
 interface AppState {
     /** true = bootstrap selesai, router aman di-render */
     isAppReady: boolean;
+    /** true = intro loading landing page sudah pernah ditampilkan di session tab ini */
+    hasSeenLandingLoading: boolean;
     setAppReady: (ready: boolean) => void;
+    setHasSeenLandingLoading: (seen: boolean) => void;
 }
 
 export const useAppStore = create<AppState>()((set) => ({
     isAppReady: false,
+    hasSeenLandingLoading: false,
     setAppReady: (ready) => set({ isAppReady: ready }),
+    setHasSeenLandingLoading: (seen) => set({ hasSeenLandingLoading: seen }),
 }));

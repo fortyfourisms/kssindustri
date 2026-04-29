@@ -144,6 +144,16 @@ export function Navbar({ mode = "landing" }: NavbarProps) {
     setIsOpen(false);
   };
 
+  const handleLogoClick = () => {
+    if (location.pathname === "/") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } else {
+      navigate("/");
+    }
+
+    setIsOpen(false);
+  };
+
   return (
     <motion.header
       initial={{ y: -100 }}
@@ -182,9 +192,14 @@ export function Navbar({ mode = "landing" }: NavbarProps) {
       >
         {/* Logo Section */}
         <div className="flex-1 flex items-center justify-start gap-3 py-2">
-          <span className="font-display font-black text-2xl tracking-tighter text-foreground">
+          <button
+            type="button"
+            onClick={handleLogoClick}
+            className="font-display font-black text-2xl tracking-tighter text-foreground"
+            aria-label="Go to home"
+          >
             FortyFour
-          </span>
+          </button>
         </div>
 
         {/* Desktop Navigation Pill */}

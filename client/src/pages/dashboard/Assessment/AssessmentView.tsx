@@ -27,6 +27,38 @@ export default function AssessmentView({
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
+  const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  const persistAnswerWithThrottle = async (
+    domainSlug: DomainSlug,
+    existingJawabanId: number | null,
+    payload: {
+      ikas_id: string;
+      pertanyaan_id: number;
+      jawaban: number;
+    }
+  ) => {
+    const MAX_RETRIES = 4;
+    let attempt = 0;
+
+    while (attempt < MAX_RETRIES) {
+      try {
+        return await ikasService.saveJawaban(domainSlug, existingJawabanId, payload);
+      } catch (error: any) {
+        attempt += 1;
+        const status = Number(error?.status ?? error?.response?.status ?? 0);
+        const isRateLimited = status === 429;
+
+        if (!isRateLimited || attempt >= MAX_RETRIES) {
+          throw error;
+        }
+
+        // Back off progressively so the server has room to recover.
+        await sleep(600 * attempt);
+      }
+    }
+  };
+
   // Derived from dynamic store
   const assessmentData = store.assessmentStructure;
 
@@ -103,30 +135,50 @@ export default function AssessmentView({
     if (isSaving) return;
     setIsSaving(true);
     const allAnswered = store.answeredQuestions() === store.totalQuestions();
-    const profile = store.respondentProfile();
     const existingId = store.existingIkasId;
 
     try {
+      if (!existingId) {
+        throw new Error('Data responden IKAS belum tersimpan. Simpan data responden terlebih dahulu lalu coba lagi.');
+      }
+
       const answersMap = store.answers();
+      const resolvedJawabanIdMap: JawabanIdMap = { ...jawabanIdMap };
+      const entries = Object.values(answersMap)
+        .map((ans) => {
+          const parts = ans.questionId.split('-');
+          const domainSlug = parts[0] as DomainSlug;
+          const pertanyaanId = parseInt(parts[1], 10);
+          const existingJawabanId = resolvedJawabanIdMap[ans.questionId] ?? null;
 
-      // Group answers by domain and call saveJawaban for each
-      const savePromises = Object.values(answersMap).map(async (ans) => {
-        const qid = ans.questionId; // format: "identifikasi-3" | "proteksi-7" etc.
-        const parts = qid.split('-');
-        const domainSlug = parts[0] as DomainSlug;
-        const pertanyaanId = parseInt(parts[1], 10);
-
-        if (!pertanyaanId || isNaN(pertanyaanId)) return;
-
-        const existingJawabanId = jawabanIdMap[qid] ?? null;
-
-        await ikasService.saveJawaban(domainSlug, existingJawabanId, {
-          pertanyaan_id: pertanyaanId,
-          jawaban: ans.index,
+          return {
+            answer: ans,
+            domainSlug,
+            pertanyaanId,
+            existingJawabanId,
+          };
+        })
+        .filter((item) => item.pertanyaanId && !Number.isNaN(item.pertanyaanId))
+        .sort((a, b) => {
+          if (a.domainSlug === b.domainSlug) return a.pertanyaanId - b.pertanyaanId;
+          return a.domainSlug.localeCompare(b.domainSlug);
         });
-      });
 
-      await Promise.all(savePromises);
+      for (const item of entries) {
+        const saved = await persistAnswerWithThrottle(item.domainSlug, item.existingJawabanId, {
+          ikas_id: existingId,
+          pertanyaan_id: item.pertanyaanId,
+          jawaban: item.answer.index,
+        });
+
+        const savedId = Number(saved?.id);
+        if (Number.isFinite(savedId) && savedId > 0) {
+          resolvedJawabanIdMap[item.answer.questionId] = savedId;
+        }
+
+        // Pace write traffic so submit doesn't burst the API.
+        await sleep(180);
+      }
 
       store.completeAssessment();
       toast({

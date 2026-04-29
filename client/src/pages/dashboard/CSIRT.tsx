@@ -40,6 +40,11 @@ function RequiredMark() {
     return <span className="text-red-500">*</span>;
 }
 
+type CsirtReadinessState = {
+    hasCsirt: "ya" | "tidak" | null;
+    isRegisteredNational: "ya" | "tidak" | null;
+};
+
 type FileUploadFieldProps = {
     label: React.ReactNode;
     accept: string;
@@ -95,6 +100,101 @@ function FileUploadField({
                     {previewName || placeholder}
                 </span>
             </div>
+        </div>
+    );
+}
+
+function CsirtReadinessModal({
+    value,
+    onChange,
+    onClose,
+    onContinue,
+}: {
+    value: CsirtReadinessState;
+    onChange: (value: CsirtReadinessState) => void;
+    onClose: () => void;
+    onContinue: () => void;
+}) {
+    const canContinue = value.hasCsirt !== null && value.isRegisteredNational !== null;
+
+    const renderQuestion = (
+        key: keyof CsirtReadinessState,
+        question: string,
+        description: string,
+    ) => (
+        <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+            <p className="text-sm font-bold text-slate-800">{question}</p>
+            <p className="mt-1 text-sm text-slate-500">{description}</p>
+            <div className="mt-4 grid grid-cols-2 gap-3">
+                {(["ya", "tidak"] as const).map((option) => {
+                    const selected = value[key] === option;
+                    return (
+                        <button
+                            key={option}
+                            type="button"
+                            onClick={() => onChange({ ...value, [key]: option })}
+                            className={`rounded-xl border px-4 py-3 text-sm font-bold transition ${selected
+                                ? "border-blue-500 bg-blue-50 text-blue-700 shadow-sm"
+                                : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                                }`}
+                        >
+                            {option === "ya" ? "Ya" : "Tidak"}
+                        </button>
+                    );
+                })}
+            </div>
+        </div>
+    );
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
+            <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl p-6"
+            >
+                <div className="flex items-center justify-between mb-6">
+                    <div>
+                        <h3 className="font-black text-slate-900 font-display text-xl">Informasi Awal CSIRT</h3>
+                        <p className="text-sm text-slate-500 mt-1">Jawaban ini hanya dipakai untuk alur tampilan form dan tidak disimpan ke database.</p>
+                    </div>
+                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition p-1 bg-slate-100 rounded-xl hover:bg-slate-200">
+                        <X className="w-5 h-5" />
+                    </button>
+                </div>
+
+                <div className="space-y-4">
+                    {renderQuestion(
+                        "hasCsirt",
+                        "Apakah perusahaan anda sudah memiliki CSIRT?",
+                        "Pilih sesuai kondisi perusahaan saat ini."
+                    )}
+                    {renderQuestion(
+                        "isRegisteredNational",
+                        "Apakah CSIRT perusahaan anda sudah teregistrasi pada National-CSIRT?",
+                        "Informasi ini hanya sebagai konfirmasi awal sebelum mengisi profil."
+                    )}
+                </div>
+
+                <div className="flex gap-3 pt-6">
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 transition"
+                    >
+                        Batal
+                    </button>
+                    <button
+                        type="button"
+                        onClick={onContinue}
+                        disabled={!canContinue}
+                        className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-lg shadow-blue-500/25 disabled:opacity-50 disabled:hover:bg-blue-600 transition"
+                    >
+                        Lanjut Isi Profil
+                    </button>
+                </div>
+            </motion.div>
         </div>
     );
 }
@@ -588,12 +688,17 @@ export default function CSIRT() {
     const { createMutation, updateMutation } = useCsirtProfile();
 
     // ── Modal state ─────────────────────────────────────────────────────────
+    const [showReadinessModal, setShowReadinessModal] = useState(false);
     const [showForm, setShowForm] = useState(false);
     const [editing, setEditing] = useState<any>(null);
     const [showSdmModal, setShowSdmModal] = useState(false);
     const [editingSdm, setEditingSdm] = useState<SdmCsirt | null>(null);
     const [viewingSe, setViewingSe] = useState<SeCsirt | null>(null);
     const [downloadDoc, setDownloadDoc] = useState<{ url: string; name: string; csirtName?: string } | null>(null);
+    const [csirtReadiness, setCsirtReadiness] = useState<CsirtReadinessState>({
+        hasCsirt: null,
+        isRegisteredNational: null,
+    });
 
     // ── Queries ─────────────────────────────────────────────────────────────
     const { data: user } = useUser();
@@ -680,6 +785,17 @@ export default function CSIRT() {
         if (confirm(`Hapus SDM "${sdm.nama_personel}"?`)) deleteSdmMutation.mutate(sdm.id);
     };
 
+    const handleStartCreateCsirt = () => {
+        setEditing(null);
+        setCsirtReadiness({ hasCsirt: null, isRegisteredNational: null });
+        setShowReadinessModal(true);
+    };
+
+    const handleContinueCreateCsirt = () => {
+        setShowReadinessModal(false);
+        setShowForm(true);
+    };
+
 
     // ── Render ───────────────────────────────────────────────────────────────
     return (
@@ -699,7 +815,7 @@ export default function CSIRT() {
                         <p className="font-semibold text-slate-600 mb-2">Belum ada data CSIRT</p>
                         <p className="text-sm mt-1 text-slate-500 mb-6">Silakan daftarkan tim CSIRT perusahaan Anda terlebih dahulu.</p>
                         <button
-                            onClick={() => { setEditing(null); setShowForm(true); }}
+                            onClick={handleStartCreateCsirt}
                             className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-l from-yellow-400 to-amber-500 text-white font-bold shadow-md shadow-yellow-500/30 hover:shadow-yellow-500/45 hover:scale-[1.01] active:scale-[0.99] transition-all whitespace-nowrap"
                         >
                             <Plus className="w-5 h-5" /> Buat Profil CSIRT
@@ -951,6 +1067,14 @@ export default function CSIRT() {
 
             {/* ── Modals ── */}
             <AnimatePresence>
+                {showReadinessModal && (
+                    <CsirtReadinessModal
+                        value={csirtReadiness}
+                        onChange={setCsirtReadiness}
+                        onClose={() => setShowReadinessModal(false)}
+                        onContinue={handleContinueCreateCsirt}
+                    />
+                )}
                 {showForm && !editing && (
                     <CreateCsirtModal idPerusahaan={idPerusahaan} onSubmit={handleCreate} onClose={() => setShowForm(false)} loading={createMutation.isPending} />
                 )}

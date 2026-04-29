@@ -3,7 +3,8 @@
 // Includes automatic token refresh interceptor via POST /api/refresh.
 // No external HTTP library — zero dependencies.
 
-const BASE_URL = (window as any)._env_?.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE_URL || '';
+export const API_BASE_URL =
+    (window as any)._env_?.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE_URL || '';
 
 // ─── Refresh Token Interceptor State ──────────────────────────────────────────
 // Mencegah race condition ketika banyak request gagal 401 secara bersamaan.
@@ -52,7 +53,7 @@ function mergeHeaders(base: RequestInit['headers'], extra: Record<string, string
 }
 
 async function attemptRefresh(): Promise<void> {
-    const res = await fetch(`${BASE_URL}/api/refresh`, {
+    const res = await fetch(`${API_BASE_URL}/api/refresh`, {
         method: 'POST',
         credentials: 'include',
     });
@@ -64,7 +65,7 @@ async function attemptRefresh(): Promise<void> {
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     const isFormData = init.body instanceof FormData;
 
-    const res = await fetch(`${BASE_URL}${path}`, {
+    const res = await fetch(`${API_BASE_URL}${path}`, {
         ...init,
         credentials: 'include', // HTTP-only cookie auth
         headers: isFormData

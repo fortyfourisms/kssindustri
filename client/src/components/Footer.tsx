@@ -45,6 +45,15 @@ export function Footer() {
     }
   };
 
+  const handleLogoClick = () => {
+    if (location.pathname === "/") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+
+    navigate("/");
+  };
+
   return (
     <section className="relative w-full py-10 md:py-20 px-4 md:px-10 overflow-hidden bg-transparent">
       <div className="max-w-7xl mx-auto relative z-10">
@@ -80,9 +89,14 @@ export function Footer() {
                 <span className="absolute left-1/2 md:left-0 -translate-x-1/2 md:translate-x-0 text-white font-bold opacity-10 leading-none select-none pointer-events-none italic" style={{ fontSize: 'clamp(5rem, 25vw, 10rem)', letterSpacing: '-0.05em' }}>
                   44
                 </span>
-                <h2 className="text-4xl md:text-5xl font-black text-slate-900 relative z-10 tracking-tighter">
+                <button
+                  type="button"
+                  onClick={handleLogoClick}
+                  className="text-4xl md:text-5xl font-black text-slate-900 relative z-10 tracking-tighter"
+                  aria-label="Go to home"
+                >
                   FortyFour
-                </h2>
+                </button>
               </div>
 
               {/* Description */}

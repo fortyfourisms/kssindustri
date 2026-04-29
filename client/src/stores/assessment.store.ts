@@ -32,6 +32,15 @@ function createDefaultProgress(assessmentData?: AssessmentData): AssessmentProgr
     };
 }
 
+function hasValidProgress(progress: AssessmentProgress | undefined, assessmentData: AssessmentData): boolean {
+    if (!progress) return false;
+    const domain = assessmentData.domains.find((item: any) => item.id === progress.currentDomainId);
+    const category = domain?.categories.find((item: any) => item.id === progress.currentCategoryId);
+    const subCategory = category?.subCategories.find((item: any) => item.id === progress.currentSubCategoryId);
+    if (!domain || !category || !subCategory) return false;
+    return progress.currentPage >= 1 && progress.currentPage <= Math.max(subCategory.questions.length, 1);
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface AssessmentState {
@@ -217,11 +226,11 @@ export const useAssessmentStore = create<AssessmentState>()(
 
             setAssessmentStructure: (data: AssessmentData) => {
                 set((state) => {
-                    // If no current progress for this stakeholder, initialize it with the
-                    // new structure so navigation starts at the first domain/category/sub
                     const slug = state.currentStakeholderSlug;
-                    const hasProgress = slug && !!state.progressMap[slug];
-                    const progressMap = hasProgress ? state.progressMap : {
+                    const currentProgress = slug ? state.progressMap[slug] : undefined;
+                    const progressMap = slug && hasValidProgress(currentProgress, data)
+                        ? state.progressMap
+                        : {
                         ...state.progressMap,
                         ...(slug ? { [slug]: createDefaultProgress(data) } : {}),
                     };
