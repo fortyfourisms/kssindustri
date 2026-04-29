@@ -16,6 +16,8 @@ export type TurnstileWidgetHandle = {
     reset: () => void;
 };
 
+type TurnstileLifecycleState = "idle" | "ready" | "verified" | "expired" | "error" | "timeout";
+
 declare global {
     interface Window {
         turnstile?: {
@@ -148,9 +150,22 @@ export const TurnstileWidget = forwardRef<TurnstileWidgetHandle, TurnstileWidget
     const containerRef = useRef<HTMLDivElement>(null);
     const widgetIdRef = useRef<string | null>(null);
     const [loadError, setLoadError] = useState<string | null>(null);
+    const lifecycleRef = useRef<TurnstileLifecycleState>("idle");
+    const onVerifyRef = useRef(onVerify);
+    const onExpireRef = useRef(onExpire);
+    const onErrorRef = useRef(onError);
+    const onTimeoutRef = useRef(onTimeout);
+
+    useEffect(() => {
+        onVerifyRef.current = onVerify;
+        onExpireRef.current = onExpire;
+        onErrorRef.current = onError;
+        onTimeoutRef.current = onTimeout;
+    }, [onError, onExpire, onTimeout, onVerify]);
 
     const resetWidget = useCallback(() => {
         setLoadError(null);
+        lifecycleRef.current = "ready";
         if (widgetIdRef.current && window.turnstile?.reset) {
             window.turnstile.reset(widgetIdRef.current);
         }
@@ -163,7 +178,8 @@ export const TurnstileWidget = forwardRef<TurnstileWidgetHandle, TurnstileWidget
     useEffect(() => {
         if (!siteKey) {
             setLoadError("Turnstile site key is missing. Please contact the administrator.");
-            onError?.();
+            lifecycleRef.current = "error";
+            onErrorRef.current?.();
             return;
         }
 
@@ -174,6 +190,7 @@ export const TurnstileWidget = forwardRef<TurnstileWidgetHandle, TurnstileWidget
                 if (!isMounted || !containerRef.current) return;
                 if (widgetIdRef.current) return;
 
+                lifecycleRef.current = "ready";
                 widgetIdRef.current = turnstile.render(containerRef.current, {
                     sitekey: siteKey,
                     theme,
@@ -181,30 +198,33 @@ export const TurnstileWidget = forwardRef<TurnstileWidgetHandle, TurnstileWidget
                     retry,
                     "retry-interval": retryInterval,
                     callback: (token: string) => {
-                        onVerify(token);
+                        lifecycleRef.current = "verified";
+                        onVerifyRef.current(token);
                         setLoadError(null);
                     },
                     "expired-callback": () => {
+                        if (lifecycleRef.current === "expired") return;
+                        lifecycleRef.current = "expired";
                         setLoadError("Turnstile verification expired. Please verify again.");
-                        onExpire?.();
-                        window.setTimeout(() => resetWidget(), 300);
+                        onExpireRef.current?.();
                     },
                     "error-callback": (error?: unknown) => {
+                        if (lifecycleRef.current === "error") return;
+                        lifecycleRef.current = "error";
                         setLoadError("Turnstile verification failed. Please retry.");
-                        onError?.(error);
-                        if (retry === "never") {
-                            window.setTimeout(() => resetWidget(), 300);
-                        }
+                        onErrorRef.current?.(error);
                     },
                     "timeout-callback": () => {
+                        if (lifecycleRef.current === "timeout") return;
+                        lifecycleRef.current = "timeout";
                         setLoadError("Turnstile timed out. Please complete the challenge again.");
-                        onTimeout?.();
-                        window.setTimeout(() => resetWidget(), 300);
+                        onTimeoutRef.current?.();
                     },
                 });
             })
             .catch((error) => {
                 if (!isMounted) return;
+                lifecycleRef.current = "error";
                 console.error("Turnstile failed to initialize", {
                     error,
                     siteKey,
@@ -213,17 +233,18 @@ export const TurnstileWidget = forwardRef<TurnstileWidgetHandle, TurnstileWidget
                 });
                 const message = error instanceof Error ? error.message : "Turnstile failed to load";
                 setLoadError(`${message}. Please refresh the page.`);
-                onError?.(error);
+                onErrorRef.current?.(error);
             });
 
         return () => {
             isMounted = false;
+            lifecycleRef.current = "idle";
             if (widgetIdRef.current && window.turnstile?.remove) {
                 window.turnstile.remove(widgetIdRef.current);
             }
             widgetIdRef.current = null;
         };
-    }, [onError, onExpire, onTimeout, onVerify, resetWidget, retry, retryInterval, siteKey, size, theme]);
+    }, [resetWidget, retry, retryInterval, siteKey, size, theme]);
 
     return (
         <div className="space-y-2">
