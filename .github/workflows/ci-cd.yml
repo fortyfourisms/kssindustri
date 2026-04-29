@@ -91,6 +91,8 @@ jobs:
             # ── Variables ───────────────────────────────────
             APP_DIR="${{ secrets.VPS_APP_DIR }}"
             IMAGE="ghcr.io/${{ github.repository }}/${{ env.IMAGE_NAME }}:latest"
+            API_BASE_URL="${{ secrets.VITE_API_BASE_URL }}"
+            TURNSTILE_SITE_KEY="${{ secrets.TURNSTILE_SITE_KEY }}"
 
             # ── Login to GHCR ───────────────────────────────
             echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u "${{ secrets.GHCR_USER }}" --password-stdin
@@ -109,6 +111,9 @@ jobs:
                 image: IMAGE_PLACEHOLDER
                 container_name: vuefront
                 restart: unless-stopped
+                environment:
+                  VITE_API_BASE_URL: "API_BASE_URL_PLACEHOLDER"
+                  TURNSTILE_SITE_KEY: "TURNSTILE_SITE_KEY_PLACEHOLDER"
                 ports:
                   - "127.0.0.1:3090:3090"
                 healthcheck:
@@ -126,6 +131,8 @@ jobs:
 
             # Replace placeholder with actual image
             sed -i "s|IMAGE_PLACEHOLDER|${IMAGE}|g" docker-compose.yml
+            sed -i "s|API_BASE_URL_PLACEHOLDER|${API_BASE_URL}|g" docker-compose.yml
+            sed -i "s|TURNSTILE_SITE_KEY_PLACEHOLDER|${TURNSTILE_SITE_KEY}|g" docker-compose.yml
 
             # ── Deploy ──────────────────────────────────────
             docker compose pull

@@ -4,25 +4,30 @@ type TurnstileWidgetProps = {
     siteKey: string;
     onVerify: (token: string) => void;
     onExpire?: () => void;
-    onError?: () => void;
+    onError?: (error?: unknown) => void;
     theme?: "light" | "dark" | "auto";
+    size?: "normal" | "flexible" | "compact";
 };
 
 declare global {
     interface Window {
         turnstile?: {
+            ready: (callback: () => void) => void;
             render: (
                 container: HTMLElement,
                 options: {
                     sitekey: string;
                     callback?: (token: string) => void;
                     "expired-callback"?: () => void;
-                    "error-callback"?: () => void;
+                    "error-callback"?: (error?: unknown) => void;
                     theme?: "light" | "dark" | "auto";
+                    size?: "normal" | "flexible" | "compact";
                 }
             ) => string;
             remove?: (widgetId: string) => void;
             reset?: (widgetId?: string) => void;
+            getResponse?: (widgetId?: string) => string;
+            isExpired?: (widgetId?: string) => boolean;
         };
     }
 }
@@ -61,12 +66,19 @@ export function TurnstileWidget({
     onExpire,
     onError,
     theme = "light",
+    size = "flexible",
 }: TurnstileWidgetProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const widgetIdRef = useRef<string | null>(null);
     const [loadError, setLoadError] = useState<string | null>(null);
 
     useEffect(() => {
+        if (!siteKey) {
+            setLoadError("Turnstile site key is missing. Please contact the administrator.");
+            onError?.();
+            return;
+        }
+
         let isMounted = true;
 
         loadTurnstileScript()
@@ -74,20 +86,27 @@ export function TurnstileWidget({
                 if (!isMounted || !window.turnstile || !containerRef.current) return;
                 if (widgetIdRef.current) return;
 
-                widgetIdRef.current = window.turnstile.render(containerRef.current, {
-                    sitekey: siteKey,
-                    theme,
-                    callback: (token: string) => {
-                        onVerify(token);
-                        setLoadError(null);
-                    },
-                    "expired-callback": () => {
-                        onExpire?.();
-                    },
-                    "error-callback": () => {
-                        setLoadError("Turnstile verification failed. Please retry.");
-                        onError?.();
-                    },
+                window.turnstile.ready(() => {
+                    if (!isMounted || !window.turnstile || !containerRef.current) return;
+                    if (widgetIdRef.current) return;
+
+                    widgetIdRef.current = window.turnstile.render(containerRef.current, {
+                        sitekey: siteKey,
+                        theme,
+                        size,
+                        callback: (token: string) => {
+                            onVerify(token);
+                            setLoadError(null);
+                        },
+                        "expired-callback": () => {
+                            setLoadError("Turnstile verification expired. Please verify again.");
+                            onExpire?.();
+                        },
+                        "error-callback": (error?: unknown) => {
+                            setLoadError("Turnstile verification failed. Please retry.");
+                            onError?.(error);
+                        },
+                    });
                 });
             })
             .catch(() => {
@@ -103,7 +122,7 @@ export function TurnstileWidget({
             }
             widgetIdRef.current = null;
         };
-    }, [onError, onExpire, onVerify, siteKey, theme]);
+    }, [onError, onExpire, onVerify, siteKey, size, theme]);
 
     return (
         <div className="space-y-2">
