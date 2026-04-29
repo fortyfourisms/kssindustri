@@ -15,8 +15,9 @@ RUN bun install --frozen-lockfile
 # Copy source and build
 COPY --chown=bun:bun . .
 
-# Build-time env: the API URL is baked into the static bundle.
-# Passed via --build-arg in docker-compose / CI.
+# Build-time env for Vite.
+# These values are read by `bun run build` and baked into the static bundle
+# via `import.meta.env.*`.
 ARG VITE_API_BASE_URL
 ARG TURNSTILE_SITE_KEY
 ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
@@ -37,6 +38,14 @@ USER bun
 # Initialize a package and install serve locally
 RUN bun init -y && \
     bun add serve@latest
+
+# Runtime defaults in the final image.
+# Container-level `-e/--env` values can still override these at startup.
+# The startup command writes them into `dist/env-config.js` as `window._env_`.
+ARG VITE_API_BASE_URL
+ARG TURNSTILE_SITE_KEY
+ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
+ENV TURNSTILE_SITE_KEY=${TURNSTILE_SITE_KEY}
 
 # Copy built assets from build stage
 COPY --from=build --chown=bun:bun /app/client/dist ./dist
