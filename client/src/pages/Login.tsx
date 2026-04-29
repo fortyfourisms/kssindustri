@@ -25,7 +25,7 @@ export default function Login() {
     const navigate = useNavigate();
     const containerRef = useRef<HTMLDivElement>(null);
     const turnstileSiteKey =
-        window._env_?.VITE_TURNSTILE_SITE_KEY || import.meta.env.VITE_TURNSTILE_SITE_KEY || "";
+        window._env_?.TURNSTILE_SITE_KEY || import.meta.env.VITE_TURNSTILE_SITE_KEY || "";
     const requiresTurnstile = Boolean(turnstileSiteKey);
 
     const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
