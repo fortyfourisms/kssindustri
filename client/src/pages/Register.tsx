@@ -7,8 +7,7 @@ import { motion } from "framer-motion";
 import { Eye, EyeOff, Loader2, ShieldCheck, ShieldAlert, XCircle, CheckCircle2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
-import { PerusahaanSelector, PERUSAHAAN_NEW } from "@/components/PerusahaanSelector";
-import { AnimatedPadlock } from "@/components/AnimatedPadlock";
+import { PerusahaanSelector } from "@/components/PerusahaanSelector";
 import Logo from "@/assets/d44.svg";
 
 const RegisterSchema = z
@@ -31,7 +30,7 @@ const RegisterSchema = z
             return false;
         }
         if (v.email) {
-            const emailPrefix = v.email.split('@')[0];
+            const emailPrefix = v.email.split("@")[0];
             if (emailPrefix && emailPrefix.length >= 3 && passLower.includes(emailPrefix.toLowerCase())) {
                 return false;
             }
@@ -50,7 +49,6 @@ type RegisterForm = z.infer<typeof RegisterSchema>;
 
 export default function Register() {
     const [showPass, setShowPass] = useState(false);
-    const [newCompanyName, setNewCompanyName] = useState("");
     const { register: registerUser, loading } = useAuth();
     const { toast } = useToast();
     const navigate = useNavigate();
@@ -61,8 +59,8 @@ export default function Register() {
         const rect = containerRef.current.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
-        containerRef.current.style.setProperty('--mouse-x', `${x}px`);
-        containerRef.current.style.setProperty('--mouse-y', `${y}px`);
+        containerRef.current.style.setProperty("--mouse-x", `${x}px`);
+        containerRef.current.style.setProperty("--mouse-y", `${y}px`);
     };
 
     const {
@@ -70,29 +68,24 @@ export default function Register() {
         handleSubmit,
         control,
         watch,
-        setError,
         formState: { errors },
     } = useForm<RegisterForm>({
         resolver: zodResolver(RegisterSchema),
         defaultValues: { perusahaanId: "" },
     });
 
-    const perusahaanId = watch("perusahaanId");
-    const isNewCompany = perusahaanId === PERUSAHAAN_NEW;
-    
-    // Password Strength Logic
     const usernameValue = watch("username") || "";
     const emailValue = watch("email") || "";
     const passwordValue = watch("password") || "";
-    
+
     const hasMinLen = passwordValue.length >= 8;
     const hasLower = /[a-z]/.test(passwordValue);
     const hasUpper = /[A-Z]/.test(passwordValue);
     const hasNumber = /[0-9]/.test(passwordValue);
     const hasSymbol = /[^a-zA-Z0-9]/.test(passwordValue);
-    
+
     const hasUsernameError = usernameValue.length >= 3 && passwordValue.toLowerCase().includes(usernameValue.toLowerCase());
-    const emailPrefix = emailValue.split('@')[0];
+    const emailPrefix = emailValue.split("@")[0];
     const hasEmailError = emailPrefix.length >= 3 && passwordValue.toLowerCase().includes(emailPrefix.toLowerCase());
     const doesNotContainUserOrEmail = !hasUsernameError && !hasEmailError && passwordValue.length > 0;
 
@@ -120,28 +113,12 @@ export default function Register() {
     }
 
     const onSubmit = async (data: RegisterForm) => {
-        // Validate new company name if "NEW" was selected
-        if (isNewCompany && !newCompanyName.trim()) {
-            toast({ title: "Company name is required", description: "Please fill in the new company name.", variant: "destructive" });
-            return;
-        }
-
-        // Build payload: either id_perusahaan OR nama_perusahaan — mirrors Vue behaviour
-        const payload: Parameters<typeof registerUser>[0] = isNewCompany
-            ? {
-                username: data.username,
-                email: data.email,
-                password: data.password,
-                nama_perusahaan: newCompanyName.trim(),
-            }
-            : {
-                username: data.username,
-                email: data.email,
-                password: data.password,
-                id_perusahaan: data.perusahaanId,
-            };
-
-        const result = await registerUser(payload);
+        const result = await registerUser({
+            username: data.username,
+            email: data.email,
+            password: data.password,
+            id_perusahaan: data.perusahaanId,
+        });
 
         if (result.success) {
             toast({ title: "Registration successful", description: "Please log in with your new account." });
@@ -152,28 +129,25 @@ export default function Register() {
     };
 
     return (
-        <div 
+        <div
             ref={containerRef}
             onMouseMove={handleMouseMove}
             className="min-h-screen grid lg:grid-cols-2 relative selection:bg-blue-100 font-sans overflow-hidden bg-white"
         >
-            {/* Interactive Mouse-Following Gradient Background */}
             <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
-                {/* Dynamic Interactive Cursor Glows */}
-                <div 
+                <div
                     className="absolute inset-0 z-10 transition-opacity duration-300 mix-blend-overlay"
                     style={{
                         background: `radial-gradient(800px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(59, 130, 246, 0.12), transparent 60%)`
                     }}
                 />
-                <div 
+                <div
                     className="absolute inset-0 z-10 transition-opacity duration-300 pointer-events-none"
                     style={{
                         background: `radial-gradient(400px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(255, 255, 255, 0.85), transparent 80%)`
                     }}
                 />
 
-                {/* Base Mesh Gradient (Animated Background Elements) */}
                 <style>
                     {`
                     @keyframes blob-float-1 {
@@ -188,22 +162,17 @@ export default function Register() {
                     }
                     `}
                 </style>
-                <div className="absolute top-[20%] left-[-20%] w-[100%] h-[100%] bg-[#DBEAFE] rounded-full blur-[120px] opacity-90" style={{ animation: 'blob-float-1 15s ease-in-out infinite' }} />
-                <div className="absolute top-[10%] right-[-10%] w-[80%] h-[90%] bg-[#FFFFFF] rounded-full blur-[100px] opacity-95" style={{ animation: 'blob-float-2 18s ease-in-out infinite' }} />
-                <div className="absolute top-[-10%] right-[-5%] w-[50%] h-[50%] bg-[#BFDBFE] rounded-full blur-[80px] opacity-70" style={{ animation: 'blob-float-1 22s ease-in-out infinite reverse' }} />
-                <div className="absolute bottom-[-20%] right-[10%] w-[70%] h-[60%] bg-[#93C5FD] rounded-full blur-[110px] opacity-65" style={{ animation: 'blob-float-2 16s ease-in-out infinite reverse' }} />
+                <div className="absolute top-[20%] left-[-20%] w-[100%] h-[100%] bg-[#DBEAFE] rounded-full blur-[120px] opacity-90" style={{ animation: "blob-float-1 15s ease-in-out infinite" }} />
+                <div className="absolute top-[10%] right-[-10%] w-[80%] h-[90%] bg-[#FFFFFF] rounded-full blur-[100px] opacity-95" style={{ animation: "blob-float-2 18s ease-in-out infinite" }} />
+                <div className="absolute top-[-10%] right-[-5%] w-[50%] h-[50%] bg-[#BFDBFE] rounded-full blur-[80px] opacity-70" style={{ animation: "blob-float-1 22s ease-in-out infinite reverse" }} />
+                <div className="absolute bottom-[-20%] right-[10%] w-[70%] h-[60%] bg-[#93C5FD] rounded-full blur-[110px] opacity-65" style={{ animation: "blob-float-2 16s ease-in-out infinite reverse" }} />
 
-                {/* Noise/Texture Overlay */}
                 <div className="absolute inset-0 bg-[url('/noise.svg')] opacity-[0.03] mix-blend-overlay z-20" />
                 <div className="absolute inset-0 bg-gradient-to-tr from-blue-100/50 via-transparent to-white/80 z-20" />
             </div>
 
-            {/* Left Side */}
             <div className="hidden lg:flex flex-col relative z-10 p-12 xl:p-20 overflow-hidden group">
-
-                {/* Content Container */}
                 <div className="relative z-10 flex flex-col h-full">
-                    {/* Top Section: Logo */}
                     <div className="mb-auto w-fit">
                         <Link to="/">
                             <div className="flex items-center gap-2 cursor-pointer group/logo w-fit">
@@ -214,24 +183,16 @@ export default function Register() {
                         </Link>
                     </div>
 
-                    {/* Bottom Section: Text Content */}
                     <div className="mt-auto max-w-lg text-slate-900">
                         <div className="bg-white/80 backdrop-blur-md border border-blue-100 p-6 rounded-2xl mb-8 shadow-lg shadow-blue-100/50">
                             <p className="text-slate-700 text-sm leading-relaxed italic">
                                 "Cybersecurity is not just about protecting your devices. It's about protecting yourself." - Anonymous
                             </p>
                         </div>
-                        {/* <h2 className="text-5xl xl:text-6xl font-black leading-[1.1] tracking-tight mb-4">
-                            Easy<br />Registration
-                        </h2>
-                        <p className="text-white/80 font-medium tracking-wide text-lg">
-                            Join and secure your data with us.
-                        </p> */}
                     </div>
                 </div>
             </div>
 
-            {/* Right Side: Form */}
             <div className="flex flex-col justify-center p-8 sm:p-12 lg:p-16 relative z-10 bg-white lg:rounded-l-[3rem] lg:shadow-[-20px_0_40px_rgba(0,0,0,0.3)]">
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
@@ -239,7 +200,6 @@ export default function Register() {
                     transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
                     className="w-full max-w-md mx-auto relative z-10"
                 >
-                    {/* Mobile Logo */}
                     <div className="mb-10 lg:hidden flex justify-center">
                         <Link to="/">
                             <div className="flex items-center gap-2 cursor-pointer group">
@@ -263,7 +223,6 @@ export default function Register() {
                     </div>
 
                     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                        {/* Username */}
                         <div>
                             <input
                                 {...register("username")}
@@ -276,7 +235,6 @@ export default function Register() {
                             )}
                         </div>
 
-                        {/* Email */}
                         <div>
                             <input
                                 {...register("email")}
@@ -289,8 +247,6 @@ export default function Register() {
                             )}
                         </div>
 
-                        {/* Perusahaan selector — "Add New Company" shows an inline text input,
-                            the name is sent as nama_perusahaan in the register payload (no separate POST needed) */}
                         <Controller
                             control={control}
                             name="perusahaanId"
@@ -299,13 +255,10 @@ export default function Register() {
                                     value={field.value}
                                     onChange={field.onChange}
                                     error={errors.perusahaanId?.message}
-                                    onNewName={setNewCompanyName}
-                                    newName={newCompanyName}
                                 />
                             )}
                         />
 
-                        {/* Password */}
                         <div className="relative">
                             <div className="relative">
                                 <input
@@ -322,8 +275,7 @@ export default function Register() {
                                     {showPass ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                                 </button>
                             </div>
-                            
-                            {/* Password Strength Indicator */}
+
                             {passwordValue && (
                                 <div className="mt-4">
                                     <div className="flex items-center justify-between mb-2">
@@ -333,34 +285,34 @@ export default function Register() {
                                         </div>
                                         <span className="text-slate-500 text-sm">{passwordValue.length} characters</span>
                                     </div>
-                                    
+
                                     <div className="bg-[#f8fafc] border border-slate-100 rounded-xl p-4 grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-4 mb-2">
                                         <div className="flex items-center gap-2">
                                             {hasMinLen ? <CheckCircle2 className="w-5 h-5 text-white fill-emerald-500" /> : <XCircle className="w-5 h-5 text-white fill-red-500" />}
-                                            <span className={`text-sm ${hasMinLen ? 'text-emerald-600' : 'text-red-500'}`}>Minimum 8 characters</span>
+                                            <span className={`text-sm ${hasMinLen ? "text-emerald-600" : "text-red-500"}`}>Minimum 8 characters</span>
                                         </div>
                                         <div className="flex items-center gap-2">
                                             {hasUpper ? <CheckCircle2 className="w-5 h-5 text-white fill-emerald-500" /> : <XCircle className="w-5 h-5 text-white fill-red-500" />}
-                                            <span className={`text-sm ${hasUpper ? 'text-emerald-600' : 'text-red-500'}`}>Uppercase letter (A-Z)</span>
+                                            <span className={`text-sm ${hasUpper ? "text-emerald-600" : "text-red-500"}`}>Uppercase letter (A-Z)</span>
                                         </div>
                                         <div className="flex items-center gap-2">
                                             {hasLower ? <CheckCircle2 className="w-5 h-5 text-white fill-emerald-500" /> : <XCircle className="w-5 h-5 text-white fill-red-500" />}
-                                            <span className={`text-sm ${hasLower ? 'text-emerald-600' : 'text-red-500'}`}>Lowercase letter (a-z)</span>
+                                            <span className={`text-sm ${hasLower ? "text-emerald-600" : "text-red-500"}`}>Lowercase letter (a-z)</span>
                                         </div>
                                         <div className="flex items-center gap-2">
                                             {hasNumber ? <CheckCircle2 className="w-5 h-5 text-white fill-emerald-500" /> : <XCircle className="w-5 h-5 text-white fill-red-500" />}
-                                            <span className={`text-sm ${hasNumber ? 'text-emerald-600' : 'text-red-500'}`}>Number (0-9)</span>
+                                            <span className={`text-sm ${hasNumber ? "text-emerald-600" : "text-red-500"}`}>Number (0-9)</span>
                                         </div>
                                         <div className="flex items-center gap-2 shrink-0">
                                             {hasSymbol ? <CheckCircle2 className="w-5 h-5 text-white fill-emerald-500" /> : <XCircle className="w-5 h-5 text-white fill-red-500" />}
-                                            <span className={`text-sm ${hasSymbol ? 'text-emerald-600' : 'text-red-500'}`}>Symbol (!@#$%)</span>
+                                            <span className={`text-sm ${hasSymbol ? "text-emerald-600" : "text-red-500"}`}>Symbol (!@#$%)</span>
                                         </div>
                                         <div className="flex items-center gap-2 shrink-0">
                                             {doesNotContainUserOrEmail ? <CheckCircle2 className="w-5 h-5 text-white fill-emerald-500" /> : <XCircle className="w-5 h-5 text-white fill-red-500" />}
-                                            <span className={`text-sm ${doesNotContainUserOrEmail ? 'text-emerald-600' : 'text-red-500'} break-words whitespace-pre-wrap`}>Exclude username/email</span>
+                                            <span className={`text-sm ${doesNotContainUserOrEmail ? "text-emerald-600" : "text-red-500"} break-words whitespace-pre-wrap`}>Exclude username/email</span>
                                         </div>
                                     </div>
-                                    
+
                                     {errors.password && strengthScore !== 6 && (
                                         <div className="flex items-center gap-2 mt-1">
                                             <XCircle className="w-4 h-4 text-white fill-red-500" />
@@ -375,7 +327,6 @@ export default function Register() {
                             )}
                         </div>
 
-                        {/* Confirm Password */}
                         <div className="relative">
                             <input
                                 {...register("confirmPassword")}
@@ -388,7 +339,6 @@ export default function Register() {
                             )}
                         </div>
 
-                        {/* Submit */}
                         <button
                             type="submit"
                             disabled={loading}

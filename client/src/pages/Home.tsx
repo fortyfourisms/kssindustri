@@ -15,13 +15,16 @@ import { CyberBackground } from "@/components/CyberBackground";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { AnimatePresence, motion } from "framer-motion";
 import { useLocation } from "react-router-dom";
+import { useAppStore } from "@/stores/useAppStore";
 
 type LandingScrollState = {
   scrollTarget?: string;
 };
 
 export default function Home() {
-  const [isLoading, setIsLoading] = useState(true);
+  const hasSeenLandingLoading = useAppStore((state) => state.hasSeenLandingLoading);
+  const setHasSeenLandingLoading = useAppStore((state) => state.setHasSeenLandingLoading);
+  const [isLoading, setIsLoading] = useState(() => !hasSeenLandingLoading);
   const location = useLocation();
   const scrollTarget = (location.state as LandingScrollState | null)?.scrollTarget;
 
@@ -49,14 +52,20 @@ export default function Home() {
     <div className="min-h-screen bg-background font-sans selection:bg-primary selection:text-white relative overflow-x-hidden">
       <AnimatePresence mode="wait">
         {isLoading && (
-          <LoadingScreen key="loading" onLoadingComplete={() => setIsLoading(false)} />
+          <LoadingScreen
+            key="loading"
+            onLoadingComplete={() => {
+              setHasSeenLandingLoading(true);
+              setIsLoading(false);
+            }}
+          />
         )}
       </AnimatePresence>
 
       <motion.div
-        initial={{ opacity: 0 }}
+        initial={false}
         animate={{ opacity: isLoading ? 0 : 1 }}
-        transition={{ duration: 0.8, delay: 0.5 }}
+        transition={{ duration: 0.5, ease: "easeOut" }}
       >
         <CyberBackground />
         <Navbar />

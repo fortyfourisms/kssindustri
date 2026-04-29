@@ -9,6 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { getDefaultAuthenticatedRoute } from "@/lib/access-control";
 import Logo from "@/assets/d44.svg";
+import { TurnstileWidget } from "@/components/TurnstileWidget";
 
 const LoginSchema = z.object({
     username: z.string().min(1, "Username is required"),
@@ -18,10 +19,14 @@ type LoginForm = z.infer<typeof LoginSchema>;
 
 export default function Login() {
     const [showPass, setShowPass] = useState(false);
+    const [turnstileToken, setTurnstileToken] = useState("");
     const { login, loading } = useAuth();
     const { toast } = useToast();
     const navigate = useNavigate();
     const containerRef = useRef<HTMLDivElement>(null);
+    const turnstileSiteKey =
+        window._env_?.TURNSTILE_SITE_KEY || import.meta.env.VITE_TURNSTILE_SITE_KEY || "";
+    const requiresTurnstile = Boolean(turnstileSiteKey);
 
     const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
         if (!containerRef.current) return;
@@ -39,7 +44,20 @@ export default function Login() {
     } = useForm<LoginForm>({ resolver: zodResolver(LoginSchema) });
 
     const onSubmit = async (data: LoginForm) => {
-        const result = await login({ identifier: data.username, password: data.password });
+        if (requiresTurnstile && !turnstileToken) {
+            toast({
+                title: "Verification required",
+                description: "Please complete the Cloudflare Turnstile check before logging in.",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        const result = await login({
+            identifier: data.username,
+            password: data.password,
+            turnstileToken: turnstileToken || undefined,
+        });
 
         if (result.error) {
             toast({ title: "Login failed", description: result.error, variant: "destructive" });
@@ -202,9 +220,18 @@ export default function Login() {
                             )}
                         </div>
 
+                        {requiresTurnstile && (
+                            <TurnstileWidget
+                                siteKey={turnstileSiteKey}
+                                onVerify={setTurnstileToken}
+                                onExpire={() => setTurnstileToken("")}
+                                onError={() => setTurnstileToken("")}
+                            />
+                        )}
+
                         <button
                             type="submit"
-                            disabled={loading}
+                            disabled={loading || (requiresTurnstile && !turnstileToken)}
                             className="w-full py-4 mt-6 rounded-2xl bg-blue-600 text-white font-bold text-sm shadow-xl shadow-blue-600/20 hover:shadow-blue-600/30 hover:bg-blue-700 active:scale-[0.98] transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-3"
                         >
                             {loading ? (

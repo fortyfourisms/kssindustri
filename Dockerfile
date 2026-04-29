@@ -18,7 +18,9 @@ COPY --chown=bun:bun . .
 # Build-time env: the API URL is baked into the static bundle.
 # Passed via --build-arg in docker-compose / CI.
 ARG VITE_API_BASE_URL
+ARG TURNSTILE_SITE_KEY
 ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
+ENV VITE_TURNSTILE_SITE_KEY=${TURNSTILE_SITE_KEY}
 
 RUN bun run build
 
@@ -47,4 +49,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
 
 # -s = SPA mode (rewrites all routes to index.html)
 # -l = listen port
-CMD sh -c "echo \"window._env_ = { VITE_API_BASE_URL: '${VITE_API_BASE_URL}' };\" > dist/env-config.js && bunx serve -s dist -l 3090"
+CMD sh -c "echo \"window._env_ = { VITE_API_BASE_URL: '${VITE_API_BASE_URL}', TURNSTILE_SITE_KEY: '${TURNSTILE_SITE_KEY}' };\" > dist/env-config.js && bunx serve -s dist -l 3090"

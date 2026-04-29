@@ -6,6 +6,8 @@ import { csirtService } from "@/services/csirt.service";
 import { perusahaanService } from "@/services/perusahaan.service";
 import { useToast } from "@/hooks/use-toast";
 import { RequireCompanyProfile } from "@/components/RequireCompanyProfile";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import KseQuestionCard from "@/components/assessment/KseQuestionCard";
 import ProgressBar from "@/components/assessment/ProgressBar";
 import PaginationControl from "@/components/assessment/PaginationControl";
@@ -13,7 +15,7 @@ import { kseCategories, getKategoriSE } from "@/data/kse-data";
 import { getKseEditRequestStatus, getKseEditStatusMeta, getLatestKseEditRequest, type KseEditRequestRecord } from "@/lib/kse-edit-request";
 import {
     Monitor, ChevronRight, ArrowLeft, Save, CheckCircle2, Edit2,
-    BarChart3, Scale, Loader2, AlertCircle, FileText, Lock, Server
+    BarChart3, Scale, Loader2, AlertCircle, Eye, FileText, Lock, Send, Server
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -58,6 +60,38 @@ const QUESTION_TO_FIELD: Record<string, string> = {
     '1.9': 'dampak_kegagalan',
     '1.10': 'potensi_kerugian_dan_dampak_negatif',
 };
+
+const FIELD_LABELS: Record<string, string> = {
+    nama_se: 'Nama Sistem Elektronik',
+    ip_se: 'IP SE',
+    as_number_se: 'AS Number',
+    pengelola_se: 'Pengelola SE',
+    fitur_se: 'Fitur SE',
+    id_perusahaan: 'Perusahaan',
+    id_sub_sektor: 'Sub Sektor',
+    nilai_investasi: 'Nilai Investasi',
+    anggaran_operasional: 'Anggaran Operasional',
+    kepatuhan_peraturan: 'Kepatuhan Peraturan',
+    teknik_kriptografi: 'Teknik Kriptografi',
+    jumlah_pengguna: 'Jumlah Pengguna',
+    data_pribadi: 'Data Pribadi',
+    klasifikasi_data: 'Klasifikasi Data',
+    kekritisan_proses: 'Kekritisan Proses',
+    dampak_kegagalan: 'Dampak Kegagalan',
+    potensi_kerugian_dan_dampak_negatif: 'Potensi Kerugian dan Dampak Negatif',
+};
+
+interface KseChangePreviewItem {
+    field: string;
+    label: string;
+    oldValue: string;
+    newValue: string;
+}
+
+function normalizeValue(value: unknown) {
+    if (value == null) return '';
+    return String(value).trim();
+}
 
 // ── Helper: localStorage slug ────────────────────────────────────────────────
 function getSlug(companyName: string) {
@@ -127,7 +161,7 @@ export default function FormKse() {
     const editRequestStatus = useMemo(() => getKseEditRequestStatus(existingSe, editRequests), [existingSe, editRequests]);
     const editRequestMeta = useMemo(() => getKseEditStatusMeta(editRequestStatus), [editRequestStatus]);
     const latestEditRequest = useMemo(() => getLatestKseEditRequest(existingSe, editRequests), [existingSe, editRequests]);
-    const isEditLocked = !!editId && editRequestStatus !== 'approved';
+    const isEditLocked = !!editId && editRequestStatus === 'pending_approval';
 
     // ── Step state ───────────────────────────────────────────────────────────
     const [currentStep, setCurrentStep] = useState(1);
@@ -153,6 +187,8 @@ export default function FormKse() {
     const [answers, setAnswers] = useState<Record<string, KseAnswer>>({});
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+    const [editReason, setEditReason] = useState('');
+    const [showConfirmModal, setShowConfirmModal] = useState(false);
 
     // ── Category navigation state ────────────────────────────────────────────
     const [currentCategoryId, setCurrentCategoryId] = useState(kseCategories[0].id);
@@ -216,6 +252,8 @@ export default function FormKse() {
     useEffect(() => {
         setAnswers({});
         setIsSubmitted(false);
+        setEditReason('');
+        setShowConfirmModal(false);
         setCurrentStep(1);
         setCurrentCategoryId(kseCategories[0].id);
         setCurrentPage(1);
@@ -315,7 +353,8 @@ export default function FormKse() {
             }
         } else if (!editId) {
             // ── ADD MODE: start blank but auto-fill id_csirt from company CSIRT ───
-            setRespondent({ ...initial, id_csirt: resolvedCsirtId });
+            const addInitial = { ...initial, id_csirt: resolvedCsirtId };
+            setRespondent(addInitial);
             setAnswers({});
             setIsSubmitted(false);
             setCurrentStep(1);
@@ -327,6 +366,72 @@ export default function FormKse() {
         if (slug === 'default') return;
         localStorage.setItem(ANSWERS_KEY, JSON.stringify({ answers, isSubmitted }));
     }, [answers, isSubmitted, ANSWERS_KEY, slug]);
+
+    const buildEditablePayload = useCallback(() => {
+        const penilaianPayload: Record<string, string> = {};
+        Object.entries(answers).forEach(([qNo, ans]) => {
+            const field = QUESTION_TO_FIELD[qNo];
+            if (field && ans.selectedOption) {
+                penilaianPayload[field] = ans.selectedOption;
+            }
+        });
+
+        const payload: Record<string, any> = {
+            ...penilaianPayload,
+            nama_se: respondent.nama_se.trim(),
+            ip_se: respondent.ip_se.trim(),
+            as_number_se: respondent.as_number_se.trim(),
+            pengelola_se: respondent.pengelola_se.trim(),
+            fitur_se: respondent.fitur_se.trim(),
+        };
+
+        if (respondent.id_perusahaan) payload.id_perusahaan = respondent.id_perusahaan;
+        if (respondent.id_sub_sektor) payload.id_sub_sektor = respondent.id_sub_sektor;
+
+        return payload;
+    }, [answers, respondent]);
+
+    const originalEditablePayload = useMemo(() => {
+        if (!editId || !existingSe) return {};
+
+        const initialPayload: Record<string, any> = {
+            nama_se: normalizeValue(existingSe.nama_se),
+            ip_se: normalizeValue(existingSe.ip_se),
+            as_number_se: normalizeValue(existingSe.as_number_se),
+            pengelola_se: normalizeValue(existingSe.pengelola_se),
+            fitur_se: normalizeValue(existingSe.fitur_se),
+        };
+
+        if (existingSe.id_perusahaan) initialPayload.id_perusahaan = normalizeValue(existingSe.id_perusahaan);
+        if (existingSe.id_sub_sektor) initialPayload.id_sub_sektor = normalizeValue(existingSe.id_sub_sektor);
+
+        Object.values(QUESTION_TO_FIELD).forEach((field) => {
+            const value = normalizeValue(existingSe[field]);
+            if (value) initialPayload[field] = value;
+        });
+
+        return initialPayload;
+    }, [editId, existingSe]);
+
+    const pendingChanges = useMemo<KseChangePreviewItem[]>(() => {
+        if (!editId) return [];
+        const currentPayload = buildEditablePayload();
+        const keys = Array.from(new Set([...Object.keys(originalEditablePayload), ...Object.keys(currentPayload)]));
+
+        return keys
+            .map((field) => {
+                const oldValue = normalizeValue(originalEditablePayload[field]);
+                const newValue = normalizeValue(currentPayload[field]);
+                if (oldValue === newValue) return null;
+                return {
+                    field,
+                    label: FIELD_LABELS[field] || field,
+                    oldValue: oldValue || 'Kosong',
+                    newValue: newValue || 'Kosong',
+                };
+            })
+            .filter((item): item is KseChangePreviewItem => item != null);
+    }, [editId, buildEditablePayload, originalEditablePayload]);
 
     // ── Handlers ─────────────────────────────────────────────────────────────
     const handleRespondentChange = (field: keyof KseRespondentProfile, value: string) => {
@@ -401,6 +506,64 @@ export default function FormKse() {
         toast({ title: "Mode edit aktif", description: "Silakan ubah jawaban Anda." });
     };
 
+    const handleOpenConfirmChanges = () => {
+        if (isEditLocked) {
+            toast({ title: editRequestMeta.label, description: editRequestMeta.description, variant: "destructive" });
+            return;
+        }
+        if (!isAllAnswered) {
+            toast({ title: "Jawaban belum lengkap", description: "Lengkapi seluruh pertanyaan sebelum mengajukan perubahan.", variant: "destructive" });
+            return;
+        }
+        if (!pendingChanges.length) {
+            toast({ title: "Belum ada perubahan", description: "Ubah minimal satu data sebelum mengajukan perubahan." });
+            return;
+        }
+        setShowConfirmModal(true);
+    };
+
+    const handleSubmitEditRequest = async () => {
+        if (!respondent.seId) return;
+        if (!editReason.trim()) {
+            toast({ title: "Catatan wajib diisi", description: "Tuliskan alasan perubahan sebelum submit.", variant: "destructive" });
+            return;
+        }
+
+        setIsSaving(true);
+        try {
+            const currentPayload = buildEditablePayload();
+            const dataPerubahan = pendingChanges.reduce<Record<string, any>>((acc, item) => {
+                acc[item.field] = currentPayload[item.field];
+                return acc;
+            }, {});
+
+            await api.requestKseEdit(respondent.seId, {
+                catatan_user: editReason.trim(),
+                data_perubahan: dataPerubahan,
+            });
+
+            await queryClient.invalidateQueries({ queryKey: ["se"] });
+            await queryClient.invalidateQueries({ queryKey: ["se-edit-requests"] });
+            await queryClient.invalidateQueries({ queryKey: ["se", String(respondent.seId)] });
+
+            setShowConfirmModal(false);
+            setEditReason('');
+            toast({
+                title: "Perubahan diajukan",
+                description: "Draft perubahan berhasil dikirim dan menunggu persetujuan admin.",
+            });
+            navigate('/dashboard/kse');
+        } catch (e: any) {
+            toast({
+                title: "Gagal mengajukan perubahan",
+                description: e?.message || "Request perubahan belum berhasil dikirim.",
+                variant: "destructive",
+            });
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
     const handleSaveAndExit = async () => {
         if (isEditLocked) {
             toast({ title: editRequestMeta.label, description: editRequestMeta.description, variant: "destructive" });
@@ -408,44 +571,25 @@ export default function FormKse() {
         }
         setIsSaving(true);
         try {
-            const penilaianPayload: Record<string, string> = {};
-            Object.entries(answers).forEach(([qNo, ans]) => {
-                const field = QUESTION_TO_FIELD[qNo];
-                if (field && ans.selectedOption) {
-                    penilaianPayload[field] = ans.selectedOption;
-                }
-            });
-
             const payload: any = {
-                ...penilaianPayload,
+                ...buildEditablePayload(),
                 kategori_se: kategoriSE.kategori,
                 total_bobot: totalBobot,
-                nama_se: respondent.nama_se,
-                ip_se: respondent.ip_se || '',
-                as_number_se: respondent.as_number_se || '',
-                pengelola_se: respondent.pengelola_se || '',
-                fitur_se: respondent.fitur_se || '',
             };
-
-            // id_perusahaan & id_sub_sektor: only send if present
-            if (respondent.id_perusahaan) payload.id_perusahaan = respondent.id_perusahaan;
-            if (respondent.id_sub_sektor) payload.id_sub_sektor = respondent.id_sub_sektor;
             // id_csirt is REQUIRED by the backend FK constraint — always include it
             const csirtId = respondent.id_csirt || resolvedCsirtId;
             if (csirtId) payload.id_csirt = csirtId;
 
             if (isAllAnswered) {
-                if (respondent.seId) {
-                    await csirtService.updateSe(respondent.seId, payload);
-                    // Invalidate cache so the next edit always loads fresh data from DB
-                    await queryClient.invalidateQueries({ queryKey: ["se", String(respondent.seId)] });
-                    await queryClient.invalidateQueries({ queryKey: ["se", editId] });
-                } else {
+                if (!respondent.seId) {
                     const created = await csirtService.createSe(payload);
                     setRespondent(prev => ({ ...prev, seId: created.id }));
                     localStorage.setItem(PROFILE_KEY, JSON.stringify({ ...respondent, seId: created.id }));
+                } else {
+                    setIsSaving(false);
+                    handleOpenConfirmChanges();
+                    return;
                 }
-                // Invalidate the SE list so the score table on /dashboard/kse shows updated values
                 await queryClient.invalidateQueries({ queryKey: ["se"] });
                 await queryClient.invalidateQueries({ queryKey: ["se-edit-requests"] });
                 setIsSubmitted(true);
@@ -651,7 +795,7 @@ export default function FormKse() {
                                                     className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold text-sm shadow-md shadow-blue-500/25
                                                         hover:shadow-blue-500/40 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:hover:scale-100"
                                                 >
-                                                    Mulai Kategorisasi
+                                                    {editId ? 'Lanjut ke Perubahan KSE' : 'Mulai Kategorisasi'}
                                                     <ChevronRight className="w-4 h-4" />
                                                 </button>
                                             </div>
@@ -761,6 +905,8 @@ export default function FormKse() {
                                                     >
                                                         {isSaving ? (
                                                             <><Loader2 className="w-4 h-4 animate-spin" /> Menyimpan...</>
+                                                        ) : editId ? (
+                                                            <><CheckCircle2 className="w-4 h-4" /> Konfirmasi Perubahan</>
                                                         ) : isAllAnswered ? (
                                                             <><CheckCircle2 className="w-4 h-4" /> Simpan &amp; Selesai</>
                                                         ) : (
@@ -783,7 +929,7 @@ export default function FormKse() {
                                                     className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-[14px] font-bold text-[13px] text-amber-600 bg-amber-50 border border-amber-100
                                                             hover:bg-amber-100/80 hover:-translate-y-0.5 transition-all duration-300 disabled:opacity-60 disabled:hover:translate-y-0"
                                                 >
-                                                    <Edit2 className="w-4 h-4" /> Edit Data
+                                                    <Edit2 className="w-4 h-4" /> Ubah Draft Perubahan
                                                 </button>
                                             )}
                                         </div>
@@ -868,6 +1014,72 @@ export default function FormKse() {
                         </motion.div>
                     )}
                 </AnimatePresence>
+
+                <Dialog open={showConfirmModal} onOpenChange={setShowConfirmModal}>
+                    <DialogContent className="sm:max-w-2xl rounded-3xl p-6">
+                        <DialogHeader>
+                            <DialogTitle className="text-xl font-bold text-slate-900">Konfirmasi Perubahan</DialogTitle>
+                            <DialogDescription className="text-sm text-slate-500">
+                                Tinjau kembali data KSE yang berubah. Setelah dikirim, perubahan akan menunggu persetujuan admin sebelum diterapkan.
+                            </DialogDescription>
+                        </DialogHeader>
+
+                        <div className="space-y-4 py-2">
+                            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                                <div className="flex items-center gap-2 mb-3 text-slate-700">
+                                    <Eye className="w-4 h-4" />
+                                    <p className="text-sm font-bold">Data yang Diubah</p>
+                                </div>
+                                <div className="max-h-[280px] overflow-y-auto space-y-2 pr-1">
+                                    {pendingChanges.map((item) => (
+                                        <div key={item.field} className="rounded-xl border border-slate-200 bg-white p-3">
+                                            <p className="text-xs font-bold uppercase tracking-wide text-slate-500">{item.label}</p>
+                                            <div className="mt-2 grid gap-2 md:grid-cols-2">
+                                                <div className="rounded-lg bg-rose-50 px-3 py-2">
+                                                    <p className="text-[11px] font-semibold text-rose-500">Data saat ini</p>
+                                                    <p className="text-sm text-slate-700">{item.oldValue}</p>
+                                                </div>
+                                                <div className="rounded-lg bg-emerald-50 px-3 py-2">
+                                                    <p className="text-[11px] font-semibold text-emerald-600">Data usulan</p>
+                                                    <p className="text-sm text-slate-700">{item.newValue}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-semibold text-slate-700 mb-2">Alasan Edit</label>
+                                <Textarea
+                                    value={editReason}
+                                    onChange={(e) => setEditReason(e.target.value)}
+                                    placeholder="Jelaskan alasan perubahan data KSE yang diajukan."
+                                    className="min-h-[120px] rounded-2xl border-slate-200 focus-visible:ring-blue-500"
+                                />
+                            </div>
+                        </div>
+
+                        <DialogFooter className="gap-2 sm:gap-0">
+                            <button
+                                type="button"
+                                onClick={() => setShowConfirmModal(false)}
+                                className="inline-flex items-center justify-center rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-500 hover:bg-slate-100"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleSubmitEditRequest}
+                                disabled={isSaving || !editReason.trim() || !pendingChanges.length}
+                                className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-blue-500/25 transition-all hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                                Submit Perubahan
+                            </button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
             </div>
         </RequireCompanyProfile>
     );

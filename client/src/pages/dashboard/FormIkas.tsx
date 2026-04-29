@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { RequireCompanyProfile } from "@/components/RequireCompanyProfile";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -19,6 +19,7 @@ import { useUser } from "@/hooks/useAuth";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { perusahaanService } from "@/services/perusahaan.service";
 import { getKategoriKematangan } from "@/types/ikas.types";
+import { getIkasEditRequestStatus, getIkasEditStatusMeta } from "@/lib/ikas-edit-request";
 
 const respondentSchema = z.object({
     responden: z.string().min(1, "Nama responden wajib diisi"),
@@ -43,11 +44,53 @@ function resolveCompanyId(...candidates: Array<unknown>) {
     return "";
 }
 
+function extractYear(value: string | null | undefined): number | null {
+    if (!value) return null;
+    const direct = new Date(value);
+    if (!Number.isNaN(direct.getTime())) return direct.getFullYear();
+
+    const parts = String(value).split(/[-/]/);
+    if (parts.length === 3) {
+        const first = Number.parseInt(parts[0], 10);
+        const last = Number.parseInt(parts[2], 10);
+        if (!Number.isNaN(first) && first > 1900) return first;
+        if (!Number.isNaN(last) && last > 1900) return last;
+    }
+    return null;
+}
+
+function normalizeDateInput(value: string | null | undefined) {
+    if (!value) return new Date().toISOString().split('T')[0];
+    const direct = new Date(value);
+    if (!Number.isNaN(direct.getTime())) return direct.toISOString().split('T')[0];
+    return value;
+}
+
+function getVerificationStatus(raw: Record<string, any> | null | undefined) {
+    if (typeof raw?.is_validated === "boolean") {
+        return raw.is_validated ? "Terverifikasi" : "Menunggu verifikasi";
+    }
+
+    const value = String(
+        raw?.status_verifikasi ??
+        raw?.verifikasi ??
+        raw?.validasi ??
+        raw?.status ??
+        ""
+    ).trim().toLowerCase();
+
+    if (!value) return "Belum diverifikasi";
+    if (value.includes("tolak") || value.includes("reject") || value.includes("revisi")) return "Perlu revisi";
+    if (value.includes("verif") || value.includes("valid") || value.includes("approve") || value.includes("setuju")) return "Terverifikasi";
+    return "Menunggu verifikasi";
+}
+
 export default function FormIkas() {
     const navigate = useNavigate();
     const { toast } = useToast();
     const queryClient = useQueryClient();
     const [step, setStep] = useState(1);
+    const lastHydratedYearRef = useRef<number | null>(null);
 
     // ── Assessment store ────────────────────────────────────────────────────────
     const saveRespondentProfile = useAssessmentStore(state => state.saveRespondentProfile);
@@ -125,9 +168,9 @@ export default function FormIkas() {
         }
     });
 
-    // watchedTanggal used only to trigger UI updates
     const watchedTanggal = watch("tanggal");
     const watchedTargetNilai = watch("target_nilai");
+    const selectedYear = useMemo(() => extractYear(watchedTanggal), [watchedTanggal]);
     const respondentCompanyId = resolveCompanyId(
         perusahaanData?.id,
         perusahaanId,
@@ -150,57 +193,73 @@ export default function FormIkas() {
         enabled: !!(respondentCompanyId || perusahaanId),
     });
 
-    const myIkasList = myIkasData
-        ? (Array.isArray(myIkasData) ? myIkasData : [myIkasData])
-        : [];
+    const myIkasList = useMemo(() => (
+        myIkasData
+            ? (Array.isArray(myIkasData) ? myIkasData : [myIkasData])
+            : []
+    ), [myIkasData]);
 
-    const scopedIkasList = myIkasList.filter((item: any) => {
+    const scopedIkasList = useMemo(() => (
+        myIkasList.filter((item: any) => {
             const itemCompanyId = resolveCompanyId(item?.id_perusahaan, item?.perusahaan?.id);
             return !respondentCompanyId || itemCompanyId === respondentCompanyId;
         })
-        ;
+    ), [myIkasList, respondentCompanyId]);
+
+    const latestIkasRecord = useMemo(() => {
+        if (scopedIkasList.length === 0) return null;
+        return scopedIkasList.reduce((prev: any, curr: any) => {
+            const prevDate = new Date(prev.updated_at ?? prev.created_at ?? prev.tanggal ?? 0).getTime();
+            const currDate = new Date(curr.updated_at ?? curr.created_at ?? curr.tanggal ?? 0).getTime();
+            return currDate > prevDate ? curr : prev;
+        }, scopedIkasList[0]);
+    }, [scopedIkasList]);
+
+    const matchingYearIkasRecord = useMemo(() => {
+        if (selectedYear === null) return null;
+        return scopedIkasList.find((item: any) => extractYear(item?.tanggal ?? item?.created_at) === selectedYear) ?? null;
+    }, [scopedIkasList, selectedYear]);
+    const activeIkasRecord = useMemo(
+        () => matchingYearIkasRecord ?? (selectedYear === null ? latestIkasRecord : null),
+        [matchingYearIkasRecord, selectedYear, latestIkasRecord]
+    );
+    const activeVerificationStatus = useMemo(() => getVerificationStatus(activeIkasRecord), [activeIkasRecord]);
+    const activeEditRequestStatus = useMemo(() => getIkasEditRequestStatus(activeIkasRecord), [activeIkasRecord]);
+    const activeEditRequestMeta = useMemo(() => getIkasEditStatusMeta(activeEditRequestStatus), [activeEditRequestStatus]);
+    const isEditBlockedByApproval = !!activeIkasRecord
+        && activeVerificationStatus === "Terverifikasi"
+        && activeEditRequestStatus !== "approved";
 
     // ── Detect existing record → set existingIkasId ────────────────────────────
     useEffect(() => {
         if (listLoading) return;
-        const list = scopedIkasList;
-        if (list.length > 0 && list[0]?.id) {
-            const latest = list.reduce((prev: any, curr: any) => {
-                const prevDate = new Date(prev.created_at ?? prev.tanggal ?? 0).getTime();
-                const currDate = new Date(curr.created_at ?? curr.tanggal ?? 0).getTime();
-                return currDate > prevDate ? curr : prev;
-            }, list[0]);
-            setExistingIkasId(String(latest.id));
+        if (matchingYearIkasRecord?.id) {
+            setExistingIkasId(String(matchingYearIkasRecord.id));
         } else {
             setExistingIkasId(null);
         }
-    }, [listLoading, scopedIkasList, setExistingIkasId]);
+    }, [listLoading, matchingYearIkasRecord, setExistingIkasId]);
 
     // ── Pre-fill respondent form from API data ─────────────────────────────────
     useEffect(() => {
         if (listLoading) return;
-        const list = scopedIkasList;
-        if (list.length === 0) return;
-        const latest = list.reduce((prev: any, curr: any) => {
-            const prevDate = new Date(prev.created_at ?? prev.tanggal ?? 0).getTime();
-            const currDate = new Date(curr.created_at ?? curr.tanggal ?? 0).getTime();
-            return currDate > prevDate ? curr : prev;
-        }, list[0]);
-        if (!latest) return;
-        const tanggalValue = latest.tanggal
-            ? new Date(latest.tanggal).toISOString().split('T')[0]
-            : new Date().toISOString().split('T')[0];
+        const sourceRecord = matchingYearIkasRecord ?? (selectedYear === null ? latestIkasRecord : null);
+        if (!sourceRecord) return;
+
+        const sourceYear = extractYear(sourceRecord.tanggal ?? sourceRecord.created_at);
+        if (sourceYear !== null && lastHydratedYearRef.current === sourceYear && isDirty) return;
+
         reset({
-            responden: latest.responden ?? "",
-            telepon: latest.telepon ?? "",
-            target_nilai: latest.target_nilai ?? 0,
-            tanggal: tanggalValue,
-            jabatan: latest.jabatan ?? "",
-            kategori_kematangan_keamanan_siber: latest.kategori_kematangan_keamanan_siber ?? "",
+            responden: sourceRecord.responden ?? "",
+            telepon: sourceRecord.telepon ?? "",
+            target_nilai: sourceRecord.target_nilai ?? 0,
+            tanggal: normalizeDateInput(sourceRecord.tanggal),
+            jabatan: sourceRecord.jabatan ?? "",
+            kategori_kematangan_keamanan_siber: sourceRecord.kategori_kematangan_keamanan_siber ?? "",
         });
-        // Mark respondent as saved since record already exists
-        setRespondentSaved(true);
-    }, [listLoading, reset, scopedIkasList, setRespondentSaved]);
+        lastHydratedYearRef.current = sourceYear;
+        setRespondentSaved(Boolean(matchingYearIkasRecord));
+    }, [listLoading, reset, matchingYearIkasRecord, latestIkasRecord, selectedYear, setRespondentSaved, isDirty]);
 
     // ── If existing answers found in DB, also mark respondent saved ───────────
     useEffect(() => {
@@ -218,6 +277,15 @@ export default function FormIkas() {
 
     // ── Submit: POST or PUT respondent data ────────────────────────────────────
     const onSubmit = async (data: RespondentFormValues) => {
+        if (isEditBlockedByApproval) {
+            toast({
+                title: "Perubahan data masih terkunci",
+                description: "Data IKAS yang sudah terverifikasi hanya dapat diedit setelah pengajuan perubahan disetujui admin.",
+                variant: "destructive",
+            });
+            return;
+        }
+
         const resolvedPerusahaanId = resolveCompanyId(
             perusahaanData?.id,
             perusahaanId,
@@ -286,6 +354,12 @@ export default function FormIkas() {
     const isEditMode = !!existingIkasId;
     const canProceed = respondentSaved && !isDirty;
     const isCompanyReady = !!respondentCompanyId;
+
+    useEffect(() => {
+        if (isEditBlockedByApproval && step !== 1) {
+            setStep(1);
+        }
+    }, [isEditBlockedByApproval, step]);
 
     return (
         <RequireCompanyProfile>
@@ -423,6 +497,21 @@ export default function FormIkas() {
 
                         {/* Success notice */}
                         <AnimatePresence>
+                            {isEditBlockedByApproval && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+                                    className="mt-5 flex items-start gap-3 p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-sm"
+                                >
+                                    <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                                    <div className="space-y-1">
+                                        <p className="font-semibold">Perubahan data IKAS memerlukan persetujuan admin.</p>
+                                        <p>{activeEditRequestMeta.description}</p>
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+
+                        <AnimatePresence>
                             {respondentSaved && !isDirty && (
                                 <motion.div
                                     initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
@@ -461,7 +550,7 @@ export default function FormIkas() {
                                 {/* Save Button */}
                                 <button
                                     type="submit"
-                                    disabled={isLoading || !isCompanyReady}
+                                    disabled={isLoading || !isCompanyReady || isEditBlockedByApproval}
                                     className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-500 text-white font-bold text-sm shadow-md shadow-indigo-500/25 hover:shadow-indigo-500/40 transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
                                 >
                                     {isLoading ? (
@@ -476,6 +565,7 @@ export default function FormIkas() {
                                     <button
                                         type="button"
                                         onClick={() => setStep(2)}
+                                        disabled={isEditBlockedByApproval}
                                         className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 text-white font-bold text-sm shadow-md shadow-blue-500/25 hover:shadow-blue-500/40 transition-all flex items-center justify-center gap-2"
                                     >
                                         Lanjut ke Penilaian <ArrowRight className="w-4 h-4" />

@@ -21,6 +21,15 @@ interface ActionResult<T = unknown> {
     error?: string;
 }
 
+export interface QuizProgressState {
+    isPassed: boolean;
+    latestScore?: number;
+    attemptCount: number;
+    passedAt?: string;
+}
+
+type QuizProgressMap = Record<string, QuizProgressState>;
+
 // ─── State Interface ──────────────────────────────────────────────────────────
 
 interface LmsState {
@@ -35,6 +44,7 @@ interface LmsState {
     courseMateri: MateriItem[];             // dari field `materi` di response
     completedMateriIds: Set<string>;        // id_materi yang is_completed = true
     courseQuizzes: KuisItem[];
+    quizProgressById: QuizProgressMap;
     isLoadingCourse: boolean;
     courseError: string | null;
 
@@ -65,9 +75,10 @@ interface LmsState {
     /** GET /api/kelas/{id} — sekaligus isi courseMateri & completedMateriIds */
     fetchCourseById: (id: string) => Promise<void>;
     fetchCourseQuizzes: (courseId: string) => Promise<void>;
+    updateQuizProgress: (quizId: string, result: Pick<KuisAttempt, 'is_passed' | 'skor'>) => void;
 
     setActiveMateri: (materi: MateriItem) => void;
-    /** POST /api/materi/{id}/progress + fetch files/diskusi/catatan */
+    /** Track view materi lalu fetch files/diskusi/catatan */
     loadMateriDetail: (materiId: string) => Promise<void>;
     markMateriCompleted: (materiId: string) => Promise<void>;
 
@@ -100,6 +111,7 @@ const initialState = {
     courseMateri: [] as MateriItem[],
     completedMateriIds: new Set<string>(),
     courseQuizzes: [] as KuisItem[],
+    quizProgressById: {} as QuizProgressMap,
     isLoadingCourse: false,
     courseError: null as string | null,
 
@@ -121,6 +133,18 @@ const initialState = {
     isLoadingCertificate: false,
     certificateError: null as string | null,
 };
+
+function buildQuizProgressMap(quizzes: KuisItem[]): QuizProgressMap {
+    return quizzes.reduce<QuizProgressMap>((acc, quiz) => {
+        acc[quiz.id] = {
+            isPassed: quiz.is_passed === true,
+            latestScore: quiz.latest_score,
+            attemptCount: quiz.attempt_count ?? 0,
+            passedAt: quiz.passed_at,
+        };
+        return acc;
+    }, {});
+}
 
 // ─── Store ────────────────────────────────────────────────────────────────────
 
@@ -160,11 +184,28 @@ export const useLmsStore = create<LmsState>()((set) => ({
     fetchCourseQuizzes: async (courseId) => {
         try {
             const quizzes = await lmsService.getCourseKuis(courseId);
-            set({ courseQuizzes: quizzes });
+            set({ courseQuizzes: quizzes, quizProgressById: buildQuizProgressMap(quizzes) });
         } catch {
-            set({ courseQuizzes: [] });
+            set({ courseQuizzes: [], quizProgressById: {} });
         }
     },
+
+    updateQuizProgress: (quizId, result) => set((state) => {
+        const previous = state.quizProgressById[quizId];
+        const nextAttemptCount = Math.max(previous?.attemptCount ?? 0, 0) + 1;
+
+        return {
+            quizProgressById: {
+                ...state.quizProgressById,
+                [quizId]: {
+                    isPassed: result.is_passed,
+                    latestScore: result.skor,
+                    attemptCount: nextAttemptCount,
+                    passedAt: result.is_passed ? new Date().toISOString() : previous?.passedAt,
+                },
+            },
+        };
+    }),
 
     // ── Active Materi Detail ───────────────────────────────────────────────────
 
@@ -173,8 +214,8 @@ export const useLmsStore = create<LmsState>()((set) => ({
     loadMateriDetail: async (materiId) => {
         set({ isLoadingMateri: true, materiError: null });
         try {
-            // POST /api/materi/{id}/progress tanpa set lokal agar status selesai ditentukan secara manual atau dari respons backend
-            lmsService.trackProgress(materiId).catch(() => undefined);
+            // Track kunjungan materi tanpa langsung menandainya selesai.
+            lmsService.trackProgress(materiId, { is_completed: false }).catch(() => undefined);
 
             const [files, discussion, notes] = await Promise.allSettled([
                 lmsService.getFiles(materiId),
@@ -199,7 +240,7 @@ export const useLmsStore = create<LmsState>()((set) => ({
             completedMateriIds: new Set<string>(Array.from(state.completedMateriIds).concat(materiId)),
         }));
         try {
-            await lmsService.trackProgress(materiId);
+            await lmsService.markMateriCompleted(materiId);
         } catch (e) {
             // Ignore for now
         }
@@ -243,7 +284,7 @@ export const useLmsStore = create<LmsState>()((set) => ({
     submitKuis: async (attemptId, answers) => {
         set({ isLoadingKuis: true, kuisError: null });
         try {
-            const attempt = await lmsService.submitKuis(attemptId, { answers });
+            const attempt = await lmsService.submitKuis(attemptId, { answers, jawaban: answers });
             // Simpan attemptId di kuisAttempt (updated), result akan di-fetch terpisah
             set({ kuisAttempt: attempt, isLoadingKuis: false });
             return { success: true, data: attempt };
@@ -317,6 +358,7 @@ export const useLmsStore = create<LmsState>()((set) => ({
         courseMateri: [],
         courseQuizzes: [],
         completedMateriIds: new Set<string>(),
+        quizProgressById: {},
         isLoadingCourse: false,
         courseError: null,
     }),
@@ -339,4 +381,85 @@ export const useLmsStore = create<LmsState>()((set) => ({
 export function computeProgress(courseMateri: MateriItem[], completedIds: Set<string>): number {
     if (courseMateri.length === 0) return 0;
     return Math.round((completedIds.size / courseMateri.length) * 100);
+}
+
+export function sortMateriByOrder(courseMateri: MateriItem[]): MateriItem[] {
+    return [...courseMateri].sort((a, b) => a.urutan - b.urutan);
+}
+
+export function sortQuizzesByOrder(quizzes: KuisItem[]): KuisItem[] {
+    return [...quizzes].sort((a, b) => a.urutan - b.urutan);
+}
+
+export function isQuizPassed(quizId: string, quizProgressById: QuizProgressMap): boolean {
+    return quizProgressById[quizId]?.isPassed === true;
+}
+
+export function getLinkedQuizzesForMateri(materiId: string, courseQuizzes: KuisItem[]): KuisItem[] {
+    return sortQuizzesByOrder(courseQuizzes.filter((quiz) => quiz.id_materi === materiId));
+}
+
+export function getFinalQuizzes(courseQuizzes: KuisItem[]): KuisItem[] {
+    return sortQuizzesByOrder(courseQuizzes.filter((quiz) => !quiz.id_materi));
+}
+
+export function isMateriAccessible(
+    sortedMateri: MateriItem[],
+    materiId: string,
+    completedIds: Set<string>,
+    courseQuizzes: KuisItem[],
+    quizProgressById: QuizProgressMap,
+): boolean {
+    const materiIndex = sortedMateri.findIndex((materi) => materi.id === materiId);
+    if (materiIndex < 0) return false;
+    if (materiIndex === 0) return true;
+
+    const previousMateri = sortedMateri[materiIndex - 1];
+    if (!completedIds.has(previousMateri.id)) return false;
+
+    return getLinkedQuizzesForMateri(previousMateri.id, courseQuizzes).every((quiz) => isQuizPassed(quiz.id, quizProgressById));
+}
+
+export function isQuizAccessible(
+    quiz: KuisItem,
+    sortedMateri: MateriItem[],
+    completedIds: Set<string>,
+    courseQuizzes: KuisItem[],
+    quizProgressById: QuizProgressMap,
+): boolean {
+    if (quiz.id_materi) {
+        return completedIds.has(quiz.id_materi);
+    }
+
+    const allMateriCompleted = sortedMateri.every((materi) => completedIds.has(materi.id));
+    if (!allMateriCompleted) return false;
+
+    return sortQuizzesByOrder(courseQuizzes)
+        .filter((item) => item.id_materi)
+        .every((item) => isQuizPassed(item.id, quizProgressById));
+}
+
+export function getNextCourseStep(
+    sortedMateri: MateriItem[],
+    courseQuizzes: KuisItem[],
+    completedIds: Set<string>,
+    quizProgressById: QuizProgressMap,
+): { type: 'materi'; id: string } | { type: 'quiz'; id: string } | null {
+    for (const materi of sortedMateri) {
+        if (!completedIds.has(materi.id)) {
+            return { type: 'materi', id: materi.id };
+        }
+
+        const firstUnpassedQuiz = getLinkedQuizzesForMateri(materi.id, courseQuizzes)
+            .find((quiz) => !isQuizPassed(quiz.id, quizProgressById));
+
+        if (firstUnpassedQuiz) {
+            return { type: 'quiz', id: firstUnpassedQuiz.id };
+        }
+    }
+
+    const firstUnpassedFinalQuiz = getFinalQuizzes(courseQuizzes)
+        .find((quiz) => !isQuizPassed(quiz.id, quizProgressById));
+
+    return firstUnpassedFinalQuiz ? { type: 'quiz', id: firstUnpassedFinalQuiz.id } : null;
 }

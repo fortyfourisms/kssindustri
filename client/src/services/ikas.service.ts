@@ -30,6 +30,17 @@ function normalizeOne<T>(res: any): T {
     return res;
 }
 
+function extractEntityId(res: any): number | null {
+    const normalized = normalizeOne<any>(res);
+    const rawId = normalized?.id;
+    const numericId = Number(rawId);
+    return Number.isFinite(numericId) && numericId > 0 ? numericId : null;
+}
+
+function sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 // ─── IKAS Service ─────────────────────────────────────────────────────────────
 
 export const ikasService = {
@@ -52,7 +63,13 @@ export const ikasService = {
                 ? `/api/maturity/ikas?${params.toString()}`
                 : '/api/maturity/ikas';
             const res = await apiClient.get<any>(path);
-            return res ?? null;
+            if (!res) return null;
+
+            const list = normalizeList<IkasData>(res);
+            if (list.length > 0) return list;
+
+            const single = normalizeOne<IkasData>(res);
+            return single ?? null;
         } catch {
             return null;
         }
@@ -84,6 +101,11 @@ export const ikasService = {
         const formData = new FormData();
         formData.append('file', file);
         return apiClient.post<any>('/api/maturity/ikas/import', formData);
+    },
+
+    /** POST /api/maturity/ikas/{id}/request-edit — Submit edit request for a verified IKAS record */
+    async requestEdit(id: number | string, payload: { reason: string }): Promise<any> {
+        return apiClient.post<any>(`/api/maturity/ikas/${id}/request-edit`, payload);
     },
 
     // ── Pertanyaan (Questions) ─────────────────────────────────────────────────
@@ -138,6 +160,11 @@ export const ikasService = {
         return normalizeList<JawabanGulih>(res);
     },
 
+    async getJawabanByDomain(domain: DomainSlug): Promise<Array<Record<string, any>>> {
+        const res = await apiClient.get<any>(`/api/maturity/jawaban-${domain}`);
+        return normalizeList<Array<Record<string, any>>[number]>(res);
+    },
+
     /**
      * Save (create or update) a single answer.
      * @param domain    - which domain ('identifikasi' | 'proteksi' | 'deteksi' | 'gulih')
@@ -152,6 +179,7 @@ export const ikasService = {
         const base = `/api/maturity/jawaban-${domain}`;
         // Remap generic fields to domain-specific field names
         const domainPayload: Record<string, any> = {
+            ikas_id: payload.ikas_id,
             [`pertanyaan_${domain}_id`]: payload.pertanyaan_id,
             [`jawaban_${domain}`]: payload.jawaban,
             evidence: payload.evidence ?? '',
@@ -160,7 +188,41 @@ export const ikasService = {
         if (jawabanId) {
             return apiClient.put<any>(`${base}/${jawabanId}`, domainPayload);
         }
-        return apiClient.post<any>(base, domainPayload);
+
+        try {
+            const created = await apiClient.post<any>(base, domainPayload);
+            const createdId = extractEntityId(created);
+            return createdId ? { ...normalizeOne<any>(created), id: createdId } : created;
+        } catch (error: any) {
+            const message = String(error?.message ?? '').toLowerCase();
+            const status = Number(error?.status ?? error?.response?.status ?? 0);
+
+            if (status === 429) {
+                await sleep(500);
+                const retried = await apiClient.post<any>(base, domainPayload);
+                const retriedId = extractEntityId(retried);
+                return retriedId ? { ...normalizeOne<any>(retried), id: retriedId } : retried;
+            }
+
+            if (message.includes('sudah pernah diisi')) {
+                const existingAnswers = await this.getJawabanByDomain(domain);
+                const pertanyaanKey = `pertanyaan_${domain}`;
+                const existingAnswer = existingAnswers.find((item: any) => {
+                    const question = item?.[pertanyaanKey];
+                    return Number(question?.id) === Number(payload.pertanyaan_id);
+                });
+
+                if (existingAnswer?.id) {
+                    const updated = await apiClient.put<any>(`${base}/${existingAnswer.id}`, domainPayload);
+                    return {
+                        ...normalizeOne<any>(updated),
+                        id: Number(existingAnswer.id),
+                    };
+                }
+            }
+
+            throw error;
+        }
     },
 
     // ─── Respondent ───────────────────────────────────────────────────────────

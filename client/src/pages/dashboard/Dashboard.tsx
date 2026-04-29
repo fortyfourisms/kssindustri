@@ -136,6 +136,10 @@ function computeKseScore(se: Record<string, any> | null | undefined) {
 }
 
 function getVerificationStatus(raw: Record<string, any> | null | undefined) {
+    if (typeof raw?.is_validated === "boolean") {
+        return raw.is_validated ? "Terverifikasi" : "Menunggu verifikasi";
+    }
+
     const value = String(
         raw?.status_verifikasi ??
         raw?.verifikasi ??
@@ -277,11 +281,19 @@ export default function Dashboard() {
         ...jawabanDeteksi,
         ...jawabanGulih,
     ];
+    const validationFlags = allJawabanIkas
+        .map((item) => item.is_validated)
+        .filter((value): value is boolean => typeof value === "boolean");
     const validasiValues = allJawabanIkas
         .map((item) => String(item.validasi ?? "").trim().toLowerCase())
         .filter(Boolean);
 
     const statusVerifikasiIkas = (() => {
+        if (validationFlags.length > 0) {
+            if (validationFlags.every(Boolean)) return "Terverifikasi";
+            return "Menunggu verifikasi";
+        }
+
         if (validasiValues.length === 0) return "Belum diverifikasi";
         if (validasiValues.some((value) => value.includes("tolak") || value.includes("reject") || value.includes("revisi"))) {
             return "Perlu revisi";

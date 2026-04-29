@@ -20,7 +20,14 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { buildYoutubeEmbed } from "@/features/lms/services/lms.service";
-import { useLmsStore } from "@/features/lms/stores/lms.store";
+import {
+  getLinkedQuizzesForMateri,
+  getNextCourseStep,
+  isMateriAccessible,
+  isQuizPassed,
+  sortMateriByOrder,
+  useLmsStore,
+} from "@/features/lms/stores/lms.store";
 import { getCourseLearnRoute, getCourseQuizRoute, getCourseRoute, getCoursesRoute } from "@/features/lms/lib/lms-routes";
 
 const TABS = [
@@ -224,6 +231,7 @@ export default function LMSLearn() {
     courseMateri,
     courseQuizzes,
     completedMateriIds,
+    quizProgressById,
     activeMateri,
     isLoadingMateri,
     materiError,
@@ -237,30 +245,88 @@ export default function LMSLearn() {
     if (!materiId) return;
     const found = courseMateri.find((m) => m.id === materiId);
     if (found) setActiveMateri(found);
-    loadMateriDetail(materiId);
+    if (isMateriAccessible(sortMateriByOrder(courseMateri), materiId, completedMateriIds, courseQuizzes, quizProgressById)) {
+      loadMateriDetail(materiId);
+    }
     return () => {
       resetMateri();
     };
-  }, [materiId, courseMateri, setActiveMateri, loadMateriDetail, resetMateri]);
+  }, [materiId, courseMateri, completedMateriIds, courseQuizzes, quizProgressById, setActiveMateri, loadMateriDetail, resetMateri]);
 
   const materi = activeMateri;
-  const sortedMateri = [...courseMateri].sort((a, b) => a.urutan - b.urutan);
-  const currentIndex = sortedMateri.findIndex((m) => m.id === materiId);
-  const nextMateri = currentIndex >= 0 && currentIndex < sortedMateri.length - 1 ? sortedMateri[currentIndex + 1] : null;
-  const linkedQuizzes = materiId ? courseQuizzes.filter((q) => q.id_materi === materiId).sort((a, b) => a.urutan - b.urutan) : [];
+  const sortedMateri = sortMateriByOrder(courseMateri);
+  const linkedQuizzes = materiId ? getLinkedQuizzesForMateri(materiId, courseQuizzes) : [];
   const isCompleted = materiId ? completedMateriIds.has(materiId) : false;
   const embedUrl = materi?.tipe === "video" && materi.youtube_id ? buildYoutubeEmbed(materi.youtube_id) : null;
+  const isAccessible = materiId ? isMateriAccessible(sortedMateri, materiId, completedMateriIds, courseQuizzes, quizProgressById) : false;
+  const nextStep = getNextCourseStep(sortedMateri, courseQuizzes, completedMateriIds, quizProgressById);
+  const currentQuizPassed = linkedQuizzes.every((quiz) => isQuizPassed(quiz.id, quizProgressById));
+
+  const navigateToNextStep = () => {
+    if (!courseId) return;
+
+    if (!isCompleted) return;
+
+    if (linkedQuizzes.length > 0 && !currentQuizPassed) {
+      navigate(getCourseQuizRoute(courseId, linkedQuizzes[0].id));
+      return;
+    }
+
+    if (nextStep?.type === "materi") {
+      navigate(getCourseLearnRoute(courseId, nextStep.id));
+      return;
+    }
+
+    if (nextStep?.type === "quiz") {
+      navigate(getCourseQuizRoute(courseId, nextStep.id));
+      return;
+    }
+
+    navigate(getCourseRoute(courseId));
+  };
+
+  useEffect(() => {
+    if (!courseId || !materiId || sortedMateri.length === 0) return;
+    if (isAccessible) return;
+
+    const fallbackStep = getNextCourseStep(sortedMateri, courseQuizzes, completedMateriIds, quizProgressById);
+    if (fallbackStep?.type === "materi") {
+      navigate(getCourseLearnRoute(courseId, fallbackStep.id), { replace: true });
+    } else if (fallbackStep?.type === "quiz") {
+      navigate(getCourseQuizRoute(courseId, fallbackStep.id), { replace: true });
+    } else {
+      navigate(getCourseRoute(courseId), { replace: true });
+    }
+  }, [courseId, materiId, sortedMateri, courseQuizzes, completedMateriIds, quizProgressById, isAccessible, navigate]);
 
   const handleSelesai = async () => {
+    const completedAfterAction = new Set(completedMateriIds);
+
     if (!isCompleted && materiId) {
       await markMateriCompleted(materiId);
+      completedAfterAction.add(materiId);
       toast.success("Materi ditandai selesai");
     }
+
+    if (!courseId) return;
+
     if (linkedQuizzes.length > 0) {
-      navigate(getCourseQuizRoute(courseId!, linkedQuizzes[0].id));
-    } else if (nextMateri) {
-      navigate(getCourseLearnRoute(courseId!, nextMateri.id));
+      navigate(getCourseQuizRoute(courseId, linkedQuizzes[0].id));
+      return;
     }
+
+    const nextStepAfterCompletion = getNextCourseStep(sortedMateri, courseQuizzes, completedAfterAction, quizProgressById);
+    if (nextStepAfterCompletion?.type === "materi") {
+      navigate(getCourseLearnRoute(courseId, nextStepAfterCompletion.id));
+      return;
+    }
+
+    if (nextStepAfterCompletion?.type === "quiz") {
+      navigate(getCourseQuizRoute(courseId, nextStepAfterCompletion.id));
+      return;
+    }
+
+    navigate(getCourseRoute(courseId));
   };
 
   return (
@@ -280,12 +346,9 @@ export default function LMSLearn() {
           </div>
 
           <button
-            onClick={() => {
-              if (linkedQuizzes.length > 0) navigate(getCourseQuizRoute(courseId!, linkedQuizzes[0].id));
-              else if (nextMateri) navigate(getCourseLearnRoute(courseId!, nextMateri.id));
-              else navigate(getCourseRoute(courseId!));
-            }}
-            className="text-teal-600 hover:text-teal-700 font-bold text-sm tracking-wide transition-colors whitespace-nowrap"
+            onClick={navigateToNextStep}
+            disabled={!isCompleted}
+            className="text-teal-600 hover:text-teal-700 disabled:text-slate-300 font-bold text-sm tracking-wide transition-colors whitespace-nowrap"
           >
             Selanjutnya
           </button>
@@ -444,12 +507,9 @@ export default function LMSLearn() {
 
             <div className="mt-6 flex justify-end">
               <button
-                onClick={() => {
-                  if (linkedQuizzes.length > 0) navigate(getCourseQuizRoute(courseId!, linkedQuizzes[0].id));
-                  else if (nextMateri) navigate(getCourseLearnRoute(courseId!, nextMateri.id));
-                  else navigate(getCourseRoute(courseId!));
-                }}
-                className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-bold text-slate-700 border border-slate-200 shadow-sm hover:border-blue-200 hover:text-blue-700 transition-colors"
+                onClick={navigateToNextStep}
+                disabled={!isCompleted}
+                className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-bold text-slate-700 border border-slate-200 shadow-sm hover:border-blue-200 hover:text-blue-700 disabled:text-slate-300 disabled:border-slate-100 transition-colors"
               >
                 Lanjut ke tahap berikutnya
                 <ChevronRight className="w-4 h-4" />

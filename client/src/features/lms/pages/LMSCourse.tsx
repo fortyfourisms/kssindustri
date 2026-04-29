@@ -4,7 +4,7 @@ import {
   AlertCircle,
   ArrowLeft,
 } from "lucide-react";
-import { useLmsStore } from "@/features/lms/stores/lms.store";
+import { getNextCourseStep, sortMateriByOrder, useLmsStore } from "@/features/lms/stores/lms.store";
 import { getCourseLearnRoute, getCourseQuizRoute, getCoursesRoute, isCoursePath } from "@/features/lms/lib/lms-routes";
 
 function Skeleton() {
@@ -43,6 +43,7 @@ export default function LMSCourse() {
     courseMateri,
     courseQuizzes,
     completedMateriIds,
+    quizProgressById,
     isLoadingCourse,
     courseError,
     fetchCourseById,
@@ -59,23 +60,20 @@ export default function LMSCourse() {
     };
   }, [courseId, fetchCourseById, fetchCourseQuizzes, resetCourse]);
 
-  const sortedMateri = [...courseMateri].sort((a, b) => a.urutan - b.urutan);
+  const sortedMateri = sortMateriByOrder(courseMateri);
 
   useEffect(() => {
     if (!isLoadingCourse && sortedMateri.length > 0 && courseId && isCoursePath(location.pathname, courseId)) {
-      const firstUncompleted = sortedMateri.find((m) => !completedMateriIds.has(m.id));
-      if (firstUncompleted) {
-        navigate(getCourseLearnRoute(courseId, firstUncompleted.id), { replace: true });
+      const nextStep = getNextCourseStep(sortedMateri, courseQuizzes, completedMateriIds, quizProgressById);
+      if (nextStep?.type === "materi") {
+        navigate(getCourseLearnRoute(courseId, nextStep.id), { replace: true });
+      } else if (nextStep?.type === "quiz") {
+        navigate(getCourseQuizRoute(courseId, nextStep.id), { replace: true });
       } else {
-        const unlinkedQuizzes = courseQuizzes.filter((q) => !q.id_materi).sort((a, b) => a.urutan - b.urutan);
-        if (unlinkedQuizzes.length > 0) {
-          navigate(getCourseQuizRoute(courseId, unlinkedQuizzes[0].id), { replace: true });
-        } else {
-          navigate(getCourseLearnRoute(courseId, sortedMateri[sortedMateri.length - 1].id), { replace: true });
-        }
+        navigate(getCourseLearnRoute(courseId, sortedMateri[sortedMateri.length - 1].id), { replace: true });
       }
     }
-  }, [isLoadingCourse, sortedMateri, location.pathname, courseId, completedMateriIds, courseQuizzes, navigate]);
+  }, [isLoadingCourse, sortedMateri, location.pathname, courseId, completedMateriIds, courseQuizzes, quizProgressById, navigate]);
 
   if (isLoadingCourse) return <Skeleton />;
   if (courseError) {

@@ -62,14 +62,17 @@ export const api = {
         ikasService.update(id, payload),
     /** Upload Excel file to import IKAS data (multipart/form-data) */
     importIkasExcel: (file: File) => ikasService.importExcel(file),
+    requestIkasEdit: (id: string | number, payload: { reason: string }) =>
+        ikasService.requestEdit(id, payload),
 
     // ── KSE ──────────────────────────────────────────────────────────────────
     getKse: () => apiClient.get<any>("/api/se"),
     saveKse: (data: any) => apiClient.post<any>("/api/se", data),
     getKseEditRequests: () => apiClient.get<any>("/api/se/edit-requests"),
-    requestKseEdit: (id: string | number, catatanUser: string) =>
+    requestKseEdit: (id: string | number, payload: { catatan_user: string; data_perubahan: Record<string, any> }) =>
         apiClient.post<any>(`/api/se/${id}/request-edit`, {
-            catatan_user: catatanUser,
+            catatan_user: payload.catatan_user,
+            data_perubahan: payload.data_perubahan,
         }),
 
     // ── CSIRT (delegates to csirtService) ────────────────────────────────────

@@ -20,7 +20,15 @@ import { useAuthStore } from "@/stores/auth.store";
 import { getUserRole, ROLE_USER_PIC } from "@/lib/access-control";
 import kssiLogo from "@/assets/KSSI.svg";
 import fortyfourLogo from "@/assets/d44.svg";
-import { computeProgress, useLmsStore } from "@/features/lms/stores/lms.store";
+import {
+    getFinalQuizzes,
+    getLinkedQuizzesForMateri,
+    isMateriAccessible,
+    isQuizAccessible,
+    isQuizPassed,
+    sortMateriByOrder,
+    useLmsStore,
+} from "@/features/lms/stores/lms.store";
 import { getCourseLearnRoute, getCourseQuizRoute, getCoursesRoute } from "@/features/lms/lib/lms-routes";
 
 interface LMSSidebarProps {
@@ -34,7 +42,7 @@ export function LMSSidebar({ mobileOpen = false, onClose }: LMSSidebarProps) {
     const logout = useLogout();
     const navigate = useNavigate();
     const currentUser = useAuthStore((state) => state.currentUser);
-    const { courseMateri, courseQuizzes, completedMateriIds } = useLmsStore();
+    const { courseMateri, courseQuizzes, completedMateriIds, quizProgressById } = useLmsStore();
     const role = getUserRole(currentUser);
     const navItems = [
         { label: role === ROLE_USER_PIC ? "LMS" : "LMS / My Learning", href: "/lms", icon: LayoutDashboard },
@@ -43,8 +51,7 @@ export function LMSSidebar({ mobileOpen = false, onClose }: LMSSidebarProps) {
     ];
 
     const isCoursePlayerRoute = (location.pathname.startsWith("/lms/materi/") || location.pathname.startsWith("/course/")) && !collapsed;
-    const sortedMateri = useMemo(() => [...courseMateri].sort((a, b) => a.urutan - b.urutan), [courseMateri]);
-    const progressPercentage = computeProgress(sortedMateri, completedMateriIds);
+    const sortedMateri = useMemo(() => sortMateriByOrder(courseMateri), [courseMateri]);
     const desktopSidebarWidth = isCoursePlayerRoute ? "w-[320px]" : "w-64";
 
     const NavContent = ({ forMobile = false }: { forMobile?: boolean }) => (
@@ -119,9 +126,8 @@ export function LMSSidebar({ mobileOpen = false, onClose }: LMSSidebarProps) {
                                         <div className="space-y-1.5">
                                             {sortedMateri.map((materi, idx) => {
                                                 const isDone = completedMateriIds.has(materi.id);
-                                                const prevDone = idx === 0 || completedMateriIds.has(sortedMateri[idx - 1].id);
-                                                const isLocked = !prevDone;
-                                                const linkedQuizzes = courseQuizzes.filter((q) => q.id_materi === materi.id).sort((a, b) => a.urutan - b.urutan);
+                                                const isLocked = !isMateriAccessible(sortedMateri, materi.id, completedMateriIds, courseQuizzes, quizProgressById);
+                                                const linkedQuizzes = getLinkedQuizzesForMateri(materi.id, courseQuizzes);
                                                 const isActive = location.pathname.includes(`/learn/${materi.id}`);
 
                                                 return (
@@ -183,37 +189,47 @@ export function LMSSidebar({ mobileOpen = false, onClose }: LMSSidebarProps) {
                                                         )}
 
                                                         {linkedQuizzes.map((kuis) => (
+                                                            (() => {
+                                                                const canAccessQuiz = isQuizAccessible(kuis, sortedMateri, completedMateriIds, courseQuizzes, quizProgressById);
+                                                                const quizPassed = isQuizPassed(kuis.id, quizProgressById);
+
+                                                                return (
                                                             <button
                                                                 key={kuis.id}
                                                                 onClick={() => {
-                                                                    if (!isLocked && isDone) {
+                                                                    if (canAccessQuiz) {
                                                                         navigate(getCourseQuizRoute(kuis.id_kelas, kuis.id));
                                                                         if (forMobile) onClose?.();
                                                                     }
                                                                 }}
-                                                                disabled={isLocked || !isDone}
+                                                                disabled={!canAccessQuiz}
                                                                 className={cn(
                                                                     "w-full flex items-center gap-3 px-2 py-2 ml-4 text-left transition-all group rounded-lg",
-                                                                    isLocked || !isDone ? "opacity-50 cursor-not-allowed" : "hover:bg-amber-50/70"
+                                                                    !canAccessQuiz ? "opacity-50 cursor-not-allowed" : quizPassed ? "hover:bg-teal-50/70" : "hover:bg-amber-50/70"
                                                                 )}
                                                             >
-                                                                {isLocked || !isDone ? <Lock className="w-3.5 h-3.5 text-slate-400 shrink-0" /> : <ClipboardList className="w-3.5 h-3.5 text-amber-500 shrink-0" />}
-                                                                <span className={cn("text-[12px] font-semibold flex-1 min-w-0 line-clamp-2", isLocked || !isDone ? "text-slate-500" : "text-slate-700 group-hover:text-amber-700")}>
+                                                                {!canAccessQuiz ? <Lock className="w-3.5 h-3.5 text-slate-400 shrink-0" /> : quizPassed ? <CheckCircle2 className="w-3.5 h-3.5 text-teal-500 shrink-0" /> : <ClipboardList className="w-3.5 h-3.5 text-amber-500 shrink-0" />}
+                                                                <span className={cn("text-[12px] font-semibold flex-1 min-w-0 line-clamp-2", !canAccessQuiz ? "text-slate-500" : quizPassed ? "text-teal-700" : "text-slate-700 group-hover:text-amber-700")}>
                                                                     Kuis: {kuis.judul}
                                                                 </span>
                                                             </button>
+                                                                );
+                                                            })()
                                                         ))}
                                                     </div>
                                                 );
                                             })}
 
                                             {(() => {
-                                                const unlinkedQuizzes = courseQuizzes.filter((q) => !q.id_materi).sort((a, b) => a.urutan - b.urutan);
+                                                const unlinkedQuizzes = getFinalQuizzes(courseQuizzes);
                                                 if (unlinkedQuizzes.length === 0) return null;
-                                                const isFinalLocked = progressPercentage < 100;
                                                 return (
                                                     <div className="mt-3 space-y-1.5">
-                                                        {unlinkedQuizzes.map((kuis) => (
+                                                        {unlinkedQuizzes.map((kuis) => {
+                                                            const isFinalLocked = !isQuizAccessible(kuis, sortedMateri, completedMateriIds, courseQuizzes, quizProgressById);
+                                                            const quizPassed = isQuizPassed(kuis.id, quizProgressById);
+
+                                                            return (
                                                             <button
                                                                 key={kuis.id}
                                                                 disabled={isFinalLocked}
@@ -225,15 +241,16 @@ export function LMSSidebar({ mobileOpen = false, onClose }: LMSSidebarProps) {
                                                                 }}
                                                                 className={cn(
                                                                     "w-full flex items-center gap-3 px-2 py-2 text-left transition-all group rounded-lg",
-                                                                    isFinalLocked ? "opacity-50 cursor-not-allowed" : "hover:bg-amber-50/70"
+                                                                    isFinalLocked ? "opacity-50 cursor-not-allowed" : quizPassed ? "hover:bg-teal-50/70" : "hover:bg-amber-50/70"
                                                                 )}
                                                             >
-                                                                {isFinalLocked ? <Lock className="w-4 h-4 text-slate-400 shrink-0" /> : <Sparkles className="w-4 h-4 text-amber-500 shrink-0" />}
-                                                                <span className={cn("text-sm font-bold flex-1 min-w-0 line-clamp-2", isFinalLocked ? "text-slate-500" : "text-amber-900")}>
+                                                                {isFinalLocked ? <Lock className="w-4 h-4 text-slate-400 shrink-0" /> : quizPassed ? <CheckCircle2 className="w-4 h-4 text-teal-500 shrink-0" /> : <Sparkles className="w-4 h-4 text-amber-500 shrink-0" />}
+                                                                <span className={cn("text-sm font-bold flex-1 min-w-0 line-clamp-2", isFinalLocked ? "text-slate-500" : quizPassed ? "text-teal-700" : "text-amber-900")}>
                                                                     Final: {kuis.judul}
                                                                 </span>
                                                             </button>
-                                                        ))}
+                                                            );
+                                                        })}
                                                     </div>
                                                 );
                                             })()}

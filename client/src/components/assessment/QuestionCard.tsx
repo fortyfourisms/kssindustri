@@ -16,11 +16,20 @@ export default function QuestionCard({
   readOnly = false,
   onAnswer,
 }: QuestionCardProps) {
-  const [selectedAnswer, setSelectedAnswer] = React.useState<number | undefined>(selectedIndex);
+  const defaultIndex = question.indexDescriptions?.[3] ? 3 : undefined;
+  const [selectedAnswer, setSelectedAnswer] = React.useState<number | undefined>(selectedIndex ?? defaultIndex);
 
   React.useEffect(() => {
-    setSelectedAnswer(selectedIndex);
-  }, [selectedIndex]);
+    setSelectedAnswer(selectedIndex ?? defaultIndex);
+  }, [selectedIndex, defaultIndex]);
+
+  React.useEffect(() => {
+    if (readOnly) return;
+    if (selectedIndex !== undefined) return;
+    if (defaultIndex === undefined) return;
+
+    onAnswer(question.id, defaultIndex);
+  }, [readOnly, selectedIndex, defaultIndex, onAnswer, question.id]);
 
   const handleSelectIndex = (index: number) => {
     if (readOnly) return;
