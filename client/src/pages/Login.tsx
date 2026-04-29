@@ -9,7 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { getDefaultAuthenticatedRoute } from "@/lib/access-control";
 import Logo from "@/assets/d44.svg";
-import { TurnstileWidget } from "@/components/TurnstileWidget";
+import { TurnstileWidget, type TurnstileWidgetHandle } from "@/components/TurnstileWidget";
 
 const LoginSchema = z.object({
     username: z.string().min(1, "Username or email is required"),
@@ -20,10 +20,12 @@ type LoginForm = z.infer<typeof LoginSchema>;
 export default function Login() {
     const [showPass, setShowPass] = useState(false);
     const [turnstileToken, setTurnstileToken] = useState("");
+    const [turnstileVerified, setTurnstileVerified] = useState(false);
     const { login, loading, isAuthenticated } = useAuth();
     const { toast } = useToast();
     const navigate = useNavigate();
     const containerRef = useRef<HTMLDivElement>(null);
+    const turnstileRef = useRef<TurnstileWidgetHandle>(null);
     const turnstileSiteKey =
         window._env_?.TURNSTILE_SITE_KEY || import.meta.env.VITE_TURNSTILE_SITE_KEY || "";
 
@@ -50,8 +52,12 @@ export default function Login() {
     const passwordValue = watch("password", "");
     const hasIdentifier = identifierValue.trim().length > 0;
     const hasPassword = passwordValue.trim().length > 0;
-    const hasTurnstileToken = turnstileToken.trim().length > 0;
-    const isLoginEnabled = hasIdentifier && hasPassword && hasTurnstileToken;
+    const isLoginEnabled = hasIdentifier && hasPassword && turnstileVerified && turnstileToken.trim().length > 0;
+
+    const clearTurnstileState = () => {
+        setTurnstileToken("");
+        setTurnstileVerified(false);
+    };
 
     const onSubmit = async (data: LoginForm) => {
         if (!turnstileSiteKey) {
@@ -79,6 +85,8 @@ export default function Login() {
         });
 
         if (result.error) {
+            clearTurnstileState();
+            turnstileRef.current?.reset();
             toast({ title: "Login failed", description: result.error, variant: "destructive" });
             return;
         }
@@ -240,16 +248,25 @@ export default function Login() {
                         </div>
 
                         <TurnstileWidget
+                            ref={turnstileRef}
                             siteKey={turnstileSiteKey}
-                            onVerify={setTurnstileToken}
-                            onExpire={() => setTurnstileToken("")}
-                            onError={() => setTurnstileToken("")}
+                            onVerify={(token) => {
+                                setTurnstileToken(token);
+                                setTurnstileVerified(true);
+                            }}
+                            onExpire={clearTurnstileState}
+                            onError={clearTurnstileState}
+                            onTimeout={clearTurnstileState}
                             theme="light"
                             size="flexible"
+                            retry="auto"
+                            retryInterval={8000}
                         />
 
-                        <p className="text-xs text-slate-500">
-                            Complete the Cloudflare Turnstile check to enable login.
+                        <p className={turnstileVerified ? "text-xs font-semibold text-emerald-600" : "text-xs text-slate-500"}>
+                            {turnstileVerified
+                                ? "Turnstile verified. You can continue to login."
+                                : "Complete the Cloudflare Turnstile check before login is enabled."}
                         </p>
 
                         <button
