@@ -1,8 +1,9 @@
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Legend, Tooltip } from "recharts";
 import { ikasDataStatic } from "@/data/ikas-data";
+import type { IkasViewData } from "@/types/ikas.types";
 
 interface Props {
-    ikasDataDynamic: any;
+    ikasDataDynamic: IkasViewData;
 }
 
 export function RadarChartIkas({ ikasDataDynamic }: Props) {
@@ -102,25 +103,25 @@ export function RadarChartIkas({ ikasDataDynamic }: Props) {
         {
             subject: 'Perencanaan Penanggulangan',
             target: ikasDataStatic.tanggulih.perencanaan_pemulihan,
-            nilai: ikasDataDynamic.tanggulih.nilai_subdomain1,
+            nilai: ikasDataDynamic.gulih.nilai_subdomain1,
             fullSubject: 'Menyusun perencanaan penanggulangan dan pemulihan Insiden Siber'
         },
         {
             subject: 'Analisis & Pelaporan',
             target: ikasDataStatic.tanggulih.analisis_pelaporan,
-            nilai: ikasDataDynamic.tanggulih.nilai_subdomain2,
+            nilai: ikasDataDynamic.gulih.nilai_subdomain2,
             fullSubject: 'Menganalisis dan melaporkan Insiden Siber'
         },
         {
             subject: 'Pelaksanaan Penanggulangan',
             target: ikasDataStatic.tanggulih.pelaksanaan_pemulihan,
-            nilai: ikasDataDynamic.tanggulih.nilai_subdomain3,
+            nilai: ikasDataDynamic.gulih.nilai_subdomain3,
             fullSubject: 'Melaksanakan penanggulangan dan pemulihan Insiden Siber'
         },
         {
             subject: 'Peningkatan Keamanan',
             target: ikasDataStatic.tanggulih.peningkatan_keamanan,
-            nilai: ikasDataDynamic.tanggulih.nilai_subdomain4,
+            nilai: ikasDataDynamic.gulih.nilai_subdomain4,
             fullSubject: 'Meningkatkan keamanan setelah terjadinya Insiden Siber'
         },
     ];
@@ -130,22 +131,22 @@ export function RadarChartIkas({ ikasDataDynamic }: Props) {
         {
             subject: 'IDENTIFIKASI',
             target: 2.51,
-            nilai: ikasDataDynamic.identifikasi.nilai_identifikasi || 0
+            nilai: ikasDataDynamic.identifikasi.nilai || 0
         },
         {
             subject: 'PROTEKSI',
             target: 2.51,
-            nilai: ikasDataDynamic.proteksi.nilai_proteksi || 0
+            nilai: ikasDataDynamic.proteksi.nilai || 0
         },
         {
             subject: 'DETEKSI',
             target: 2.51,
-            nilai: ikasDataDynamic.deteksi.nilai_deteksi || 0
+            nilai: ikasDataDynamic.deteksi.nilai || 0
         },
         {
             subject: 'PENANGGULANGAN DAN PEMULIHAN',
             target: 2.51,
-            nilai: ikasDataDynamic.tanggulih.nilai_tanggulih || 0
+            nilai: ikasDataDynamic.gulih.nilai || 0
         }
     ];
 

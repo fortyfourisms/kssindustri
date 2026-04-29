@@ -4,6 +4,7 @@ import {
     ReferenceLine, Cell,
 } from "recharts";
 import { TrendingUp, BarChart2, BarChart3 } from "lucide-react";
+import type { IkasData } from "@/types/ikas.types";
 
 // ─── Helper: petakan raw API item ke nilai domain ────────────────────────────
 function extractDomainValues(item: any) {
@@ -11,7 +12,7 @@ function extractDomainValues(item: any) {
         identifikasi: item?.identifikasi?.nilai_identifikasi ?? 0,
         proteksi: item?.proteksi?.nilai_proteksi ?? 0,
         deteksi: item?.deteksi?.nilai_deteksi ?? 0,
-        tanggulih: item?.gulih?.nilai_gulih ?? item?.tanggulih?.nilai_tanggulih ?? 0,
+        gulih: item?.gulih?.nilai_gulih ?? item?.tanggulih?.nilai_tanggulih ?? 0,
         total: item?.nilai_kematangan ?? item?.total_rata_rata ?? 0,
     };
 }
@@ -35,7 +36,7 @@ const DOMAIN_COLORS = {
     identifikasi: "#3b82f6",  // blue
     proteksi: "#8b5cf6",  // purple
     deteksi: "#f59e0b",  // amber
-    tanggulih: "#10b981",  // emerald
+    gulih: "#10b981",  // emerald
 };
 
 const YEAR_PALETTE = [
@@ -88,7 +89,7 @@ const CustomLineTooltip = ({ active, payload, label }: any) => {
 
 // ─── Props ───────────────────────────────────────────────────────────────────
 interface Props {
-    ikasList: any[] | undefined;
+    ikasList: IkasData[] | undefined;
     availableYears: number[];
 }
 
@@ -107,7 +108,7 @@ export function IkasYearComparisonChart({ ikasList, availableYears }: Props) {
             Identifikasi: vals.identifikasi,
             Proteksi: vals.proteksi,
             Deteksi: vals.deteksi,
-            Tanggulih: vals.tanggulih,
+            Tanggulih: vals.gulih,
         };
     }).reverse();
 
@@ -128,7 +129,7 @@ export function IkasYearComparisonChart({ ikasList, availableYears }: Props) {
         { domain: "Identifikasi", key: "identifikasi" as const },
         { domain: "Proteksi", key: "proteksi" as const },
         { domain: "Deteksi", key: "deteksi" as const },
-        { domain: "Tanggulih", key: "tanggulih" as const },
+        { domain: "Tanggulih", key: "gulih" as const },
     ].map(({ domain, key }) => {
         const row: Record<string, any> = { domain };
         availableYears.forEach(year => {
@@ -215,7 +216,7 @@ export function IkasYearComparisonChart({ ikasList, availableYears }: Props) {
                                     <Bar dataKey="Identifikasi" fill={DOMAIN_COLORS.identifikasi} radius={[4, 4, 0, 0]} />
                                     <Bar dataKey="Proteksi" fill={DOMAIN_COLORS.proteksi} radius={[4, 4, 0, 0]} />
                                     <Bar dataKey="Deteksi" fill={DOMAIN_COLORS.deteksi} radius={[4, 4, 0, 0]} />
-                                    <Bar dataKey="Tanggulih" fill={DOMAIN_COLORS.tanggulih} radius={[4, 4, 0, 0]} />
+                                    <Bar dataKey="Tanggulih" fill={DOMAIN_COLORS.gulih} radius={[4, 4, 0, 0]} />
                                 </BarChart>
                             </ResponsiveContainer>
                         </div>
