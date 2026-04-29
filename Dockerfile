@@ -16,8 +16,8 @@ RUN bun install --frozen-lockfile
 COPY --chown=bun:bun . .
 
 # Build-time env for Vite.
-# These values are read by `bun run build` and baked into the static bundle
-# via `import.meta.env.*`.
+# These values are available as `import.meta.env.*` in the built frontend.
+# Turnstile uses the public site key here, never the secret key.
 ARG VITE_API_BASE_URL
 ARG TURNSTILE_SITE_KEY
 ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
@@ -40,8 +40,9 @@ RUN bun init -y && \
     bun add serve@latest
 
 # Runtime defaults in the final image.
-# Container-level `-e/--env` values can still override these at startup.
-# The startup command writes them into `dist/env-config.js` as `window._env_`.
+# Container-level `-e/--env` values can override these at startup.
+# `TURNSTILE_SITE_KEY` is the public frontend key that gets written to
+# `window._env_` for the browser to read at runtime.
 ARG VITE_API_BASE_URL
 ARG TURNSTILE_SITE_KEY
 ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}

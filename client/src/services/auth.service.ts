@@ -21,7 +21,11 @@ class AuthService {
         return apiClient.post<AuthResponse>('/api/login', {
             identifier: payload.identifier,
             password: payload.password,
+            "cf-turnstile-response": payload.turnstileToken,
+            // Keep multiple field variants for backend compatibility.
             turnstile_token: payload.turnstileToken,
+            turnstileToken: payload.turnstileToken,
+            turnstiletoken: payload.turnstileToken,
         });
     }
 

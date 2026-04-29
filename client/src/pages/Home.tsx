@@ -14,19 +14,25 @@ import { Footer } from "@/components/Footer";
 import { CyberBackground } from "@/components/CyberBackground";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { AnimatePresence, motion } from "framer-motion";
-import { useLocation } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { useAppStore } from "@/stores/useAppStore";
+import { useAuthStore } from "@/stores/auth.store";
 
 type LandingScrollState = {
   scrollTarget?: string;
 };
 
 export default function Home() {
+  const isAuthenticated = useAuthStore((state) => state.authenticated);
   const hasSeenLandingLoading = useAppStore((state) => state.hasSeenLandingLoading);
   const setHasSeenLandingLoading = useAppStore((state) => state.setHasSeenLandingLoading);
   const [isLoading, setIsLoading] = useState(() => !hasSeenLandingLoading);
   const location = useLocation();
   const scrollTarget = (location.state as LandingScrollState | null)?.scrollTarget;
+
+  if (isAuthenticated) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   useEffect(() => {
     if (isLoading) {

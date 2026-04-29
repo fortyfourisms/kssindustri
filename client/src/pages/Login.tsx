@@ -2,9 +2,9 @@ import { useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Eye, EyeOff, Loader2, ShieldCheck } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { getDefaultAuthenticatedRoute } from "@/lib/access-control";
@@ -12,7 +12,7 @@ import Logo from "@/assets/d44.svg";
 import { TurnstileWidget } from "@/components/TurnstileWidget";
 
 const LoginSchema = z.object({
-    username: z.string().min(1, "Username is required"),
+    username: z.string().min(1, "Username or email is required"),
     password: z.string().min(1, "Password is required"),
 });
 type LoginForm = z.infer<typeof LoginSchema>;
@@ -20,13 +20,16 @@ type LoginForm = z.infer<typeof LoginSchema>;
 export default function Login() {
     const [showPass, setShowPass] = useState(false);
     const [turnstileToken, setTurnstileToken] = useState("");
-    const { login, loading } = useAuth();
+    const { login, loading, isAuthenticated } = useAuth();
     const { toast } = useToast();
     const navigate = useNavigate();
     const containerRef = useRef<HTMLDivElement>(null);
     const turnstileSiteKey =
         window._env_?.TURNSTILE_SITE_KEY || import.meta.env.VITE_TURNSTILE_SITE_KEY || "";
-    const requiresTurnstile = Boolean(turnstileSiteKey);
+
+    if (isAuthenticated) {
+        return <Navigate to="/dashboard" replace />;
+    }
 
     const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
         if (!containerRef.current) return;
@@ -40,14 +43,30 @@ export default function Login() {
     const {
         register,
         handleSubmit,
+        watch,
         formState: { errors },
     } = useForm<LoginForm>({ resolver: zodResolver(LoginSchema) });
+    const identifierValue = watch("username", "");
+    const passwordValue = watch("password", "");
+    const hasIdentifier = identifierValue.trim().length > 0;
+    const hasPassword = passwordValue.trim().length > 0;
+    const hasTurnstileToken = turnstileToken.trim().length > 0;
+    const isLoginEnabled = hasIdentifier && hasPassword && hasTurnstileToken;
 
     const onSubmit = async (data: LoginForm) => {
-        if (requiresTurnstile && !turnstileToken) {
+        if (!turnstileSiteKey) {
+            toast({
+                title: "Turnstile unavailable",
+                description: "Login is temporarily unavailable because Turnstile is not configured.",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        if (!isLoginEnabled) {
             toast({
                 title: "Verification required",
-                description: "Please complete the Cloudflare Turnstile check before logging in.",
+                description: "Complete Turnstile verification and fill in your credentials before logging in.",
                 variant: "destructive",
             });
             return;
@@ -192,7 +211,7 @@ export default function Login() {
                             <input
                                 {...register("username")}
                                 type="text"
-                                placeholder="Username"
+                                placeholder="Username or email"
                                 className="w-full px-5 py-4 rounded-2xl bg-[#f8fafc] border border-transparent text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all shadow-sm"
                             />
                             {errors.username && (
@@ -220,19 +239,23 @@ export default function Login() {
                             )}
                         </div>
 
-                        {requiresTurnstile && (
-                            <TurnstileWidget
-                                siteKey={turnstileSiteKey}
-                                onVerify={setTurnstileToken}
-                                onExpire={() => setTurnstileToken("")}
-                                onError={() => setTurnstileToken("")}
-                            />
-                        )}
+                        <TurnstileWidget
+                            siteKey={turnstileSiteKey}
+                            onVerify={setTurnstileToken}
+                            onExpire={() => setTurnstileToken("")}
+                            onError={() => setTurnstileToken("")}
+                            theme="light"
+                            size="flexible"
+                        />
+
+                        <p className="text-xs text-slate-500">
+                            Complete the Cloudflare Turnstile check to enable login.
+                        </p>
 
                         <button
                             type="submit"
-                            disabled={loading || (requiresTurnstile && !turnstileToken)}
-                            className="w-full py-4 mt-6 rounded-2xl bg-blue-600 text-white font-bold text-sm shadow-xl shadow-blue-600/20 hover:shadow-blue-600/30 hover:bg-blue-700 active:scale-[0.98] transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+                            disabled={loading || !isLoginEnabled}
+                            className="w-full py-4 mt-6 rounded-2xl bg-blue-600 text-white font-bold text-sm shadow-xl shadow-blue-600/20 hover:shadow-blue-600/30 hover:bg-blue-700 active:scale-[0.98] transition-all disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-blue-600 disabled:hover:shadow-blue-600/20 flex items-center justify-center gap-3"
                         >
                             {loading ? (
                                 <>
