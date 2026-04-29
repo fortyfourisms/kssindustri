@@ -12,7 +12,6 @@ type TurnstileWidgetProps = {
 declare global {
     interface Window {
         turnstile?: {
-            ready: (callback: () => void) => void;
             render: (
                 container: HTMLElement,
                 options: {
@@ -34,17 +33,67 @@ declare global {
 
 const TURNSTILE_SCRIPT_ID = "cf-turnstile-script";
 const TURNSTILE_SCRIPT_SRC = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+const TURNSTILE_LOAD_TIMEOUT_MS = 15000;
 
-function loadTurnstileScript(): Promise<void> {
+function waitForTurnstileApi(timeoutMs = TURNSTILE_LOAD_TIMEOUT_MS): Promise<NonNullable<Window["turnstile"]>> {
     if (window.turnstile) {
-        return Promise.resolve();
+        return Promise.resolve(window.turnstile);
+    }
+
+    return new Promise((resolve, reject) => {
+        const startedAt = Date.now();
+
+        const check = () => {
+            if (window.turnstile) {
+                resolve(window.turnstile);
+                return;
+            }
+
+            if (Date.now() - startedAt >= timeoutMs) {
+                reject(new Error("Turnstile API did not become available"));
+                return;
+            }
+
+            window.setTimeout(check, 50);
+        };
+
+        check();
+    });
+}
+
+function loadTurnstileScript(): Promise<NonNullable<Window["turnstile"]>> {
+    if (window.turnstile) {
+        return Promise.resolve(window.turnstile);
     }
 
     const existingScript = document.getElementById(TURNSTILE_SCRIPT_ID) as HTMLScriptElement | null;
     if (existingScript) {
         return new Promise((resolve, reject) => {
-            existingScript.addEventListener("load", () => resolve(), { once: true });
-            existingScript.addEventListener("error", () => reject(new Error("Failed to load Turnstile")), { once: true });
+            if (window.turnstile) {
+                resolve(window.turnstile);
+                return;
+            }
+            if (existingScript.dataset.loaded === "error") {
+                reject(new Error("Turnstile script previously failed to load"));
+                return;
+            }
+
+            const timeoutId = window.setTimeout(() => {
+                reject(new Error("Turnstile script load timed out"));
+            }, TURNSTILE_LOAD_TIMEOUT_MS);
+
+            existingScript.addEventListener("load", async () => {
+                window.clearTimeout(timeoutId);
+                try {
+                    resolve(await waitForTurnstileApi());
+                } catch (error) {
+                    reject(error);
+                }
+            }, { once: true });
+            existingScript.addEventListener("error", () => {
+                window.clearTimeout(timeoutId);
+                reject(new Error("Turnstile script failed to load"));
+            }, { once: true });
         });
     }
 
@@ -52,10 +101,25 @@ function loadTurnstileScript(): Promise<void> {
         const script = document.createElement("script");
         script.id = TURNSTILE_SCRIPT_ID;
         script.src = TURNSTILE_SCRIPT_SRC;
-        script.async = true;
-        script.defer = true;
-        script.onload = () => resolve();
-        script.onerror = () => reject(new Error("Failed to load Turnstile"));
+        const timeoutId = window.setTimeout(() => {
+            script.dataset.loaded = "error";
+            reject(new Error("Turnstile script load timed out"));
+        }, TURNSTILE_LOAD_TIMEOUT_MS);
+
+        script.onload = async () => {
+            window.clearTimeout(timeoutId);
+            script.dataset.loaded = "true";
+            try {
+                resolve(await waitForTurnstileApi());
+            } catch (error) {
+                reject(error);
+            }
+        };
+        script.onerror = () => {
+            window.clearTimeout(timeoutId);
+            script.dataset.loaded = "error";
+            reject(new Error("Turnstile script failed to load"));
+        };
         document.head.appendChild(script);
     });
 }
@@ -82,37 +146,39 @@ export function TurnstileWidget({
         let isMounted = true;
 
         loadTurnstileScript()
-            .then(() => {
-                if (!isMounted || !window.turnstile || !containerRef.current) return;
+            .then((turnstile) => {
+                if (!isMounted || !containerRef.current) return;
                 if (widgetIdRef.current) return;
 
-                window.turnstile.ready(() => {
-                    if (!isMounted || !window.turnstile || !containerRef.current) return;
-                    if (widgetIdRef.current) return;
-
-                    widgetIdRef.current = window.turnstile.render(containerRef.current, {
-                        sitekey: siteKey,
-                        theme,
-                        size,
-                        callback: (token: string) => {
-                            onVerify(token);
-                            setLoadError(null);
-                        },
-                        "expired-callback": () => {
-                            setLoadError("Turnstile verification expired. Please verify again.");
-                            onExpire?.();
-                        },
-                        "error-callback": (error?: unknown) => {
-                            setLoadError("Turnstile verification failed. Please retry.");
-                            onError?.(error);
-                        },
-                    });
+                widgetIdRef.current = turnstile.render(containerRef.current, {
+                    sitekey: siteKey,
+                    theme,
+                    size,
+                    callback: (token: string) => {
+                        onVerify(token);
+                        setLoadError(null);
+                    },
+                    "expired-callback": () => {
+                        setLoadError("Turnstile verification expired. Please verify again.");
+                        onExpire?.();
+                    },
+                    "error-callback": (error?: unknown) => {
+                        setLoadError("Turnstile verification failed. Please retry.");
+                        onError?.(error);
+                    },
                 });
             })
-            .catch(() => {
+            .catch((error) => {
                 if (!isMounted) return;
-                setLoadError("Turnstile failed to load. Please refresh the page.");
-                onError?.();
+                console.error("Turnstile failed to initialize", {
+                    error,
+                    siteKey,
+                    scriptSrc: TURNSTILE_SCRIPT_SRC,
+                    hostname: window.location.hostname,
+                });
+                const message = error instanceof Error ? error.message : "Turnstile failed to load";
+                setLoadError(`${message}. Please refresh the page.`);
+                onError?.(error);
             });
 
         return () => {
