@@ -8,6 +8,11 @@ import type {
     MfaVerifyResponse,
 } from '@/types/auth.types';
 
+const REFRESH_COOLDOWN_MS = 15000;
+
+let refreshInFlight: Promise<void> | null = null;
+let lastRefreshAt = 0;
+
 /**
  * Authentication Service — Cookie Auth + MFA.
  * Backend sets HTTP-only cookie on login.
@@ -55,13 +60,31 @@ class AuthService {
      * Melempar error jika refresh token sudah expired atau tidak valid.
      */
     async refresh(): Promise<void> {
+        const now = Date.now();
+        if (refreshInFlight) {
+            return refreshInFlight;
+        }
+
+        if (now - lastRefreshAt < REFRESH_COOLDOWN_MS) {
+            return;
+        }
+
         const BASE_URL = (window as any)._env_?.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE_URL || '';
-        const res = await fetch(`${BASE_URL}/api/refresh`, {
-            method: 'POST',
-            credentials: 'include',
-        });
-        if (!res.ok) {
-            throw new Error(`Token refresh failed: ${res.status}`);
+        refreshInFlight = (async () => {
+            const res = await fetch(`${BASE_URL}/api/refresh`, {
+                method: 'POST',
+                credentials: 'include',
+            });
+            if (!res.ok) {
+                throw new Error('Session expired');
+            }
+            lastRefreshAt = Date.now();
+        })();
+
+        try {
+            await refreshInFlight;
+        } finally {
+            refreshInFlight = null;
         }
     }
 

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { authService } from '@/services/auth.service';
+import type { CurrentUser } from '@/types/user.types';
 import type { LoginPayload, RegisterPayload } from '@/types/auth.types';
 
 // ─── MFA transient tokens ─────────────────────────────────────────────────────
@@ -57,25 +58,7 @@ export function readMfaVerifyToken(): string | null { return readToken(MFA_VERIF
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export interface CurrentUser {
-    id: string;
-    username: string;
-    name: string;
-    displayName: string;
-    email: string;
-    role: string;
-    roleId: string;
-    roleName: string;
-    jabatan: string;
-    companyId: string;
-    fotoProfile: string;
-    banner: string;
-    status: string;
-    mfaEnabled: boolean;
-    hasCompany: boolean | null;
-    createdAt: string;
-    updatedAt: string;
-}
+export type { CurrentUser } from '@/types/user.types';
 
 interface AuthResult {
     authenticated: boolean;
@@ -110,6 +93,7 @@ interface AuthState {
     clearMfaState: () => void;
     registerUser: (payload: RegisterPayload) => Promise<{ success: boolean; error?: string }>;
     logUserOut: () => Promise<void>;
+    syncCurrentUser: (response: unknown) => void;
 
     /**
      * Restore session dari HTTP-only cookie via GET /api/me.
@@ -140,29 +124,42 @@ function mapToCurrentUser(data: unknown): CurrentUser {
     const u = (data as { user?: unknown })?.user ?? data;
     const user = u as Record<string, unknown>;
     const rawHasCompany = user.has_company;
+    const displayName = String(user.display_name ?? user.name ?? user.username ?? '');
+    const jabatan = String(user.jabatan ?? '');
+    const fotoProfile = String(user.foto_profile ?? '');
+    const createdAt = String(user.created_at ?? user.createdAt ?? '');
+    const updatedAt = String(user.updated_at ?? user.updatedAt ?? '');
     return {
         id: String(user.id ?? ''),
         username: String(user.username ?? ''),
-        name: String(user.display_name ?? user.name ?? user.username ?? ''),
-        displayName: String(user.display_name ?? user.name ?? user.username ?? ''),
+        name: displayName,
+        displayName,
+        display_name: displayName,
         email: String(user.email ?? ''),
         role: String(user.role ?? user.role_name ?? 'user'),
         roleId: String(user.role_id ?? ''),
         roleName: String(user.role_name ?? user.role ?? ''),
-        jabatan: String(user.jabatan ?? ''),
+        jabatan,
+        jabatan_name: String(user.jabatan_name ?? user.jabatan ?? ''),
+        id_jabatan: user.id_jabatan != null ? String(user.id_jabatan) : '',
         companyId: String(user.id_perusahaan ?? ''),
-        fotoProfile: String(user.foto_profile ?? ''),
+        fotoProfile,
+        foto_profile: fotoProfile,
         banner: String(user.banner ?? ''),
         status: String(user.status ?? ''),
         mfaEnabled: Boolean(user.mfa_enabled),
+        id_perusahaan: user.id_perusahaan != null ? String(user.id_perusahaan) : '',
+        perusahaan: (user.perusahaan as CurrentUser["perusahaan"]) ?? null,
         hasCompany:
             typeof rawHasCompany === 'boolean'
                 ? rawHasCompany
                 : user.id_perusahaan != null
                     ? Boolean(String(user.id_perusahaan))
                     : null,
-        createdAt: String(user.created_at ?? user.createdAt ?? ''),
-        updatedAt: String(user.updated_at ?? user.updatedAt ?? ''),
+        createdAt,
+        updatedAt,
+        created_at: createdAt,
+        updated_at: updatedAt,
     };
 }
 
@@ -270,6 +267,11 @@ export const useAuthStore = create<AuthState>()(
                 setupToken: null,
                 mfaToken: null,
             });
+        },
+
+        syncCurrentUser: (response) => {
+            const userData = mapToCurrentUser(response);
+            set({ authenticated: true, currentUser: userData });
         },
 
         rehydrateFromServer: async () => {

@@ -3,7 +3,6 @@ import type { CurrentUser } from "@/stores/auth.store";
 export const ROLE_USER = "user";
 export const ROLE_USER_PIC = "user_pic";
 
-export const LMS_ALLOWED_ROLES = [ROLE_USER, ROLE_USER_PIC] as const;
 export const ORGANIZATION_ALLOWED_ROLES = [ROLE_USER_PIC] as const;
 
 export function getUserRole(user?: Pick<CurrentUser, "role"> | null): string {

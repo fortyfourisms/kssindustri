@@ -11,6 +11,7 @@ import {
 } from "@/features/lms/lib/lms-dashboard";
 import { lmsService } from "@/features/lms/services/lms.service";
 import { useLmsStore } from "@/features/lms/stores/lms.store";
+import { useAuthStore } from "@/stores/auth.store";
 import { cn } from "@/lib/utils";
 import type { LmsCourseInsight } from "@/features/lms/lib/lms-dashboard";
 
@@ -29,7 +30,9 @@ const TAG_THEMES = [
 export function LMSDashboard() {
     const navigate = useNavigate();
     const { courses, isLoadingCourses, coursesError, fetchCourses } = useLmsStore();
+    const currentUser = useAuthStore((state) => state.currentUser);
     const [selectedCategory, setSelectedCategory] = useState("All");
+    const userDisplayName = currentUser?.displayName || currentUser?.name || currentUser?.username || "User";
 
     useEffect(() => {
         fetchCourses();
@@ -45,44 +48,83 @@ export function LMSDashboard() {
         queryFn: () => lmsService.getMySertifikats(),
     });
 
-    const courseDetailQueries = useQueries({
-        queries: publishedCourses.map((course) => ({
-            queryKey: ["lms-dashboard-course-detail", course.id],
-            queryFn: () => lmsService.getCourseById(course.id),
-            enabled: !!course.id,
-        })),
-    });
-
     const certificateCourseIds = useMemo(
         () => getCertificateCourseIds(userCertificates),
         [userCertificates]
     );
 
-    const courseInsights = useMemo(
+    const baseCourseInsights = useMemo(
         () =>
             publishedCourses.map((course, index) => {
-                const detail = courseDetailQueries[index]?.data;
                 return buildLmsCourseInsight({
                     course,
-                    materi: detail?.materi ?? [],
-                    completedIds: detail?.completedIds ?? [],
                     hasCertificate: certificateCourseIds.has(String(course.id)),
                     index,
                 });
             }),
-        [publishedCourses, courseDetailQueries, certificateCourseIds]
+        [publishedCourses, certificateCourseIds]
     );
 
     const categoryOptions = useMemo(
-        () => ["All", ...Array.from(new Set(courseInsights.map((item, index) => inferLmsCategory(item.title, index))))],
-        [courseInsights]
+        () => ["All", ...Array.from(new Set(baseCourseInsights.map((item, index) => inferLmsCategory(item.title, index))))],
+        [baseCourseInsights]
     );
     const safeSelectedCategory = categoryOptions.includes(selectedCategory) ? selectedCategory : "All";
-    const filteredCourses = useMemo(
+    const filteredBaseCourses = useMemo(
         () => safeSelectedCategory === "All"
-            ? courseInsights
-            : courseInsights.filter((item) => item.category === safeSelectedCategory),
-        [courseInsights, safeSelectedCategory]
+            ? baseCourseInsights
+            : baseCourseInsights.filter((item) => item.category === safeSelectedCategory),
+        [baseCourseInsights, safeSelectedCategory]
+    );
+    const detailCourseIds = useMemo(
+        () => filteredBaseCourses.slice(0, 5).map((course) => course.id),
+        [filteredBaseCourses]
+    );
+    const courseDetailQueries = useQueries({
+        queries: detailCourseIds.map((courseId) => ({
+            queryKey: ["lms-dashboard-course-detail", courseId],
+            queryFn: () => lmsService.getCourseById(courseId),
+            enabled: !!courseId,
+            staleTime: 1000 * 60 * 5,
+        })),
+    });
+    const detailedCourseMap = useMemo(
+        () =>
+            detailCourseIds.reduce<Record<string, { materi: any[]; completedIds: string[] }>>((acc, courseId, index) => {
+                const detail = courseDetailQueries[index]?.data;
+                if (detail) {
+                    acc[courseId] = {
+                        materi: detail.materi ?? [],
+                        completedIds: detail.completedIds ?? [],
+                    };
+                }
+                return acc;
+            }, {}),
+        [detailCourseIds, courseDetailQueries]
+    );
+    const filteredCourses = useMemo(
+        () =>
+            filteredBaseCourses.map((course, index) => {
+                const detail = detailedCourseMap[course.id];
+                if (!detail) return course;
+
+                return buildLmsCourseInsight({
+                    course: publishedCourses.find((item) => item.id === course.id) ?? {
+                        id: course.id,
+                        judul: course.title,
+                        deskripsi: course.description,
+                        status: "published",
+                        created_by: "",
+                        created_at: "",
+                        updated_at: "",
+                    },
+                    materi: detail.materi,
+                    completedIds: detail.completedIds,
+                    hasCertificate: certificateCourseIds.has(String(course.id)),
+                    index,
+                });
+            }),
+        [filteredBaseCourses, detailedCourseMap, publishedCourses, certificateCourseIds]
     );
     const featuredCourses = filteredCourses.slice(0, 3);
     const lessonRows = filteredCourses.slice(0, 5);
@@ -109,6 +151,13 @@ export function LMSDashboard() {
             <div className="mx-auto max-w-[1480px] px-6 py-6">
                 <div className="flex gap-8 xl:gap-10">
                     <div className="min-w-0 flex-1">
+                        <div className="mb-6 rounded-3xl bg-white px-6 py-5 shadow-sm ring-1 ring-slate-200">
+                            <p className="text-sm font-medium text-slate-500">Dashboard LMS</p>
+                            <h1 className="mt-1 text-2xl font-black tracking-tight text-slate-950">
+                                Selamat datang {userDisplayName}
+                            </h1>
+                        </div>
+
                         <div className="mb-6 flex flex-wrap gap-2">
                             {categoryOptions.map((cat, i) => (
                                 <button

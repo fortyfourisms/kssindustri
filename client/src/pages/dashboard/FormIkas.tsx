@@ -16,8 +16,8 @@ import { useIkasAssessmentSetup } from "@/hooks/useIkasAssessmentSetup";
 import { ikasService } from "@/services/ikas.service";
 import AssessmentView from "@/pages/dashboard/Assessment/AssessmentView";
 import { useUser } from "@/hooks/useAuth";
+import { useCompanyProfile } from "@/hooks/useCompanyProfile";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { perusahaanService } from "@/services/perusahaan.service";
 import { getKategoriKematangan } from "@/types/ikas.types";
 import { getIkasEditRequestStatus, getIkasEditStatusMeta } from "@/lib/ikas-edit-request";
 
@@ -112,13 +112,8 @@ export default function FormIkas() {
     // ── Company data ────────────────────────────────────────────────────────────
     const { data: meData } = useUser();
     const perusahaanId = resolveCompanyId(meData?.id_perusahaan, meData?.perusahaan?.id);
-    const { data: perusahaan } = useQuery({
-        queryKey: ["perusahaan", perusahaanId],
-        queryFn: () => perusahaanService.getById(String(perusahaanId)),
-        enabled: !!perusahaanId && !meData?.perusahaan?.nama_perusahaan,
-        staleTime: 1000 * 60 * 5,
-    });
-    const perusahaanData = perusahaan ?? meData?.perusahaan ?? null;
+    const { perusahaan } = useCompanyProfile(meData);
+    const perusahaanData = perusahaan ?? null;
 
     // ── Assessment setup from API (questions + existing answers) ───────────────
     const {

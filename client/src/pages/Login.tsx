@@ -63,7 +63,7 @@ export default function Login() {
         if (!turnstileSiteKey) {
             toast({
                 title: "Turnstile unavailable",
-                description: "Login is temporarily unavailable because Turnstile is not configured.",
+                description: "Login is temporarily unavailable. Please try again later.",
                 variant: "destructive",
             });
             return;
@@ -263,11 +263,11 @@ export default function Login() {
                             retryInterval={8000}
                         />
 
-                        <p className={turnstileVerified ? "text-xs font-semibold text-emerald-600" : "text-xs text-slate-500"}>
-                            {turnstileVerified
-                                ? "Turnstile verified. You can continue to login."
-                                : "Complete the Cloudflare Turnstile check before login is enabled."}
-                        </p>
+                        {!turnstileVerified && (
+                            <p className="text-xs text-slate-500">
+                                Complete the Cloudflare Turnstile check before login is enabled.
+                            </p>
+                        )}
 
                         <button
                             type="submit"

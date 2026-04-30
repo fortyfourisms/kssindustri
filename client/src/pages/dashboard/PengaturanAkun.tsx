@@ -1,6 +1,5 @@
-import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { apiClient } from "@/services/apiClient";
+import { usersService } from "@/services/users.service";
 import { useUser } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
@@ -9,6 +8,7 @@ import { z } from "zod";
 import { Loader2, Lock, UserCircle, Mail, User, Save } from "lucide-react";
 import { motion } from "framer-motion";
 import { useQueryClient } from "@tanstack/react-query";
+import { useAuthStore } from "@/stores/auth.store";
 
 const AkunSchema = z.object({
     username: z.string().min(2, "Username minimal 2 karakter"),
@@ -35,6 +35,7 @@ const LABEL_CLS = "block text-sm font-semibold text-slate-700 mb-1.5";
 export default function PengaturanAkun() {
     const { toast } = useToast();
     const qc = useQueryClient();
+    const syncCurrentUser = useAuthStore((state) => state.syncCurrentUser);
     const { data: user, isLoading: isUserLoading } = useUser();
 
     // AKUN (Username & Email)
@@ -48,15 +49,13 @@ export default function PengaturanAkun() {
 
     const akunMutation = useMutation({
         mutationFn: (d: AkunForm) => {
-            const userId = user?.id || user?.id_user;
-            if (!userId) throw new Error("ID user tidak ditemukan");
-            
             // Sertakan jabatan yang sudah ada agar tidak di-null-kan oleh backend
             const currentJabatan = user?.jabatan_name || user?.id_jabatan || user?.jabatan || null;
-            return apiClient.put<any>(`/api/users/${userId}`, { ...d, jabatan: currentJabatan });
+            return usersService.updateCurrentUser({ ...d, jabatan: currentJabatan });
         },
         onSuccess: (updated) => {
             qc.setQueryData(["me"], updated);
+            syncCurrentUser(updated);
             toast({ title: "Akun berhasil diperbarui" });
         },
         onError: (e: any) => toast({ title: "Gagal", description: e.message, variant: "destructive" }),
@@ -65,11 +64,8 @@ export default function PengaturanAkun() {
     const passwordForm = useForm<PasswordForm>({ resolver: zodResolver(PasswordSchema) });
 
     const passwordMutation = useMutation({
-        mutationFn: (d: PasswordForm) => {
-            const userId = user?.id || user?.id_user;
-            if (!userId) throw new Error("ID user tidak ditemukan");
-            return apiClient.put<any>(`/api/users/${userId}`, { currentPassword: d.currentPassword, newPassword: d.newPassword });
-        },
+        mutationFn: (d: PasswordForm) =>
+            usersService.updateCurrentUser({ currentPassword: d.currentPassword, newPassword: d.newPassword }),
         onSuccess: () => {
             passwordForm.reset();
             toast({ title: "Password diperbarui" });

@@ -177,7 +177,7 @@ export const TurnstileWidget = forwardRef<TurnstileWidgetHandle, TurnstileWidget
 
     useEffect(() => {
         if (!siteKey) {
-            setLoadError("Turnstile site key is missing. Please contact the administrator.");
+            setLoadError("Security verification is temporarily unavailable. Please try again later.");
             lifecycleRef.current = "error";
             onErrorRef.current?.();
             return;
@@ -225,14 +225,7 @@ export const TurnstileWidget = forwardRef<TurnstileWidgetHandle, TurnstileWidget
             .catch((error) => {
                 if (!isMounted) return;
                 lifecycleRef.current = "error";
-                console.error("Turnstile failed to initialize", {
-                    error,
-                    siteKey,
-                    scriptSrc: TURNSTILE_SCRIPT_SRC,
-                    hostname: window.location.hostname,
-                });
-                const message = error instanceof Error ? error.message : "Turnstile failed to load";
-                setLoadError(`${message}. Please refresh the page.`);
+                setLoadError("Security verification is temporarily unavailable. Please refresh the page and try again.");
                 onErrorRef.current?.(error);
             });
 

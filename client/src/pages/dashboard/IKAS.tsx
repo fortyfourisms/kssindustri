@@ -4,9 +4,8 @@ import { ikasDataStatic } from "@/data/ikas-data";
 import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { api } from "@/lib/api";
-import { exportIkasPdf } from "@/lib/pdf-export";
 import { PageHeader } from "@/components/dashboard/PageHeader";
-import { Building2, Search, Shield, Radar, Activity, Edit, FileSpreadsheet, Loader2, CalendarDays, Download, BadgeCheck, Clock3 } from "lucide-react";
+import { Building2, Search, Shield, Radar, Activity, Edit, FileSpreadsheet, Loader2, CalendarDays, BadgeCheck, Clock3 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { RadarChartIkas } from "@/components/RadarChartIkas";
 import { IkasYearComparisonChart } from "@/components/IkasYearComparisonChart";
@@ -833,35 +832,6 @@ export default function IKAS() {
                                     ) : (
                                         <><FileSpreadsheet className="w-4 h-4" /> Upload Excel</>
                                     )}
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        try {
-                                            exportIkasPdf({
-                                                companyName: userData?.perusahaan?.nama_perusahaan,
-                                                selectedYear,
-                                                totalCategory: ikasDataDynamic.total_kategori,
-                                                totalScore: formatValue(ikasDataDynamic.total_rata_rata),
-                                                summaryRows: [
-                                                    { label: "Nilai Identifikasi", value: formatValue(ikasDataDynamic.identifikasi.nilai) },
-                                                    { label: "Nilai Proteksi", value: formatValue(ikasDataDynamic.proteksi.nilai) },
-                                                    { label: "Nilai Deteksi", value: formatValue(ikasDataDynamic.deteksi.nilai) },
-                                                    { label: "Nilai Tanggulih", value: formatValue(ikasDataDynamic.gulih.nilai) },
-                                                ],
-                                                detailRows: ikasDetailRows,
-                                            });
-                                        } catch (error: any) {
-                                            toast({
-                                                title: "Export PDF gagal",
-                                                description: error?.message || "Tidak dapat membuka jendela export.",
-                                                variant: "destructive",
-                                            });
-                                        }
-                                    }}
-                                    className="px-5 py-2.5 rounded-xl bg-gradient-to-l from-blue-500 to-blue-600 text-white font-bold text-sm shadow-md shadow-blue-500/25 hover:shadow-blue-500/40 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center gap-2 whitespace-nowrap"
-                                >
-                                    <Download className="w-4 h-4" /> Export PDF
                                 </button>
                             </div>
                         </>
