@@ -1,4 +1,5 @@
 import { useUser } from "@/hooks/useAuth";
+import { useCompanyProfile } from "@/hooks/useCompanyProfile";
 import {
     Shield,
     Monitor,
@@ -16,21 +17,10 @@ import { motion } from "framer-motion";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { getMediaUrl } from "@/lib/utils";
-import { ikasService } from "@/services/ikas.service";
 import { csirtService } from "@/services/csirt.service";
 import { lmsService } from "@/features/lms/services/lms.service";
 import { surveyService } from "@/services/survey.service";
-import type {
-    IkasData,
-    JawabanDeteksi,
-    JawabanGulih,
-    JawabanIdentifikasi,
-    JawabanProteksi,
-    PertanyaanDeteksi,
-    PertanyaanGulih,
-    PertanyaanIdentifikasi,
-    PertanyaanProteksi,
-} from "@/types/ikas.types";
+import type { IkasData } from "@/types/ikas.types";
 import type { SurveyProgress, SurveyRespondent } from "@/types/survey.types";
 
 const moduleConfig = {
@@ -160,6 +150,7 @@ function computeLearningProgress(materi: Array<Record<string, any>>, completedId
 }
 
 const LMS_CATEGORY_FALLBACKS = ["Network", "Awareness", "Policy", "Incident", "Cloud", "Defense"];
+const DASHBOARD_STAGE_STALE_TIME = 1000 * 60 * 5;
 
 function inferLmsCategory(title: string, index: number) {
     const lower = title.toLowerCase();
@@ -188,128 +179,106 @@ function getSurveyStatus(progress: SurveyProgress | null, respondent: SurveyResp
     return "Data responden tersimpan";
 }
 
+function countFilledIkasSubdomains(domain: Record<string, any> | null | undefined) {
+    if (!domain) return 0;
+
+    return Object.entries(domain).reduce((count, [key, value]) => {
+        if (!key.startsWith("nilai_subdomain")) return count;
+        return typeof value === "number" && value > 0 ? count + 1 : count;
+    }, 0);
+}
+
 export default function Dashboard() {
     const { data: user } = useUser();
 
-    // Fetch perusahaan langsung dari GET /api/perusahaan/{id}
     const perusahaanId = user?.id_perusahaan || user?.perusahaan?.id;
-    const { data: perusahaanResponse } = useQuery({
-        queryKey: ["perusahaan", perusahaanId],
-        queryFn: () => api.getPerusahaanById(String(perusahaanId)),
-        enabled: !!perusahaanId && !user?.perusahaan?.nama_perusahaan,
-    });
-    const perusahaan = perusahaanResponse ?? user?.perusahaan;
+    const { perusahaan, perusahaanQuery, shouldFetchPerusahaan } = useCompanyProfile(user);
 
-    const { data: myIkasData } = useQuery({
+    const myIkasQuery = useQuery({
         queryKey: ["my-ikas", perusahaanId || "unknown"],
-        queryFn: () => ikasService.getMyIkas(perusahaanId),
+        queryFn: () => api.getMyIkas(perusahaanId),
         enabled: !!perusahaanId,
+        staleTime: DASHBOARD_STAGE_STALE_TIME,
     });
-    const { data: kseData } = useQuery({ queryKey: ["kse"], queryFn: api.getKse });
-    const { data: csirtData } = useQuery({ queryKey: ["csirt"], queryFn: api.getCsirt });
-    const { data: lmsCoursesData } = useQuery({ queryKey: ["lms-courses"], queryFn: () => lmsService.getCourses() });
-    const { data: lmsCertificatesData } = useQuery({ queryKey: ["lms-certificates"], queryFn: () => lmsService.getMySertifikats() });
-    const { data: surveyRespondent } = useQuery({
+    const myIkasData = myIkasQuery.data;
+    const kseQuery = useQuery({
+        queryKey: ["kse"],
+        queryFn: api.getKse,
+        staleTime: DASHBOARD_STAGE_STALE_TIME,
+    });
+    const csirtQuery = useQuery({
+        queryKey: ["csirt"],
+        queryFn: api.getCsirt,
+        staleTime: DASHBOARD_STAGE_STALE_TIME,
+    });
+    const lmsCoursesQuery = useQuery({
+        queryKey: ["lms-courses"],
+        queryFn: () => lmsService.getCourses(),
+        staleTime: DASHBOARD_STAGE_STALE_TIME,
+    });
+    const surveyRespondentQuery = useQuery({
         queryKey: ["survey-respondent", user?.email || "unknown"],
         queryFn: () => surveyService.findRespondentByEmail(user?.email),
         enabled: !!user?.email,
+        staleTime: DASHBOARD_STAGE_STALE_TIME,
     });
-    const { data: surveyProgress } = useQuery({
+    const surveyRespondent = surveyRespondentQuery.data;
+
+    const isPrimaryStageReady =
+        !!user &&
+        (!shouldFetchPerusahaan || perusahaanQuery.isFetched) &&
+        (!perusahaanId || myIkasQuery.isFetched) &&
+        kseQuery.isFetched &&
+        csirtQuery.isFetched &&
+        lmsCoursesQuery.isFetched &&
+        surveyRespondentQuery.isFetched;
+
+    const lmsCertificatesQuery = useQuery({
+        queryKey: ["lms-certificates"],
+        queryFn: () => lmsService.getMySertifikats(),
+        enabled: isPrimaryStageReady,
+        staleTime: DASHBOARD_STAGE_STALE_TIME,
+    });
+    const lmsCertificatesData = lmsCertificatesQuery.data;
+
+    const surveyProgressQuery = useQuery({
         queryKey: ["survey-progress", surveyRespondent?.id || "unknown"],
         queryFn: () => surveyService.getProgress(surveyRespondent?.id as number),
-        enabled: !!surveyRespondent?.id,
+        enabled: isPrimaryStageReady && !!surveyRespondent?.id,
+        staleTime: DASHBOARD_STAGE_STALE_TIME,
     });
+    const surveyProgress = surveyProgressQuery.data;
 
-    const [
-        pertanyaanIdentifikasiQuery,
-        pertanyaanProteksiQuery,
-        pertanyaanDeteksiQuery,
-        pertanyaanGulihQuery,
-        jawabanIdentifikasiQuery,
-        jawabanProteksiQuery,
-        jawabanDeteksiQuery,
-        jawabanGulihQuery,
-    ] = useQueries({
-        queries: [
-            { queryKey: ["pertanyaan-identifikasi"], queryFn: () => ikasService.getPertanyaanIdentifikasi() },
-            { queryKey: ["pertanyaan-proteksi"], queryFn: () => ikasService.getPertanyaanProteksi() },
-            { queryKey: ["pertanyaan-deteksi"], queryFn: () => ikasService.getPertanyaanDeteksi() },
-            { queryKey: ["pertanyaan-gulih"], queryFn: () => ikasService.getPertanyaanGulih() },
-            { queryKey: ["jawaban-identifikasi"], queryFn: () => ikasService.getJawabanIdentifikasi() },
-            { queryKey: ["jawaban-proteksi"], queryFn: () => ikasService.getJawabanProteksi() },
-            { queryKey: ["jawaban-deteksi"], queryFn: () => ikasService.getJawabanDeteksi() },
-            { queryKey: ["jawaban-gulih"], queryFn: () => ikasService.getJawabanGulih() },
-        ],
-    });
+    const isSecondaryStageReady =
+        isPrimaryStageReady &&
+        lmsCertificatesQuery.isFetched &&
+        (!surveyRespondent?.id || surveyProgressQuery.isFetched);
 
     const ikasList = (myIkasData
         ? (Array.isArray(myIkasData) ? myIkasData : [myIkasData])
         : []) as IkasData[];
     const latestIkas = [...ikasList].sort((a, b) => {
-        const dateA = new Date(a.tanggal || a.updated_at || a.created_at).getTime();
-        const dateB = new Date(b.tanggal || b.updated_at || b.created_at).getTime();
+        const dateA = new Date(a.tanggal || a.updated_at || a.created_at || 0).getTime();
+        const dateB = new Date(b.tanggal || b.updated_at || b.created_at || 0).getTime();
         return dateB - dateA;
     })[0];
 
-    const pertanyaanIdentifikasi = (pertanyaanIdentifikasiQuery.data ?? []) as PertanyaanIdentifikasi[];
-    const pertanyaanProteksi = (pertanyaanProteksiQuery.data ?? []) as PertanyaanProteksi[];
-    const pertanyaanDeteksi = (pertanyaanDeteksiQuery.data ?? []) as PertanyaanDeteksi[];
-    const pertanyaanGulih = (pertanyaanGulihQuery.data ?? []) as PertanyaanGulih[];
-
-    const jawabanIdentifikasi = (jawabanIdentifikasiQuery.data ?? []) as JawabanIdentifikasi[];
-    const jawabanProteksi = (jawabanProteksiQuery.data ?? []) as JawabanProteksi[];
-    const jawabanDeteksi = (jawabanDeteksiQuery.data ?? []) as JawabanDeteksi[];
-    const jawabanGulih = (jawabanGulihQuery.data ?? []) as JawabanGulih[];
-
-    const totalPertanyaanIkas =
-        pertanyaanIdentifikasi.length +
-        pertanyaanProteksi.length +
-        pertanyaanDeteksi.length +
-        pertanyaanGulih.length;
-    const totalJawabanIkas =
-        jawabanIdentifikasi.length +
-        jawabanProteksi.length +
-        jawabanDeteksi.length +
-        jawabanGulih.length;
-    const progressPengisianIkas = totalPertanyaanIkas > 0
-        ? `${Math.round((totalJawabanIkas / totalPertanyaanIkas) * 100)}%`
+    const filledIkasSubdomains =
+        countFilledIkasSubdomains(latestIkas?.identifikasi as Record<string, any> | undefined) +
+        countFilledIkasSubdomains(latestIkas?.proteksi as Record<string, any> | undefined) +
+        countFilledIkasSubdomains(latestIkas?.deteksi as Record<string, any> | undefined) +
+        countFilledIkasSubdomains((latestIkas?.gulih ?? latestIkas?.tanggulih) as Record<string, any> | undefined);
+    const totalIkasSubdomains = 18;
+    const progressPengisianIkas = latestIkas
+        ? `${Math.round((filledIkasSubdomains / totalIkasSubdomains) * 100)}%`
         : "0%";
-
-    const allJawabanIkas = [
-        ...jawabanIdentifikasi,
-        ...jawabanProteksi,
-        ...jawabanDeteksi,
-        ...jawabanGulih,
-    ];
-    const validationFlags = allJawabanIkas
-        .map((item) => item.is_validated)
-        .filter((value): value is boolean => typeof value === "boolean");
-    const validasiValues = allJawabanIkas
-        .map((item) => String(item.validasi ?? "").trim().toLowerCase())
-        .filter(Boolean);
-
-    const statusVerifikasiIkas = (() => {
-        if (validationFlags.length > 0) {
-            if (validationFlags.every(Boolean)) return "Terverifikasi";
-            return "Menunggu verifikasi";
-        }
-
-        if (validasiValues.length === 0) return "Belum diverifikasi";
-        if (validasiValues.some((value) => value.includes("tolak") || value.includes("reject") || value.includes("revisi"))) {
-            return "Perlu revisi";
-        }
-        if (validasiValues.every((value) => value.includes("verif") || value.includes("valid") || value.includes("approve") || value.includes("setuju"))) {
-            return "Terverifikasi";
-        }
-        return "Menunggu verifikasi";
-    })();
-
-    const isIkasFilled = totalJawabanIkas > 0 || ikasList.length > 0;
-    const kseList = normalizeList<Record<string, any>>(kseData);
-    const lmsCourses = normalizeList<Record<string, any>>(lmsCoursesData).filter((course) => course.status !== "draft");
+    const statusVerifikasiIkas = getVerificationStatus(latestIkas as Record<string, any> | null | undefined);
+    const isIkasFilled = filledIkasSubdomains > 0 || ikasList.length > 0;
+    const kseList = normalizeList<Record<string, any>>(kseQuery.data);
+    const lmsCourses = normalizeList<Record<string, any>>(lmsCoursesQuery.data).filter((course) => course.status !== "draft");
     const lmsCertificates = normalizeList<Record<string, any>>(lmsCertificatesData);
     const latestKse = getLatestRecord(kseList);
-    const latestCsirt = getLatestRecord(normalizeList<Record<string, any>>(csirtData));
+    const latestCsirt = getLatestRecord(normalizeList<Record<string, any>>(csirtQuery.data));
     const latestCsirtId = latestCsirt?.id ? String(latestCsirt.id) : null;
 
     const [sdmCsirtQuery, seCsirtQuery] = useQueries({
@@ -317,22 +286,38 @@ export default function Dashboard() {
             {
                 queryKey: ["sdm_csirt", latestCsirtId],
                 queryFn: () => csirtService.getSdmByCsirtId(latestCsirtId as string),
-                enabled: !!latestCsirtId,
+                enabled: isPrimaryStageReady && !!latestCsirtId,
+                staleTime: DASHBOARD_STAGE_STALE_TIME,
             },
             {
                 queryKey: ["se_csirt", latestCsirtId],
                 queryFn: () => csirtService.getSeByCsirtId(latestCsirtId as string),
-                enabled: !!latestCsirtId,
+                enabled: isPrimaryStageReady && !!latestCsirtId,
+                staleTime: DASHBOARD_STAGE_STALE_TIME,
             },
         ],
     });
+
+    const isLmsDetailStageReady = isSecondaryStageReady && lmsCourses.length > 0;
+    const lmsDetailCourseIds = lmsCourses.slice(0, 4).map((course) => String(course.id));
     const lmsCourseDetailsQueries = useQueries({
-        queries: lmsCourses.map((course) => ({
-            queryKey: ["lms-course-detail-card", course.id],
-            queryFn: () => lmsService.getCourseById(String(course.id)),
-            enabled: !!course.id,
+        queries: lmsDetailCourseIds.map((courseId) => ({
+            queryKey: ["lms-course-detail-card", courseId],
+            queryFn: () => lmsService.getCourseById(courseId),
+            enabled: isLmsDetailStageReady && !!courseId,
+            staleTime: DASHBOARD_STAGE_STALE_TIME,
         })),
     });
+    const lmsCourseDetailsMap = lmsDetailCourseIds.reduce<Record<string, { materi: Array<Record<string, any>>; completedIds: string[] }>>((acc, courseId, index) => {
+        const detail = lmsCourseDetailsQueries[index]?.data;
+        if (detail) {
+            acc[courseId] = {
+                materi: detail.materi ?? [],
+                completedIds: detail.completedIds ?? [],
+            };
+        }
+        return acc;
+    }, {});
 
     const sdmCsirtList = normalizeList<Record<string, any>>(sdmCsirtQuery.data);
     const seCsirtList = normalizeList<Record<string, any>>(seCsirtQuery.data);
@@ -359,7 +344,7 @@ export default function Dashboard() {
             ? surveyProgress.total_steps
             : null;
     const lmsProgressByCourse = lmsCourses.map((course, index) => {
-        const detail = lmsCourseDetailsQueries[index]?.data;
+        const detail = lmsCourseDetailsMap[String(course.id)];
         const materi = detail?.materi ?? [];
         const completedIds = detail?.completedIds ?? [];
         const hasCertificate = lmsCertificates.some((cert) => String(cert.id_kelas) === String(course.id));

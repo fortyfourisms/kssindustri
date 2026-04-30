@@ -1,5 +1,7 @@
 // ─── Auth Types ──────────────────────────────────────────────────────────────
 
+import type { UserSessionPayload } from "@/types/user.types";
+
 export interface LoginPayload {
     identifier: string;
     password: string;
@@ -32,26 +34,7 @@ export interface AuthResponse {
     [key: string]: unknown;
 }
 
-export interface AuthUser {
-    id: string;
-    username: string;
-    display_name?: string;
-    email: string;
-    name?: string;
-    id_jabatan?: string;
-    jabatan?: string;
-    id_perusahaan?: string;
-    foto_profile?: string;
-    banner?: string;
-    status?: string;
-    mfa_enabled?: boolean;
-    has_company?: boolean;
-    role_id?: string;
-    role_name?: string;
-    role?: string;
-    created_at?: string;
-    updated_at?: string;
-}
+export type AuthUser = UserSessionPayload;
 
 /** POST /api/mfa/setup response */
 export interface MfaSetupResponse {

@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "@/lib/api";
 import { csirtService } from "@/services/csirt.service";
-import { perusahaanService } from "@/services/perusahaan.service";
+import { useCompanyProfile } from "@/hooks/useCompanyProfile";
 import { useToast } from "@/hooks/use-toast";
 import { RequireCompanyProfile } from "@/components/RequireCompanyProfile";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -110,13 +110,8 @@ export default function FormKse() {
 
     const { data: user, isLoading: userLoading } = useQuery<any>({ queryKey: ["me"], queryFn: api.getMe });
 
-    // Fetch the company profile so we have full company details
     const perusahaanId = user?.id_perusahaan || user?.perusahaan?.id;
-    const { data: pData } = useQuery<any>({
-        queryKey: ["perusahaan", perusahaanId],
-        queryFn: () => perusahaanService.getById(String(perusahaanId)),
-        enabled: !!perusahaanId,
-    });
+    const { perusahaan: pData } = useCompanyProfile(user);
 
     // Edit mode only: fetch specific SE by id from /api/se/{id}
     // Add mode never pre-fills from an existing record → existingSe stays null.

@@ -8,6 +8,7 @@ import { exportKsePdf } from "@/lib/pdf-export";
 import { getKategoriSE } from "@/data/kse-data";
 import { getKseEditRequestStatus, getKseEditStatusMeta, getLatestKseEditRequest, type KseEditRequestRecord, type KseEditRequestStatus } from "@/lib/kse-edit-request";
 import { useUser } from "@/hooks/useAuth";
+import { useCompanyProfile } from "@/hooks/useCompanyProfile";
 import { useToast } from "@/hooks/use-toast";
 import { Building2, Download, Edit2, Loader2, Monitor, Plus, Send, ServerCrash } from "lucide-react";
 import { motion } from "framer-motion";
@@ -68,12 +69,7 @@ export default function KSE() {
     const { data: user } = useUser();
 
     const perusahaanId = user?.id_perusahaan || user?.perusahaan?.id;
-    const { data: perusahaanResponse } = useQuery({
-        queryKey: ["perusahaan", perusahaanId],
-        queryFn: () => api.getPerusahaanById(String(perusahaanId)),
-        enabled: !!perusahaanId && !user?.perusahaan?.nama_perusahaan,
-    });
-    const perusahaan = perusahaanResponse ?? user?.perusahaan;
+    const { perusahaan } = useCompanyProfile(user);
 
     const { data: seData, isLoading, isError, refetch } = useQuery<any>({
         queryKey: ["se"],

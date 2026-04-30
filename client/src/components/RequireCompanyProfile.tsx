@@ -1,18 +1,10 @@
-import { useUser } from "@/hooks/useAuth";
-import { useQuery } from "@tanstack/react-query";
-import { perusahaanService } from "@/services/perusahaan.service";
+import { useCompanyProfile } from "@/hooks/useCompanyProfile";
 import { useNavigate } from "react-router-dom";
 import { Building2, Lock, ArrowRight } from "lucide-react";
 
 export function isCompanyEmpty(p: any): boolean {
-    // If no company data exists at all
     if (!p) return true;
-
-    // Company must have a name at minimum.
-    // If it has a username but no nama_perusahaan, it's actually the user object (false positive guard)
     if (!p.nama_perusahaan) return true;
-
-    // Consider company "incomplete" if critical contact fields are missing
     return !p.alamat || !p.email || !p.telepon;
 }
 
@@ -20,47 +12,24 @@ interface RequireCompanyProfileProps {
     children: React.ReactNode;
 }
 
-/**
- * Wraps dashboard feature pages. If company profile is incomplete,
- * shows a lock screen instead of the page content.
- *
- * Strategy:
- * 1. Get the logged-in user data from /api/me.
- * 2. If user has an id_perusahaan (or nested perusahaan.id), fetch the company data.
- * 3. Only show the lock modal if the company data is truly empty/incomplete.
- *    Users who have already filled in company profile pass through immediately.
- */
 export function RequireCompanyProfile({ children }: RequireCompanyProfileProps) {
     const navigate = useNavigate();
+    const {
+        userQuery,
+        perusahaanId,
+        perusahaan,
+        perusahaanQuery,
+        shouldFetchPerusahaan,
+    } = useCompanyProfile();
 
-    const { data: meData, isLoading: isUserLoading } = useUser();
-
-    // Resolve the company ID from nested or flat user data
-    const perusahaanId = meData?.id_perusahaan || meData?.perusahaan?.id;
-    const embeddedPerusahaan = meData?.perusahaan ?? null;
-    const shouldFetchPerusahaan = !!perusahaanId && !embeddedPerusahaan?.nama_perusahaan;
-
-    // Fetch the full company data only when we have an ID
-    const { data: perusahaan, isLoading: isPerusahaanLoading } = useQuery({
-        queryKey: ["perusahaan", perusahaanId],
-        queryFn: () => perusahaanService.getById(String(perusahaanId)),
-        enabled: shouldFetchPerusahaan,
-        staleTime: 1000 * 60 * 5,
-    });
-
-    // While loading either the user or company data, render children to avoid flicker
-    if (isUserLoading || (shouldFetchPerusahaan && isPerusahaanLoading)) {
+    if (userQuery.isLoading || (shouldFetchPerusahaan && perusahaanQuery.isLoading)) {
         return <>{children}</>;
     }
 
-    // If user has no company linked at all, OR the company data is incomplete → show lock
-    const companyData = perusahaan ?? embeddedPerusahaan;
-    if (!perusahaanId || isCompanyEmpty(companyData)) {
+    if (!perusahaanId || isCompanyEmpty(perusahaan)) {
         return (
             <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                {/* Backdrop */}
                 <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" />
-                {/* Modal Card */}
                 <div className="relative bg-white rounded-2xl shadow-2xl shadow-blue-900/20 p-8 max-w-sm w-full flex flex-col items-center text-center gap-4 border border-white/60 animate-in fade-in zoom-in duration-300">
                     <div className="relative">
                         <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-lg shadow-orange-500/30">

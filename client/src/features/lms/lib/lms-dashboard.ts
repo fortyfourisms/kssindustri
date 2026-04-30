@@ -44,12 +44,12 @@ export interface LmsCourseInsight {
 
 export function buildLmsCourseInsight(params: {
     course: Kelas;
-    materi: MateriItem[];
-    completedIds: string[];
+    materi?: MateriItem[];
+    completedIds?: string[];
     hasCertificate: boolean;
     index: number;
 }): LmsCourseInsight {
-    const { course, materi, completedIds, hasCertificate, index } = params;
+    const { course, materi = [], completedIds = [], hasCertificate, index } = params;
     const sorted = sortMateri(materi);
     const totalMateri = sorted.length;
     const totalDurationSeconds = sorted.reduce((sum, item) => sum + (item.durasi_detik ?? 0), 0);

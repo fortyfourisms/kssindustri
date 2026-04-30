@@ -1,15 +1,16 @@
 import { useEffect } from "react";
 import { toast } from "sonner";
 import { API_BASE_URL } from "@/services/apiClient";
+import { authService } from "@/services/auth.service";
 import { notificationsService } from "@/services/notifications.service";
 import { useNotificationsStore } from "@/stores/notifications.store";
 
+const SSE_DELAY_MIN_MS = 5000;
+const SSE_DELAY_MAX_MS = 10000;
+
 async function attemptSseRefresh() {
     try {
-        await fetch(`${API_BASE_URL}/api/refresh`, {
-            method: "POST",
-            credentials: "include",
-        });
+        await authService.refresh();
     } catch {
         // Silent: SSE reconnect can still succeed if session is valid.
     }
@@ -21,6 +22,11 @@ function safeParseEventData(data: string) {
     } catch {
         return data;
     }
+}
+
+function getSseDelayMs() {
+    const range = SSE_DELAY_MAX_MS - SSE_DELAY_MIN_MS;
+    return SSE_DELAY_MIN_MS + Math.floor(Math.random() * (range + 1));
 }
 
 export function useNotifications() {
@@ -47,32 +53,26 @@ export function useNotificationStream(enabled = true) {
     useEffect(() => {
         if (!enabled) return;
 
-        const store = useNotificationsStore.getState();
-        void store.fetchNotifications();
-
         let eventSource: EventSource | null = null;
         let reconnectTimer: number | null = null;
+        let initialConnectTimer: number | null = null;
+        let initialFetchTimer: number | null = null;
         let reconnectAttempt = 0;
         let closed = false;
 
-        const clearReconnect = () => {
-            if (reconnectTimer !== null) {
-                window.clearTimeout(reconnectTimer);
-                reconnectTimer = null;
+        const clearTimer = (timerId: number | null) => {
+            if (timerId !== null) {
+                window.clearTimeout(timerId);
             }
         };
 
-        const scheduleReconnect = () => {
-            if (closed || reconnectTimer !== null) return;
-
-            const delay = Math.min(1000 * 2 ** reconnectAttempt, 10000);
-            reconnectAttempt += 1;
-
-            reconnectTimer = window.setTimeout(async () => {
-                reconnectTimer = null;
-                await attemptSseRefresh();
-                connect();
-            }, delay);
+        const clearAllTimers = () => {
+            clearTimer(reconnectTimer);
+            clearTimer(initialConnectTimer);
+            clearTimer(initialFetchTimer);
+            reconnectTimer = null;
+            initialConnectTimer = null;
+            initialFetchTimer = null;
         };
 
         const handleIncoming = (rawPayload: unknown) => {
@@ -115,15 +115,33 @@ export function useNotificationStream(enabled = true) {
             eventSource.onerror = () => {
                 useNotificationsStore.getState().setConnected(false);
                 eventSource?.close();
-                scheduleReconnect();
+
+                if (closed || reconnectTimer !== null) return;
+
+                const delay = getSseDelayMs();
+                reconnectAttempt += 1;
+
+                reconnectTimer = window.setTimeout(async () => {
+                    reconnectTimer = null;
+                    await attemptSseRefresh();
+                    connect();
+                }, delay);
             };
         };
 
-        connect();
+        initialFetchTimer = window.setTimeout(() => {
+            initialFetchTimer = null;
+            void useNotificationsStore.getState().fetchNotifications();
+        }, getSseDelayMs());
+
+        initialConnectTimer = window.setTimeout(() => {
+            initialConnectTimer = null;
+            connect();
+        }, getSseDelayMs());
 
         return () => {
             closed = true;
-            clearReconnect();
+            clearAllTimers();
             useNotificationsStore.getState().setConnected(false);
             eventSource?.close();
         };

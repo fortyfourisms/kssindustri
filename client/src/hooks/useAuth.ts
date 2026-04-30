@@ -1,77 +1,29 @@
 /**
  * useAuth.ts
  *
- * This file exports BOTH:
- * 1. Legacy TanStack Query hooks (useUser, useLogin, useRegister, useMfaVerify, useLogout)
- *    — kept for backward compatibility with existing pages.
- * 2. New Zustand-based hooks (useAuth, useProfile) — for new user-side pages.
+ * This file exports:
+ * 1. `useUser` for legacy TanStack Query compatibility where components still read `/api/me`.
+ * 2. `useLogout` and `useAuth` for current auth flows.
  */
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useNavigate } from "react-router-dom";
-import { useAuthStore } from "@/stores/auth.store";
-import { useProfileStore } from "@/stores/profile.store";
+import { useAuthStore, type CurrentUser } from "@/stores/auth.store";
 import type { LoginPayload, RegisterPayload } from "@/types/auth.types";
 import { getDefaultAuthenticatedRoute } from "@/lib/access-control";
 
-// ─── Legacy compatibility (do NOT change — used by existing pages) ────────────
-
 export function useUser() {
-    return useQuery({
+    const currentUser = useAuthStore((state) => state.currentUser);
+    const authenticated = useAuthStore((state) => state.authenticated);
+
+    return useQuery<CurrentUser>({
         queryKey: ["me"],
-        queryFn: async () => {
-            const res = await api.getMe();
-            // API returns an array based on the user's Swagger mapping note
-            return Array.isArray(res) ? res[0] : res;
-        },
+        queryFn: async () => api.getMe() as Promise<CurrentUser>,
+        initialData: authenticated && currentUser ? currentUser : undefined,
+        initialDataUpdatedAt: authenticated && currentUser ? Date.now() : undefined,
         retry: false,
         staleTime: 1000 * 60 * 5,
-    });
-}
-
-export function useLogin() {
-    const navigate = useNavigate();
-    const qc = useQueryClient();
-    return useMutation({
-        mutationFn: async (data: { email: string; password: string }) => {
-            return api.login(data);
-        },
-        onSuccess: () => {
-            qc.invalidateQueries({ queryKey: ["me"] });
-            navigate("/mfa");
-        },
-    });
-}
-
-export function useRegister() {
-    const navigate = useNavigate();
-    return useMutation({
-        mutationFn: async (data: {
-            name: string;
-            email: string;
-            password: string;
-            perusahaanId: string;
-        }) => {
-            return api.register(data);
-        },
-        onSuccess: () => {
-            navigate("/login");
-        },
-    });
-}
-
-export function useMfaVerify() {
-    const navigate = useNavigate();
-    const qc = useQueryClient();
-    return useMutation({
-        mutationFn: async (token: string) => {
-            return api.verifyMfa(token);
-        },
-        onSuccess: () => {
-            qc.invalidateQueries({ queryKey: ["me"] });
-            navigate(getDefaultAuthenticatedRoute(useAuthStore.getState().currentUser));
-        },
     });
 }
 
@@ -89,12 +41,6 @@ export function useLogout() {
     });
 }
 
-// ─── New Zustand-based hooks (for new user-side pages) ───────────────────────
-
-/**
- * useAuth — ergonomic wrapper around useAuthStore.
- * Use this in new pages instead of the TanStack Query hooks above.
- */
 export function useAuth() {
     const store = useAuthStore();
 
@@ -103,12 +49,10 @@ export function useAuth() {
         isAuthenticated: store.authenticated,
         loading: store.loading,
         error: store.error,
-
         isMfaSetupRequired: store.isMfaSetupRequired(),
         isMfaVerifyRequired: store.isMfaVerifyRequired(),
         setupToken: store.setupToken,
         mfaToken: store.mfaToken,
-
         login: (payload: LoginPayload) => store.authenticateUser(payload),
         logout: () => store.logUserOut(),
         register: (payload: RegisterPayload) => store.registerUser(payload),
@@ -117,31 +61,5 @@ export function useAuth() {
         clearMfaState: () => store.clearMfaState(),
         checkSession: () => store.rehydrateFromServer(),
         formattedJoinDate: store.formattedJoinDate(),
-    };
-}
-
-/**
- * useProfile — ergonomic wrapper around useProfileStore.
- */
-export function useProfile() {
-    const store = useProfileStore();
-
-    return {
-        profile: store,
-        isLoading: store.isLoading,
-        displayName: store.displayName(),
-        displayEmail: store.displayEmail(),
-        displayRole: store.displayRole(),
-        displayPhone: store.displayPhone(),
-        displayLocation: store.displayLocation(),
-        displayJabatan: store.displayJabatan(),
-        displayJoined: store.displayJoined(),
-        fetch: () => store.fetchFromApi(),
-        save: (data: Parameters<typeof store.saveToApi>[0]) => store.saveToApi(data),
-        update: (data: Parameters<typeof store.updateProfile>[0]) => store.updateProfile(data),
-        switchUser: () => store.switchUser(),
-        updateAvatar: (url: string) => store.updateAvatar(url),
-        updateBanner: (url: string) => store.updateBanner(url),
-        resetToDefaults: () => store.resetToDefaults(),
     };
 }

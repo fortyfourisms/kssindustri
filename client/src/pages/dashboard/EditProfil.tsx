@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/services/apiClient";
-import { perusahaanService } from "@/services/perusahaan.service";
+import { usersService } from "@/services/users.service";
 import { useUser } from "@/hooks/useAuth";
+import { useCompanyProfile } from "@/hooks/useCompanyProfile";
 import { useToast } from "@/hooks/use-toast";
 import { useAuthStore } from "@/stores/auth.store";
 import { useForm } from "react-hook-form";
@@ -115,6 +116,7 @@ export default function EditProfil({ defaultTab = "pengguna" }: EditProfilProps)
     const { toast } = useToast();
     const qc = useQueryClient();
     const rehydrateFromServer = useAuthStore((state) => state.rehydrateFromServer);
+    const syncCurrentUser = useAuthStore((state) => state.syncCurrentUser);
     const [searchParams] = useSearchParams();
     const [isEditingPengguna, setIsEditingPengguna] = useState(false);
     const [isEditingPerusahaan, setIsEditingPerusahaan] = useState(false);
@@ -122,13 +124,8 @@ export default function EditProfil({ defaultTab = "pengguna" }: EditProfilProps)
 
     const { data: user, isLoading: isUserLoading } = useUser();
 
-    // Fetch perusahaan langsung dari GET /api/perusahaan/{id}
     const perusahaanId = user?.id_perusahaan || user?.perusahaan?.id;
-    const { data: perusahaan } = useQuery({
-        queryKey: ["perusahaan", perusahaanId],
-        queryFn: () => perusahaanService.getById(String(perusahaanId)),
-        enabled: !!perusahaanId,
-    });
+    const { perusahaan } = useCompanyProfile(user);
 
     const { data: subSektors } = useQuery({ queryKey: ["subSektor"], queryFn: () => apiClient.get<any[]>("/api/sub_sektor") });
 
@@ -203,13 +200,10 @@ export default function EditProfil({ defaultTab = "pengguna" }: EditProfilProps)
     }, [perusahaan, user?.perusahaan, perusahaanForm]);
 
     const profileMutation = useMutation({
-        mutationFn: (d: ProfileForm) => {
-            const userId = user?.id || user?.id_user;
-            if (!userId) throw new Error("ID user tidak ditemukan");
-            return apiClient.put<any>(`/api/users/${userId}`, d);
-        },
+        mutationFn: (d: ProfileForm) => usersService.updateCurrentUser(d),
         onSuccess: (updated) => {
             qc.setQueryData(["me"], updated);
+            syncCurrentUser(updated);
             toast({ title: "Profil diperbarui" });
             setIsEditingPengguna(false);
         },
@@ -241,13 +235,10 @@ export default function EditProfil({ defaultTab = "pengguna" }: EditProfilProps)
     });
 
     const uploadProfileImageMutation = useMutation({
-        mutationFn: (formData: FormData) => {
-            const userId = user?.id || user?.id_user;
-            if (!userId) throw new Error("ID user tidak ditemukan");
-            return apiClient.putForm<any>(`/api/users/${userId}`, formData);
-        },
+        mutationFn: (formData: FormData) => usersService.updateCurrentUser(formData),
         onSuccess: (updated) => {
             qc.setQueryData(["me"], updated);
+            syncCurrentUser(updated);
             toast({ title: "Foto profil/banner berhasil diperbarui" });
         },
         onError: (e: any) => toast({ title: "Gagal mengunggah foto", description: e.message, variant: "destructive" }),

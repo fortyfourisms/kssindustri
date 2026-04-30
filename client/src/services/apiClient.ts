@@ -3,8 +3,14 @@
 // Includes automatic token refresh interceptor via POST /api/refresh.
 // No external HTTP library — zero dependencies.
 
+import { authService } from "@/services/auth.service";
+
 export const API_BASE_URL =
     (window as any)._env_?.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE_URL || '';
+
+const DEFAULT_429_BACKOFF_MS = 1000;
+const MAX_429_RETRY_AFTER_MS = 30000;
+const MAX_429_RETRIES = 3;
 
 // ─── Refresh Token Interceptor State ──────────────────────────────────────────
 // Mencegah race condition ketika banyak request gagal 401 secara bersamaan.
@@ -17,6 +23,56 @@ let failedQueue: QueueItem[] = [];
 function processQueue(error: unknown): void {
     failedQueue.forEach((item) => (error ? item.reject(error) : item.resolve()));
     failedQueue = [];
+}
+
+function sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+function parseRetryAfterMs(value: string | null): number | null {
+    if (!value) return null;
+
+    const seconds = Number(value);
+    if (Number.isFinite(seconds) && seconds >= 0) {
+        return seconds * 1000;
+    }
+
+    const retryAt = Date.parse(value);
+    if (Number.isNaN(retryAt)) return null;
+
+    return Math.max(retryAt - Date.now(), 0);
+}
+
+function getRetryAfterMs(res: Response, backoffMs: number): number {
+    const parsed = parseRetryAfterMs(res.headers.get('Retry-After'));
+    return Math.min(parsed ?? backoffMs, MAX_429_RETRY_AFTER_MS);
+}
+
+function isSafeRetryMethod(method?: string): boolean {
+    const normalized = (method ?? 'GET').toUpperCase();
+    return normalized === 'GET' || normalized === 'HEAD' || normalized === 'OPTIONS';
+}
+
+async function createHttpError(res: Response, retryAfterMs?: number): Promise<any> {
+    const errData = await res.json().catch(() => null);
+    const message =
+        errData?.message ||
+        errData?.error ||
+        (res.status === 429
+            ? 'Terlalu banyak permintaan. Silakan coba lagi beberapa saat.'
+            : res.statusText || `HTTP ${res.status}`);
+
+    const error = new Error(message) as any;
+    error.status = res.status;
+    error.retryAfterMs = retryAfterMs;
+    error.response = {
+        status: res.status,
+        data: errData,
+        headers: {
+            retryAfter: res.headers.get('Retry-After'),
+        },
+    };
+    return error;
 }
 
 /**
@@ -53,16 +109,15 @@ function mergeHeaders(base: RequestInit['headers'], extra: Record<string, string
 }
 
 async function attemptRefresh(): Promise<void> {
-    const res = await fetch(`${API_BASE_URL}/api/refresh`, {
-        method: 'POST',
-        credentials: 'include',
-    });
-    if (!res.ok) {
-        throw new Error(`Refresh failed: ${res.status}`);
-    }
+    await authService.refresh();
 }
 
-async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+async function request<T>(
+    path: string,
+    init: RequestInit = {},
+    retryCount = 0,
+    backoffMs = DEFAULT_429_BACKOFF_MS,
+): Promise<T> {
     const isFormData = init.body instanceof FormData;
 
     const res = await fetch(`${API_BASE_URL}${path}`, {
@@ -123,25 +178,31 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     }
     // ── End Interceptor ──────────────────────────────────────────────────────
 
+    if (res.status === 429) {
+        const retryAfterMs = getRetryAfterMs(res, backoffMs);
+
+        if (isSafeRetryMethod(init.method) && retryCount < MAX_429_RETRIES) {
+            console.warn(`Rate limited for ${path}. Retrying in ${retryAfterMs}ms...`);
+            await sleep(retryAfterMs);
+            return request<T>(path, init, retryCount + 1, backoffMs * 2);
+        }
+
+        throw await createHttpError(res, retryAfterMs);
+    }
+
     if (!res.ok) {
-        const errData = await res.json().catch(() => null);
-        const message = errData?.message || errData?.error || res.statusText || `HTTP ${res.status}`;
-        const error = new Error(message) as any;
-        error.status = res.status;
-        error.response = { status: res.status, data: errData };
-        throw error;
+        throw await createHttpError(res);
     }
 
     // Some DELETE/POST responses may be empty
     const text = await res.text();
     try {
         return (text ? JSON.parse(text) : {}) as T;
-    } catch (parseError) {
-        const errMessage = parseError instanceof Error ? parseError.message : 'Unknown parse error';
+    } catch {
         if (text.trim().startsWith('<')) {
-            throw new Error(`Server returned HTML instead of JSON. Check your API URL or proxy configuration. (Status ${res.status})`);
+            throw new Error('Unexpected server response. Please try again later.');
         }
-        throw new Error(`Failed to parse API response: ${errMessage}`);
+        throw new Error('Unexpected server response. Please try again later.');
     }
 }
 

@@ -52,23 +52,46 @@ export function LMSProgress() {
         queryFn: () => lmsService.getMySertifikats(),
     });
 
-    const courseDetailQueries = useQueries({
-        queries: publishedCourses.map((course) => ({
-            queryKey: ["lms-progress-course-detail", course.id],
-            queryFn: () => lmsService.getCourseById(course.id),
-            enabled: !!course.id,
-        })),
-    });
-
     const certificateCourseIds = useMemo(
         () => getCertificateCourseIds(userCertificates),
         [userCertificates]
     );
 
+    const detailCourseIds = useMemo(() => {
+        const ids = new Set<string>();
+        publishedCourses.slice(0, 8).forEach((course) => ids.add(course.id));
+        userCertificates.forEach((certificate) => ids.add(String(certificate.id_kelas)));
+        return Array.from(ids);
+    }, [publishedCourses, userCertificates]);
+
+    const courseDetailQueries = useQueries({
+        queries: detailCourseIds.map((courseId) => ({
+            queryKey: ["lms-progress-course-detail", courseId],
+            queryFn: () => lmsService.getCourseById(courseId),
+            enabled: !!courseId,
+            staleTime: 1000 * 60 * 5,
+        })),
+    });
+
+    const detailedCourseMap = useMemo(
+        () =>
+            detailCourseIds.reduce<Record<string, { materi: any[]; completedIds: string[] }>>((acc, courseId, index) => {
+                const detail = courseDetailQueries[index]?.data;
+                if (detail) {
+                    acc[courseId] = {
+                        materi: detail.materi ?? [],
+                        completedIds: detail.completedIds ?? [],
+                    };
+                }
+                return acc;
+            }, {}),
+        [detailCourseIds, courseDetailQueries]
+    );
+
     const courseInsights = useMemo(
         () =>
             publishedCourses.map((course, index) => {
-                const detail = courseDetailQueries[index]?.data;
+                const detail = detailedCourseMap[course.id];
                 return buildLmsCourseInsight({
                     course,
                     materi: detail?.materi ?? [],
@@ -77,7 +100,7 @@ export function LMSProgress() {
                     index,
                 });
             }),
-        [publishedCourses, courseDetailQueries, certificateCourseIds]
+        [publishedCourses, detailedCourseMap, certificateCourseIds]
     );
 
     const totalCourses = courseInsights.length;

@@ -249,12 +249,16 @@ export const useIkasStore = create<IkasState>()((set, get) => ({
         set({ isLoading: true, error: null });
         try {
             let result: IkasData;
+            const normalizedPayload: CreateIkasPayload = {
+                ...payload,
+                id_perusahaan: payload.id_perusahaan,
+            };
             if (existingId) {
                 // Edit mode — PUT
-                result = await ikasService.update(existingId, payload);
+                result = await ikasService.update(existingId, normalizedPayload);
             } else {
                 // Create mode — POST
-                result = await ikasService.create(payload);
+                result = await ikasService.create(normalizedPayload);
             }
             set({
                 respondentData: payload,

@@ -1,44 +1,19 @@
 import { apiClient } from '@/services/apiClient';
-import type { User, CreateUserPayload, UpdateUserPayload } from '@/types/user.types';
+import type { CurrentUser, UpdateUserPayload } from '@/types/user.types';
 
 /**
- * Users Service — CRUD operations for user accounts.
+ * Users service for self-service operations of the authenticated user.
  */
 class UsersService {
-    /** Get all users */
-    async getAll(): Promise<User[]> {
-        return apiClient.get<User[]>('/api/users');
+    async getCurrentUser(): Promise<CurrentUser> {
+        return apiClient.get<CurrentUser>('/api/me');
     }
 
-    /** Get current authenticated user (cookie auth) */
-    async getCurrentUser(): Promise<User> {
-        return apiClient.get<User>('/api/me');
-    }
-
-    /** Get user by ID */
-    async getById(id: string): Promise<User> {
-        return apiClient.get<User>(`/api/users/${id}`);
-    }
-
-    /** Create new user */
-    async create(payload: CreateUserPayload): Promise<User> {
-        return apiClient.post<User>('/api/users', payload);
-    }
-
-    /**
-     * Update existing user.
-     * Accepts either a JSON payload or FormData (for photo/banner uploads).
-     */
-    async update(id: string, payload: UpdateUserPayload | FormData): Promise<User> {
+    async updateCurrentUser(payload: UpdateUserPayload | FormData): Promise<CurrentUser> {
         if (payload instanceof FormData) {
-            return apiClient.putForm<User>(`/api/users/${id}`, payload);
+            return apiClient.putForm<CurrentUser>('/api/me', payload);
         }
-        return apiClient.put<User>(`/api/users/${id}`, payload);
-    }
-
-    /** Delete user by ID */
-    async delete(id: string): Promise<void> {
-        return apiClient.delete<void>(`/api/users/${id}`);
+        return apiClient.put<CurrentUser>('/api/me', payload);
     }
 }
 
