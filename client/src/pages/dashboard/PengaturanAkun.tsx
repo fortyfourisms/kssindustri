@@ -9,6 +9,7 @@ import { Loader2, Lock, UserCircle, Mail, User, Save } from "lucide-react";
 import { motion } from "framer-motion";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "@/stores/auth.store";
+import { AppButton, AppInput, FormSection } from "@/ui";
 
 const AkunSchema = z.object({
     username: z.string().min(2, "Username minimal 2 karakter"),
@@ -29,8 +30,7 @@ const PasswordSchema = z
 
 type PasswordForm = z.infer<typeof PasswordSchema>;
 
-const INPUT_CLS = "w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white/80 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400 transition";
-const LABEL_CLS = "block text-sm font-semibold text-slate-700 mb-1.5";
+const FIELD_ICON_CLS = "pointer-events-none absolute left-3.5 top-[46px] h-4 w-4 text-[var(--dashboard-text-muted)]";
 
 export default function PengaturanAkun() {
     const { toast } = useToast();
@@ -38,7 +38,6 @@ export default function PengaturanAkun() {
     const syncCurrentUser = useAuthStore((state) => state.syncCurrentUser);
     const { data: user, isLoading: isUserLoading } = useUser();
 
-    // AKUN (Username & Email)
     const akunForm = useForm<AkunForm>({
         resolver: zodResolver(AkunSchema),
         values: {
@@ -49,7 +48,6 @@ export default function PengaturanAkun() {
 
     const akunMutation = useMutation({
         mutationFn: (d: AkunForm) => {
-            // Sertakan jabatan yang sudah ada agar tidak di-null-kan oleh backend
             const currentJabatan = user?.jabatan_name || user?.id_jabatan || user?.jabatan || null;
             return usersService.updateCurrentUser({ ...d, jabatan: currentJabatan });
         },
@@ -75,98 +73,89 @@ export default function PengaturanAkun() {
 
     if (isUserLoading) {
         return (
-            <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>
+            <div className="flex justify-center py-20">
+                <Loader2 className="h-8 w-8 animate-spin text-[var(--dashboard-info-soft-fg)]" />
+            </div>
         );
     }
 
     return (
-        <div className="max-w-2xl mx-auto space-y-6">
-            <motion.div
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200"
-            >
-                <div className="flex items-center gap-2 mb-6 pb-4 border-b border-slate-100">
-                    <UserCircle className="w-5 h-5 text-slate-600" />
-                    <h3 className="font-bold text-slate-900 text-lg">Informasi Dasar</h3>
-                </div>
-                <form onSubmit={akunForm.handleSubmit((d) => akunMutation.mutate(d))} className="space-y-5">
-                    <div>
-                        <label className={LABEL_CLS}>Username</label>
+        <div className="mx-auto max-w-2xl space-y-6">
+            <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
+                <FormSection
+                    title="Informasi Dasar"
+                    icon={<UserCircle className="w-5 h-5 text-[var(--dashboard-info-soft-fg)]" />}
+                >
+                    <form onSubmit={akunForm.handleSubmit((d) => akunMutation.mutate(d))} className="space-y-5">
                         <div className="relative">
-                            <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                            <input {...akunForm.register("username")} className={`${INPUT_CLS} pl-10`} />
+                            <User className={FIELD_ICON_CLS} />
+                            <AppInput
+                                label="Username"
+                                error={akunForm.formState.errors.username?.message}
+                                {...akunForm.register("username")}
+                                className="pl-10"
+                            />
                         </div>
-                        {akunForm.formState.errors.username && (
-                            <p className="text-red-500 text-xs mt-1.5">{akunForm.formState.errors.username.message}</p>
-                        )}
-                    </div>
-                    <div>
-                        <label className={LABEL_CLS}>Email</label>
                         <div className="relative">
-                            <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                            <input {...akunForm.register("email")} type="email" className={`${INPUT_CLS} pl-10`} />
+                            <Mail className={FIELD_ICON_CLS} />
+                            <AppInput
+                                label="Email"
+                                type="email"
+                                error={akunForm.formState.errors.email?.message}
+                                {...akunForm.register("email")}
+                                className="pl-10"
+                            />
                         </div>
-                        {akunForm.formState.errors.email && (
-                            <p className="text-red-500 text-xs mt-1.5">{akunForm.formState.errors.email.message}</p>
-                        )}
-                    </div>
-                    <div className="pt-2">
-                        <button
+                        <AppButton
                             type="submit"
-                            disabled={akunMutation.isPending}
-                            className="w-full py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold text-sm shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 hover:scale-[1.01] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                            fullWidth
+                            loading={akunMutation.isPending}
+                            leftIcon={!akunMutation.isPending ? <Save className="w-4 h-4" /> : undefined}
                         >
-                            {akunMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                             Simpan Perubahan
-                        </button>
-                    </div>
-                </form>
+                        </AppButton>
+                    </form>
+                </FormSection>
             </motion.div>
 
-            <motion.div
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
-                className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200"
-            >
-                <div className="flex items-center gap-2 mb-6 pb-4 border-b border-slate-100">
-                    <Lock className="w-5 h-5 text-slate-600" />
-                    <h3 className="font-bold text-slate-900 text-lg">Ganti Password</h3>
-                </div>
-                <form onSubmit={passwordForm.handleSubmit((d) => passwordMutation.mutate(d))} className="space-y-5">
-                    <div>
-                        <label className={LABEL_CLS}>Password Lama</label>
-                        <input {...passwordForm.register("currentPassword")} type="password" placeholder="••••••••" className={INPUT_CLS} />
-                        {passwordForm.formState.errors.currentPassword && (
-                            <p className="text-red-500 text-xs mt-1.5">{passwordForm.formState.errors.currentPassword.message}</p>
-                        )}
-                    </div>
-                    <div>
-                        <label className={LABEL_CLS}>Password Baru</label>
-                        <input {...passwordForm.register("newPassword")} type="password" placeholder="Minimal 8 karakter" className={INPUT_CLS} />
-                        {passwordForm.formState.errors.newPassword && (
-                            <p className="text-red-500 text-xs mt-1.5">{passwordForm.formState.errors.newPassword.message}</p>
-                        )}
-                    </div>
-                    <div>
-                        <label className={LABEL_CLS}>Konfirmasi Password Baru</label>
-                        <input {...passwordForm.register("confirmPassword")} type="password" placeholder="Ulangi password baru" className={INPUT_CLS} />
-                        {passwordForm.formState.errors.confirmPassword && (
-                            <p className="text-red-500 text-xs mt-1.5">{passwordForm.formState.errors.confirmPassword.message}</p>
-                        )}
-                    </div>
-                    <div className="pt-2">
-                        <button
+            <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+                <FormSection
+                    title="Ganti Password"
+                    icon={<Lock className="w-5 h-5 text-[var(--dashboard-warning-soft-fg)]" />}
+                >
+                    <form onSubmit={passwordForm.handleSubmit((d) => passwordMutation.mutate(d))} className="space-y-5">
+                        <AppInput
+                            label="Password Lama"
+                            type="password"
+                            placeholder="••••••••"
+                            error={passwordForm.formState.errors.currentPassword?.message}
+                            {...passwordForm.register("currentPassword")}
+                        />
+                        <AppInput
+                            label="Password Baru"
+                            type="password"
+                            placeholder="Minimal 8 karakter"
+                            error={passwordForm.formState.errors.newPassword?.message}
+                            {...passwordForm.register("newPassword")}
+                        />
+                        <AppInput
+                            label="Konfirmasi Password Baru"
+                            type="password"
+                            placeholder="Ulangi password baru"
+                            error={passwordForm.formState.errors.confirmPassword?.message}
+                            {...passwordForm.register("confirmPassword")}
+                        />
+                        <AppButton
                             type="submit"
-                            disabled={passwordMutation.isPending}
-                            className="w-full py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                            variant="secondary"
+                            fullWidth
+                            loading={passwordMutation.isPending}
+                            leftIcon={!passwordMutation.isPending ? <Lock className="w-4 h-4" /> : undefined}
                         >
-                            {passwordMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lock className="w-4 h-4" />}
                             Simpan Password
-                        </button>
-                    </div>
-                </form>
+                        </AppButton>
+                    </form>
+                </FormSection>
             </motion.div>
         </div>
     );

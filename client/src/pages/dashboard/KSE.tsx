@@ -6,12 +6,36 @@ import { PageHeader } from "@/components/dashboard/PageHeader";
 import { api } from "@/lib/api";
 import { exportKsePdf } from "@/lib/pdf-export";
 import { getKategoriSE } from "@/data/kse-data";
-import { getKseEditRequestStatus, getKseEditStatusMeta, getLatestKseEditRequest, type KseEditRequestRecord, type KseEditRequestStatus } from "@/lib/kse-edit-request";
+import {
+    getKseEditRequestStatus,
+    getKseEditStatusMeta,
+    getLatestKseEditRequest,
+    type KseEditRequestRecord,
+    type KseEditRequestStatus,
+} from "@/lib/kse-edit-request";
 import { useUser } from "@/hooks/useAuth";
 import { useCompanyProfile } from "@/hooks/useCompanyProfile";
 import { useToast } from "@/hooks/use-toast";
-import { Building2, Download, Edit2, Loader2, Monitor, Plus, Send, ServerCrash } from "lucide-react";
+import { Building2, Download, Loader2, Monitor, Plus, Send, ServerCrash } from "lucide-react";
 import { motion } from "framer-motion";
+
+const PANEL_CLS = "dashboard-table-surface overflow-hidden rounded-2xl border shadow-[0_24px_54px_rgba(148,163,184,0.18)]";
+const PANEL_HEADER_CLS = "dashboard-table-divider flex flex-col gap-4 border-b px-6 py-5 sm:flex-row sm:items-center sm:justify-between";
+const PANEL_TITLE_CLS = "text-lg font-bold text-[var(--dashboard-text)]";
+const PANEL_DESCRIPTION_CLS = "mt-0.5 text-sm text-[var(--dashboard-text-muted)]";
+const SECONDARY_BUTTON_CLS = "dashboard-secondary-button inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-bold transition-all";
+const PRIMARY_BUTTON_CLS = "dashboard-primary-button inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all hover:-translate-y-0.5 active:translate-y-0";
+const TABLE_HEAD_CLS = "dashboard-table-head dashboard-table-divider border-b";
+const TABLE_HEAD_CELL_CLS = "px-5 py-3.5 text-left text-xs font-bold uppercase tracking-wider text-[var(--dashboard-text-muted)] whitespace-nowrap";
+const TABLE_HEAD_CELL_CENTER_CLS = `${TABLE_HEAD_CELL_CLS} text-center`;
+const TABLE_ROW_CLS = "dashboard-table-row-hover transition-colors";
+const SCORE_BADGE_CLS = "inline-flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--dashboard-border)] bg-[var(--dashboard-section-muted)] text-base font-extrabold text-[var(--dashboard-text)] shadow-sm";
+const ACTION_BUTTON_CLS = "inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition-all";
+const ACTION_BUTTON_ACTIVE_CLS = `${ACTION_BUTTON_CLS} dashboard-warning-button whitespace-nowrap shadow-md hover:-translate-y-0.5`;
+const ACTION_BUTTON_DISABLED_CLS = `${ACTION_BUTTON_CLS} cursor-not-allowed border border-[var(--dashboard-border)] bg-[var(--dashboard-section-muted)] text-[var(--dashboard-text-muted)]`;
+const FOOTER_CLS = "dashboard-table-divider flex items-center justify-between border-t bg-[var(--dashboard-section-muted)] px-5 py-3";
+const FOOTER_TEXT_CLS = "text-xs font-medium text-[var(--dashboard-text-muted)]";
+const INFO_ICON_CLS = "flex h-16 w-16 items-center justify-center rounded-2xl border border-[var(--dashboard-info-soft-border)] bg-[var(--dashboard-info-soft-bg)] text-[var(--dashboard-info-soft-fg)]";
 
 const FIELD_TO_BOBOT: Record<string, Record<string, number>> = {
     nilai_investasi: { A: 5, B: 2, C: 1 },
@@ -41,14 +65,15 @@ function formatDate(dateStr?: string) {
 
 function KategoriBadge({ kategori }: { kategori: string }) {
     const map: Record<string, { bg: string; text: string; dot: string }> = {
-        Strategis: { bg: "bg-red-50 border border-red-200", text: "text-red-600", dot: "bg-red-500" },
-        Tinggi: { bg: "bg-orange-50 border border-orange-200", text: "text-orange-600", dot: "bg-orange-500" },
-        Rendah: { bg: "bg-emerald-50 border border-emerald-200", text: "text-emerald-600", dot: "bg-emerald-400" },
+        Strategis: { bg: "dashboard-chip-danger", text: "text-[var(--dashboard-danger-soft-fg)]", dot: "bg-[var(--dashboard-danger-soft-fg)]" },
+        Tinggi: { bg: "dashboard-chip-warning", text: "text-[var(--dashboard-warning-soft-fg)]", dot: "bg-[var(--dashboard-warning-soft-fg)]" },
+        Rendah: { bg: "dashboard-chip-success", text: "text-[var(--dashboard-success-soft-fg)]", dot: "bg-[var(--dashboard-success-soft-fg)]" },
     };
-    const style = map[kategori] || { bg: "bg-slate-50 border border-slate-200", text: "text-slate-500", dot: "bg-slate-400" };
+    const style = map[kategori] || { bg: "dashboard-chip-info", text: "text-[var(--dashboard-info-soft-fg)]", dot: "bg-[var(--dashboard-info-soft-fg)]" };
+
     return (
-        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${style.bg} ${style.text}`}>
-            <span className={`w-1.5 h-1.5 rounded-full ${style.dot}`} />
+        <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold ${style.bg} ${style.text}`}>
+            <span className={`h-1.5 w-1.5 rounded-full ${style.dot}`} />
             {kategori || "Belum Lengkap"}
         </span>
     );
@@ -96,7 +121,7 @@ export default function KSE() {
 
     return (
         <RequireCompanyProfile>
-            <div className="max-w-7xl mx-auto space-y-6 pb-12">
+            <div className="mx-auto max-w-7xl space-y-6 pb-12">
                 <PageHeader
                     icon={Building2}
                     title={`Kategorisasi Sistem Elektronik - ${perusahaan?.nama_perusahaan || "Stakeholder"}`}
@@ -107,12 +132,12 @@ export default function KSE() {
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.3 }}
-                    className="bg-white/80 backdrop-blur-sm border border-slate-200/60 rounded-2xl shadow-sm overflow-hidden"
+                    className={PANEL_CLS}
                 >
-                    <div className="px-6 py-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className={PANEL_HEADER_CLS}>
                         <div>
-                            <h3 className="font-bold text-slate-800 text-lg">Tabel KSE</h3>
-                            <p className="text-sm text-slate-500 mt-0.5">Daftar sistem elektronik, skor kategorisasi, dan status pengajuan perubahan data.</p>
+                            <h3 className={PANEL_TITLE_CLS}>Tabel KSE</h3>
+                            <p className={PANEL_DESCRIPTION_CLS}>Daftar sistem elektronik, skor kategorisasi, dan status pengajuan perubahan data.</p>
                         </div>
                         <div className="flex flex-wrap items-center gap-3">
                             {seList.length > 0 && (
@@ -129,63 +154,68 @@ export default function KSE() {
                                             });
                                         }
                                     }}
-                                    className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white shadow-md shadow-blue-500/25 transition-all hover:bg-blue-700 hover:shadow-blue-500/40 hover:scale-[1.01] active:scale-[0.99] whitespace-nowrap"
+                                    className={SECONDARY_BUTTON_CLS}
                                 >
-                                    <Download className="w-4 h-4" /> Export PDF
+                                    <Download className="h-4 w-4" />
+                                    Export PDF
                                 </button>
                             )}
                             <button
                                 onClick={() => navigate("/dashboard/form-kse")}
-                                className="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-bold text-white shadow-md shadow-yellow-500/30 transition-all hover:bg-amber-600 hover:shadow-yellow-500/45 hover:scale-[1.01] active:scale-[0.99] whitespace-nowrap"
+                                className={PRIMARY_BUTTON_CLS}
                             >
-                                <Plus className="w-4 h-4" /> Tambah SE
+                                <Plus className="h-4 w-4" />
+                                Tambah SE
                             </button>
                         </div>
                     </div>
 
                     {isLoading ? (
-                        <div className="flex flex-col items-center justify-center py-24 gap-3">
-                            <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-                            <p className="text-sm text-slate-400 font-medium">Memuat data...</p>
+                        <div className="flex flex-col items-center justify-center gap-3 py-24">
+                            <Loader2 className="h-8 w-8 animate-spin text-[var(--dashboard-info-soft-fg)]" />
+                            <p className="text-sm font-medium text-[var(--dashboard-text-muted)]">Memuat data...</p>
                         </div>
                     ) : isError ? (
-                        <div className="flex flex-col items-center justify-center py-24 gap-3 text-center px-8">
-                            <ServerCrash className="w-10 h-10 text-red-400" />
-                            <p className="text-slate-600 font-semibold">Gagal memuat data SE.</p>
-                            <button onClick={() => refetch()} className="text-blue-500 text-sm font-bold hover:underline">Coba Lagi</button>
+                        <div className="flex flex-col items-center justify-center gap-3 px-8 py-24 text-center">
+                            <ServerCrash className="h-10 w-10 text-[var(--dashboard-danger-soft-fg)]" />
+                            <p className="font-semibold text-[var(--dashboard-text)]">Gagal memuat data SE.</p>
+                            <button onClick={() => refetch()} className="text-sm font-bold text-[var(--dashboard-info-soft-fg)] hover:underline">
+                                Coba Lagi
+                            </button>
                         </div>
                     ) : seList.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-24 gap-4 px-8 text-center">
-                            <div className="w-16 h-16 rounded-2xl bg-blue-50 flex items-center justify-center">
-                                <Monitor className="w-8 h-8 text-blue-400" />
+                        <div className="flex flex-col items-center justify-center gap-4 px-8 py-24 text-center">
+                            <div className={INFO_ICON_CLS}>
+                                <Monitor className="h-8 w-8" />
                             </div>
                             <div>
-                                <p className="font-bold text-slate-700 text-base">Belum ada data SE</p>
-                                <p className="text-sm text-slate-400 mt-1">Tambahkan sistem elektronik pertama Anda untuk memulai penilaian.</p>
+                                <p className="text-base font-bold text-[var(--dashboard-text)]">Belum ada data SE</p>
+                                <p className="mt-1 text-sm text-[var(--dashboard-text-muted)]">Tambahkan sistem elektronik pertama Anda untuk memulai penilaian.</p>
                             </div>
                             <button
                                 onClick={() => navigate("/dashboard/form-kse")}
-                                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500 text-white font-bold text-sm shadow-md shadow-yellow-500/30 hover:bg-amber-600 hover:shadow-yellow-500/45 hover:scale-[1.01] active:scale-[0.99] transition-all whitespace-nowrap"
+                                className={PRIMARY_BUTTON_CLS}
                             >
-                                <Plus className="w-4 h-4" /> Tambah SE Sekarang
+                                <Plus className="h-4 w-4" />
+                                Tambah SE Sekarang
                             </button>
                         </div>
                     ) : (
                         <div className="overflow-x-auto">
                             <table className="w-full text-sm">
                                 <thead>
-                                    <tr className="border-b border-slate-100 bg-slate-50/70">
-                                        <th className="text-left px-5 py-3.5 text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">No</th>
-                                        <th className="text-left px-5 py-3.5 text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Nama Sistem Elektronik</th>
-                                        <th className="text-left px-5 py-3.5 text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Kategori</th>
-                                        <th className="text-left px-5 py-3.5 text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Status Edit</th>
-                                        <th className="text-center px-5 py-3.5 text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Skor</th>
-                                        <th className="text-left px-5 py-3.5 text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Dibuat</th>
-                                        <th className="text-left px-5 py-3.5 text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Diperbarui</th>
-                                        <th className="text-center px-5 py-3.5 text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Aksi</th>
+                                    <tr className={TABLE_HEAD_CLS}>
+                                        <th className={TABLE_HEAD_CELL_CLS}>No</th>
+                                        <th className={TABLE_HEAD_CELL_CLS}>Nama Sistem Elektronik</th>
+                                        <th className={TABLE_HEAD_CELL_CLS}>Kategori</th>
+                                        <th className={TABLE_HEAD_CELL_CLS}>Status Edit</th>
+                                        <th className={TABLE_HEAD_CELL_CENTER_CLS}>Skor</th>
+                                        <th className={TABLE_HEAD_CELL_CLS}>Dibuat</th>
+                                        <th className={TABLE_HEAD_CELL_CLS}>Diperbarui</th>
+                                        <th className={TABLE_HEAD_CELL_CENTER_CLS}>Aksi</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-slate-100">
+                                <tbody className="dashboard-table-divider divide-y">
                                     {seList.map((se, idx) => {
                                         const bobot = computeBobot(se);
                                         const kategori = se.kategori_se || getKategoriSE(bobot).kategori;
@@ -200,15 +230,15 @@ export default function KSE() {
                                                 initial={{ opacity: 0, y: 4 }}
                                                 animate={{ opacity: 1, y: 0 }}
                                                 transition={{ delay: idx * 0.04 }}
-                                                className="hover:bg-blue-50/30 transition-colors group"
+                                                className={TABLE_ROW_CLS}
                                             >
-                                                <td className="px-5 py-4 text-slate-400 font-semibold text-xs">{idx + 1}</td>
+                                                <td className="px-5 py-4 text-xs font-semibold text-[var(--dashboard-text-muted)]">{idx + 1}</td>
                                                 <td className="px-5 py-4">
                                                     <div className="flex items-center gap-3">
-                                                        <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center shrink-0">
-                                                            <Monitor className="w-4 h-4 text-blue-500" />
+                                                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-[var(--dashboard-info-soft-border)] bg-[var(--dashboard-info-soft-bg)]">
+                                                            <Monitor className="h-4 w-4 text-[var(--dashboard-info-soft-fg)]" />
                                                         </div>
-                                                        <span className="font-semibold text-slate-800 leading-tight">{se.nama_se || "—"}</span>
+                                                        <span className="font-semibold leading-tight text-[var(--dashboard-text)]">{se.nama_se || "—"}</span>
                                                     </div>
                                                 </td>
                                                 <td className="px-5 py-4">
@@ -217,33 +247,28 @@ export default function KSE() {
                                                 <td className="px-5 py-4">
                                                     <div className="space-y-1">
                                                         <EditRequestBadge status={editStatus} />
-                                                        <p className="text-[11px] text-slate-400">{statusMeta.description}</p>
+                                                        <p className="text-[11px] text-[var(--dashboard-text-muted)]">{statusMeta.description}</p>
                                                         {latestRequest?.catatan_user && (
-                                                            <p className="text-[11px] text-slate-500">Catatan user: {latestRequest.catatan_user}</p>
+                                                            <p className="text-[11px] text-[var(--dashboard-text-soft)]">Catatan user: {latestRequest.catatan_user}</p>
                                                         )}
                                                         {latestRequest?.catatan && (
-                                                            <p className="text-[11px] text-slate-500">Catatan admin: {latestRequest.catatan}</p>
+                                                            <p className="text-[11px] text-[var(--dashboard-text-soft)]">Catatan admin: {latestRequest.catatan}</p>
                                                         )}
                                                     </div>
                                                 </td>
                                                 <td className="px-5 py-4 text-center">
-                                                    <span className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-slate-50 border border-slate-100 font-extrabold text-slate-800 text-base shadow-sm">
-                                                        {bobot}
-                                                    </span>
+                                                    <span className={SCORE_BADGE_CLS}>{bobot}</span>
                                                 </td>
-                                                <td className="px-5 py-4 text-slate-500 whitespace-nowrap">{formatDate(se.created_at)}</td>
-                                                <td className="px-5 py-4 text-slate-500 whitespace-nowrap">{formatDate(se.updated_at)}</td>
+                                                <td className="px-5 py-4 whitespace-nowrap text-[var(--dashboard-text-soft)]">{formatDate(se.created_at)}</td>
+                                                <td className="px-5 py-4 whitespace-nowrap text-[var(--dashboard-text-soft)]">{formatDate(se.updated_at)}</td>
                                                 <td className="px-5 py-4 text-center">
                                                     <div className="flex items-center justify-center gap-1.5">
                                                         <button
                                                             onClick={() => navigate(`/dashboard/form-kse?id=${se.id}`)}
                                                             disabled={isPendingApproval}
-                                                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold text-xs transition-all ${isPendingApproval
-                                                                ? "bg-slate-100 text-slate-400 cursor-not-allowed"
-                                                                : "bg-amber-500 text-white shadow-md shadow-yellow-500/30 hover:bg-amber-600 hover:shadow-yellow-500/45 hover:scale-[1.01] active:scale-[0.99]"
-                                                                }`}
+                                                            className={isPendingApproval ? ACTION_BUTTON_DISABLED_CLS : ACTION_BUTTON_ACTIVE_CLS}
                                                         >
-                                                            {isPendingApproval ? <Loader2 className="w-3.5 h-3.5" /> : <Send className="w-3.5 h-3.5" />}
+                                                            {isPendingApproval ? <Loader2 className="h-3.5 w-3.5" /> : <Send className="h-3.5 w-3.5" />}
                                                             {isPendingApproval ? "Menunggu Admin" : "Ajukan Perubahan Data"}
                                                         </button>
                                                     </div>
@@ -254,8 +279,11 @@ export default function KSE() {
                                 </tbody>
                             </table>
 
-                            <div className="px-5 py-3 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between">
-                                <p className="text-xs text-slate-400 font-medium">{seList.length} sistem elektronik terdaftar{seData?.total_count != null ? ` (total: ${seData.total_count})` : ""}</p>
+                            <div className={FOOTER_CLS}>
+                                <p className={FOOTER_TEXT_CLS}>
+                                    {seList.length} sistem elektronik terdaftar
+                                    {seData?.total_count != null ? ` (total: ${seData.total_count})` : ""}
+                                </p>
                             </div>
                         </div>
                     )}

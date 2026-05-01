@@ -13,6 +13,7 @@ import { RoleGuard } from "@/components/RoleGuard";
 import { ORGANIZATION_ALLOWED_ROLES } from "@/lib/access-control";
 import { bootstrapApp } from "@/lib/bootstrapApp";
 import { useAppStore } from "@/stores/useAppStore";
+import { GlobalModalProvider } from "@/ui";
 
 import Home from "@/pages/Home";
 import Login from "@/pages/Login";
@@ -198,6 +199,7 @@ const router = createBrowserRouter([
 function App() {
   const isAppReady = useAppStore((state) => state.isAppReady);
   const setAppReady = useAppStore((state) => state.setAppReady);
+  const dashboardTheme = useAppStore((state) => state.dashboardTheme);
 
   useEffect(() => {
     const initApp = async () => {
@@ -208,6 +210,13 @@ function App() {
     initApp();
   }, [setAppReady]);
 
+  useEffect(() => {
+    document.documentElement.dataset.theme = dashboardTheme;
+    document.documentElement.dataset.dashboardTheme = dashboardTheme;
+    document.body.dataset.theme = dashboardTheme;
+    document.body.dataset.dashboardTheme = dashboardTheme;
+  }, [dashboardTheme]);
+
   if (!isAppReady) {
     return <LoadingScreen />;
   }
@@ -215,9 +224,11 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <Toaster />
-        <ShadcnToaster />
-        <RouterProvider router={router} />
+        <GlobalModalProvider>
+          <Toaster />
+          <ShadcnToaster />
+          <RouterProvider router={router} />
+        </GlobalModalProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );

@@ -1,13 +1,15 @@
 import { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { ChevronDown, UserCircle, User, Menu, Settings } from "lucide-react";
+import { ChevronDown, UserCircle, User, Menu, Settings, Moon, Sun } from "lucide-react";
 import { useUser } from "@/hooks/useAuth";
 import { cn, getMediaUrl } from "@/lib/utils";
 import { NotificationBell } from "@/components/dashboard/NotificationBell";
+import { useAppStore } from "@/stores/useAppStore";
 
 interface TopbarProps {
     title?: string;
     onMenuClick?: () => void;
+    hideThemeToggle?: boolean;
 }
 
 function getInitials(name: string): string {
@@ -19,10 +21,13 @@ function getInitials(name: string): string {
         .toUpperCase();
 }
 
-export function Topbar({ title, onMenuClick }: TopbarProps) {
+export function Topbar({ title, onMenuClick, hideThemeToggle = false }: TopbarProps) {
     const { data: user } = useUser();
     const [open, setOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
+    const dashboardTheme = useAppStore((state) => state.dashboardTheme);
+    const toggleDashboardTheme = useAppStore((state) => state.toggleDashboardTheme);
+    const isDark = dashboardTheme === "dark";
 
     useEffect(() => {
         function handle(e: MouseEvent) {
@@ -35,78 +40,147 @@ export function Topbar({ title, onMenuClick }: TopbarProps) {
     }, []);
 
     return (
-        <header className="h-16 flex items-center justify-between px-4 md:px-6 border-b border-slate-100/80 bg-white/60 backdrop-blur-xl sticky top-0 z-30">
-            {/* Left: Hamburger (mobile) + Title */}
+        <header
+            className="h-16 flex items-center justify-between px-4 md:px-8 sticky top-0 z-30"
+            style={{
+                background: "var(--dashboard-topbar-bg)",
+                backdropFilter: "blur(20px)",
+                WebkitBackdropFilter: "blur(20px)",
+                borderBottom: "1px solid var(--dashboard-topbar-border)",
+                boxShadow: "var(--dashboard-topbar-shadow)",
+            }}
+        >
+            {/* Left: Hamburger + Title */}
             <div className="flex items-center gap-3">
-                {/* Hamburger for mobile */}
                 <button
                     onClick={onMenuClick}
-                    className="md:hidden p-2 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition"
+                    className="md:hidden p-2 rounded-xl transition"
+                    style={{ color: "var(--dashboard-text-muted)" }}
                     aria-label="Open menu"
                 >
                     <Menu className="w-5 h-5" />
                 </button>
                 {title && (
-                    <h2 className="text-lg font-black text-slate-900 font-display">{title}</h2>
+                    <div className="flex items-center gap-2">
+                        <div
+                            className="hidden h-5 w-1 rounded-full sm:block"
+                            style={{
+                                background: "linear-gradient(180deg, var(--dashboard-title-accent-start), var(--dashboard-title-accent-end))",
+                            }}
+                        />
+                        <h2 className="text-base font-black tracking-tight" style={{ color: "var(--dashboard-text)" }}>{title}</h2>
+                    </div>
                 )}
             </div>
 
             {/* Right: Notifications + Avatar dropdown */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+                {!hideThemeToggle && (
+                    <button
+                        type="button"
+                        onClick={toggleDashboardTheme}
+                        className="relative flex h-10 items-center gap-2 rounded-2xl border px-3 text-sm font-semibold transition"
+                        style={{
+                            borderColor: "var(--dashboard-border)",
+                            background: "var(--dashboard-surface)",
+                            color: "var(--dashboard-text-soft)",
+                        }}
+                        aria-label={isDark ? "Aktifkan light mode" : "Aktifkan dark mode"}
+                        title={isDark ? "Aktifkan light mode" : "Aktifkan dark mode"}
+                    >
+                        {isDark ? (
+                            <Sun className="h-4 w-4" style={{ color: "var(--dashboard-status-warning)" }} />
+                        ) : (
+                            <Moon className="h-4 w-4" style={{ color: "var(--dashboard-text-soft)" }} />
+                        )}
+                        <span className="hidden md:inline">{isDark ? "Light" : "Dark"}</span>
+                    </button>
+                )}
+
                 <NotificationBell />
+
+                <div className="w-px h-6 mx-1 hidden sm:block" style={{ background: "var(--dashboard-topbar-border)" }} />
 
                 <div className="relative" ref={dropdownRef}>
                     <button
                         onClick={() => setOpen((v) => !v)}
-                        className="flex items-center gap-2.5 rounded-2xl px-3 py-1.5 hover:bg-slate-100 transition"
+                        className={cn(
+                            "flex items-center gap-2.5 rounded-2xl px-2.5 py-1.5 transition-all duration-200",
+                            open
+                                ? "ring-1"
+                                : ""
+                        )}
+                        style={{
+                            background: open ? "var(--dashboard-surface-muted)" : "transparent",
+                            borderColor: "var(--dashboard-border)",
+                        }}
                     >
                         {/* Avatar */}
-                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-sm font-bold shadow-lg shadow-blue-500/25 flex-shrink-0 overflow-hidden">
+                        <div
+                            className="flex h-8 w-8 flex-shrink-0 items-center justify-center overflow-hidden rounded-full text-xs font-bold ring-2"
+                            style={{
+                                background: "linear-gradient(135deg, var(--dashboard-avatar-start), var(--dashboard-avatar-end))",
+                                boxShadow: "var(--dashboard-avatar-shadow)",
+                                borderColor: "var(--dashboard-border)",
+                                color: "var(--dashboard-nav-active-fg)",
+                            }}
+                        >
                             {user?.foto_profile ? (
-                                <img
-                                    src={getMediaUrl(user.foto_profile)}
-                                    alt="Profile"
-                                    className="w-full h-full object-cover"
-                                />
+                                <img src={getMediaUrl(user.foto_profile)} alt="Profile" className="w-full h-full object-cover" />
                             ) : (
-                                user?.name ? getInitials(user.name) : <User className="w-4 h-4" />
+                                user?.name ? getInitials(user.name) : <User className="w-3.5 h-3.5" />
                             )}
                         </div>
                         <div className="hidden sm:block text-left">
-                            <p className="text-sm font-semibold text-slate-800 leading-none">{user?.username}</p>
-                            <p className="text-xs text-slate-400 mt-0.5">{user?.email}</p>
+                            <p className="text-sm font-bold leading-none" style={{ color: "var(--dashboard-text)" }}>{user?.username ?? user?.name}</p>
+                            <p className="text-[10px] mt-0.5 truncate max-w-[140px]" style={{ color: "var(--dashboard-text-muted)" }}>{user?.email}</p>
                         </div>
-                        <ChevronDown
-                            className={cn(
-                                "w-4 h-4 text-slate-400 transition-transform",
-                                open ? "rotate-180" : ""
-                            )}
-                        />
+                        <ChevronDown className={cn("w-3.5 h-3.5 transition-transform duration-200", open ? "rotate-180" : "")} style={{ color: "var(--dashboard-text-muted)" }} />
                     </button>
 
                     {/* Dropdown */}
                     {open && (
-                        <div className="absolute right-0 mt-2 w-52 bg-white/90 backdrop-blur-xl border border-slate-200/80 rounded-2xl shadow-2xl shadow-slate-900/10 py-1 z-50 overflow-hidden">
-                            <div className="px-4 py-3 border-b border-slate-100">
-                                <p className="text-xs font-semibold text-slate-500">Masuk sebagai</p>
-                                <p className="text-sm font-bold text-slate-900 truncate">{user?.username ?? user?.name}</p>
+                        <div
+                            className="absolute right-0 mt-2 w-56 rounded-2xl py-1.5 z-50 overflow-hidden"
+                            style={{
+                                background: "var(--dashboard-surface-strong)",
+                                backdropFilter: "blur(20px)",
+                                border: "1px solid var(--dashboard-border)",
+                                boxShadow: "var(--dashboard-card-shadow)",
+                            }}
+                        >
+                            <div className="px-4 py-3 border-b" style={{ borderColor: "var(--dashboard-border)" }}>
+                                <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--dashboard-text-muted)" }}>Masuk sebagai</p>
+                                <p className="text-sm font-black truncate mt-0.5" style={{ color: "var(--dashboard-text)" }}>{user?.username ?? user?.name}</p>
+                                <p className="text-[10px] truncate" style={{ color: "var(--dashboard-text-muted)" }}>{user?.email}</p>
                             </div>
-                            <Link
-                                to="/dashboard/profil"
-                                onClick={() => setOpen(false)}
-                                className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition w-full"
-                            >
-                                <UserCircle className="w-4 h-4" />
-                                Profil
-                            </Link>
-                            <Link
-                                to="/dashboard/pengaturan"
-                                onClick={() => setOpen(false)}
-                                className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition w-full"
-                            >
-                                <Settings className="w-4 h-4" />
-                                Pengaturan Akun
-                            </Link>
+                            <div className="py-1">
+                                <Link
+                                    to="/dashboard/profil"
+                                    onClick={() => setOpen(false)}
+                                    className="group flex items-center gap-3 px-4 py-2.5 text-sm transition-colors hover:bg-[var(--dashboard-card-chip)]"
+                                    style={{ color: "var(--dashboard-text-soft)" }}
+                                >
+                                    <div
+                                        className="flex h-7 w-7 items-center justify-center rounded-lg transition-colors group-hover:bg-[var(--dashboard-action-soft-icon-hover)]"
+                                        style={{ background: "var(--dashboard-action-soft-icon-bg)" }}
+                                    >
+                                        <UserCircle className="h-4 w-4" style={{ color: "var(--dashboard-action-soft-icon-fg)" }} />
+                                    </div>
+                                    <span className="font-semibold">Profil Saya</span>
+                                </Link>
+                                <Link
+                                    to="/dashboard/pengaturan"
+                                    onClick={() => setOpen(false)}
+                                    className="group flex items-center gap-3 px-4 py-2.5 text-sm transition-colors hover:bg-[var(--dashboard-card-chip)]"
+                                    style={{ color: "var(--dashboard-text-soft)" }}
+                                >
+                                    <div className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors" style={{ background: "var(--dashboard-card-chip)" }}>
+                                        <Settings className="w-4 h-4 transition-colors" style={{ color: "var(--dashboard-text-muted)" }} />
+                                    </div>
+                                    <span className="font-semibold">Pengaturan Akun</span>
+                                </Link>
+                            </div>
                         </div>
                     )}
                 </div>

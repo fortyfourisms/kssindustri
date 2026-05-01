@@ -30,12 +30,15 @@ export function useUser() {
 export function useLogout() {
     const navigate = useNavigate();
     const qc = useQueryClient();
+    const clearSessionState = useAuthStore((state) => state.clearSessionState);
+
     return useMutation({
         mutationFn: async () => {
             return api.logout();
         },
-        onSuccess: () => {
+        onMutate: () => {
             qc.clear();
+            clearSessionState();
             navigate("/");
         },
     });

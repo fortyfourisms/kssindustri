@@ -1,0 +1,236 @@
+@layer components {
+
+  /* ═══════════════════════════════════════════════
+     DARK MODE — Swap light Tailwind bg & text to
+     dark-theme surface tokens
+     ═══════════════════════════════════════════════ */
+
+  .dashboard-shell[data-theme="dark"] .bg-white,
+  .dashboard-shell[data-theme="dark"] .bg-white\/95,
+  .dashboard-shell[data-theme="dark"] .bg-white\/90,
+  .dashboard-shell[data-theme="dark"] .bg-white\/80,
+  .dashboard-shell[data-theme="dark"] .bg-white\/70,
+  .dashboard-shell[data-theme="dark"] .bg-white\/60,
+  .dashboard-shell[data-theme="dark"] .bg-slate-50,
+  .dashboard-shell[data-theme="dark"] .bg-slate-50\/80,
+  .dashboard-shell[data-theme="dark"] .bg-slate-100,
+  .dashboard-shell[data-theme="dark"] .bg-slate-100\/90,
+  .dashboard-shell[data-theme="dark"] .bg-slate-200\/50,
+  .dashboard-shell[data-dashboard-theme="dark"] .bg-white,
+  .dashboard-shell[data-dashboard-theme="dark"] .bg-white\/95,
+  .dashboard-shell[data-dashboard-theme="dark"] .bg-white\/90,
+  .dashboard-shell[data-dashboard-theme="dark"] .bg-white\/80,
+  .dashboard-shell[data-dashboard-theme="dark"] .bg-white\/70,
+  .dashboard-shell[data-dashboard-theme="dark"] .bg-white\/60,
+  .dashboard-shell[data-dashboard-theme="dark"] .bg-slate-50,
+  .dashboard-shell[data-dashboard-theme="dark"] .bg-slate-50\/80,
+  .dashboard-shell[data-dashboard-theme="dark"] .bg-slate-100,
+  .dashboard-shell[data-dashboard-theme="dark"] .bg-slate-100\/90,
+  .dashboard-shell[data-dashboard-theme="dark"] .bg-slate-200\/50 {
+    background-color: var(--dashboard-surface-strong) !important;
+    color: var(--dashboard-text) !important;
+  }
+
+  .dashboard-shell[data-theme="dark"] .border-slate-100,
+  .dashboard-shell[data-theme="dark"] .border-slate-200,
+  .dashboard-shell[data-theme="dark"] .border-slate-200\/50,
+  .dashboard-shell[data-theme="dark"] .border-slate-200\/80,
+  .dashboard-shell[data-theme="dark"] .border-blue-100,
+  .dashboard-shell[data-theme="dark"] .border-blue-200,
+  .dashboard-shell[data-theme="dark"] .border-white,
+  .dashboard-shell[data-theme="dark"] .border-white\/60,
+  .dashboard-shell[data-dashboard-theme="dark"] .border-slate-100,
+  .dashboard-shell[data-dashboard-theme="dark"] .border-slate-200,
+  .dashboard-shell[data-dashboard-theme="dark"] .border-slate-200\/50,
+  .dashboard-shell[data-dashboard-theme="dark"] .border-slate-200\/80,
+  .dashboard-shell[data-dashboard-theme="dark"] .border-blue-100,
+  .dashboard-shell[data-dashboard-theme="dark"] .border-blue-200,
+  .dashboard-shell[data-dashboard-theme="dark"] .border-white,
+  .dashboard-shell[data-dashboard-theme="dark"] .border-white\/60 {
+    border-color: var(--dashboard-border) !important;
+  }
+
+  .dashboard-shell[data-theme="dark"] .text-slate-900,
+  .dashboard-shell[data-theme="dark"] .text-slate-800,
+  .dashboard-shell[data-theme="dark"] .text-slate-700,
+  .dashboard-shell[data-theme="dark"] .text-slate-600,
+  .dashboard-shell[data-theme="dark"] .text-slate-500,
+  .dashboard-shell[data-theme="dark"] .text-slate-400,
+  .dashboard-shell[data-dashboard-theme="dark"] .text-slate-900,
+  .dashboard-shell[data-dashboard-theme="dark"] .text-slate-800,
+  .dashboard-shell[data-dashboard-theme="dark"] .text-slate-700,
+  .dashboard-shell[data-dashboard-theme="dark"] .text-slate-600,
+  .dashboard-shell[data-dashboard-theme="dark"] .text-slate-500,
+  .dashboard-shell[data-dashboard-theme="dark"] .text-slate-400 {
+    color: var(--dashboard-text-soft) !important;
+  }
+
+  .dashboard-shell[data-theme="dark"] .placeholder\:text-slate-400::placeholder,
+  .dashboard-shell[data-theme="dark"] .placeholder\:text-slate-500::placeholder,
+  .dashboard-shell[data-dashboard-theme="dark"] .placeholder\:text-slate-400::placeholder,
+  .dashboard-shell[data-dashboard-theme="dark"] .placeholder\:text-slate-500::placeholder {
+    color: var(--dashboard-text-muted) !important;
+  }
+
+  .dashboard-shell[data-theme="dark"] .shadow-sm,
+  .dashboard-shell[data-theme="dark"] .shadow-xl,
+  .dashboard-shell[data-theme="dark"] .shadow-2xl,
+  .dashboard-shell[data-dashboard-theme="dark"] .shadow-sm,
+  .dashboard-shell[data-dashboard-theme="dark"] .shadow-xl,
+  .dashboard-shell[data-dashboard-theme="dark"] .shadow-2xl {
+    box-shadow: var(--dashboard-card-shadow) !important;
+  }
+
+  .dashboard-shell[data-theme="dark"] input,
+  .dashboard-shell[data-theme="dark"] textarea,
+  .dashboard-shell[data-theme="dark"] select,
+  .dashboard-shell[data-dashboard-theme="dark"] input,
+  .dashboard-shell[data-dashboard-theme="dark"] textarea,
+  .dashboard-shell[data-dashboard-theme="dark"] select {
+    background-color: rgba(15, 23, 42, 0.7);
+    color: var(--dashboard-text);
+    border-color: var(--dashboard-border);
+  }
+
+  .dashboard-shell[data-theme="dark"] table thead,
+  .dashboard-shell[data-dashboard-theme="dark"] table thead {
+    background-color: var(--dashboard-table-head) !important;
+  }
+
+  .dashboard-shell[data-theme="dark"] table tbody tr,
+  .dashboard-shell[data-dashboard-theme="dark"] table tbody tr {
+    background-color: transparent;
+  }
+
+  .dashboard-shell[data-theme="dark"] table tbody tr:hover,
+  .dashboard-shell[data-dashboard-theme="dark"] table tbody tr:hover {
+    background-color: rgba(59, 130, 246, 0.06);
+  }
+
+  /* Module color tokens in dark mode — remap Tailwind colors to accessible dark variants */
+  .dashboard-shell[data-theme="dark"] .text-blue-700,
+  .dashboard-shell[data-dashboard-theme="dark"] .text-blue-700 { color: #93c5fd !important; }
+  .dashboard-shell[data-theme="dark"] .text-violet-700,
+  .dashboard-shell[data-dashboard-theme="dark"] .text-violet-700 { color: #c4b5fd !important; }
+  .dashboard-shell[data-theme="dark"] .text-teal-700,
+  .dashboard-shell[data-dashboard-theme="dark"] .text-teal-700 { color: #5eead4 !important; }
+  .dashboard-shell[data-theme="dark"] .text-amber-700,
+  .dashboard-shell[data-dashboard-theme="dark"] .text-amber-700 { color: #fcd34d !important; }
+  .dashboard-shell[data-theme="dark"] .text-sky-700,
+  .dashboard-shell[data-dashboard-theme="dark"] .text-sky-700 { color: #7dd3fc !important; }
+  .dashboard-shell[data-theme="dark"] .text-emerald-700,
+  .dashboard-shell[data-dashboard-theme="dark"] .text-emerald-700 { color: #6ee7b7 !important; }
+  .dashboard-shell[data-theme="dark"] .text-emerald-600,
+  .dashboard-shell[data-dashboard-theme="dark"] .text-emerald-600 { color: #34d399 !important; }
+
+  /* Dark mode stat chip backgrounds */
+  .dashboard-shell[data-theme="dark"] .bg-sky-50,
+  .dashboard-shell[data-dashboard-theme="dark"] .bg-sky-50 { background-color: rgba(14, 165, 233, 0.12) !important; }
+  .dashboard-shell[data-theme="dark"] .bg-violet-50,
+  .dashboard-shell[data-dashboard-theme="dark"] .bg-violet-50 { background-color: rgba(139, 92, 246, 0.12) !important; }
+  .dashboard-shell[data-theme="dark"] .bg-emerald-50,
+  .dashboard-shell[data-dashboard-theme="dark"] .bg-emerald-50 { background-color: rgba(52, 211, 153, 0.12) !important; }
+  .dashboard-shell[data-theme="dark"] .bg-amber-50,
+  .dashboard-shell[data-dashboard-theme="dark"] .bg-amber-50 { background-color: rgba(251, 191, 36, 0.12) !important; }
+
+  /* Dark mode borders for stat chips */
+  .dashboard-shell[data-theme="dark"] .border-sky-100\/50,
+  .dashboard-shell[data-dashboard-theme="dark"] .border-sky-100\/50 { border-color: rgba(14, 165, 233, 0.2) !important; }
+  .dashboard-shell[data-theme="dark"] .border-violet-100\/50,
+  .dashboard-shell[data-dashboard-theme="dark"] .border-violet-100\/50 { border-color: rgba(139, 92, 246, 0.2) !important; }
+  .dashboard-shell[data-theme="dark"] .border-emerald-100\/50,
+  .dashboard-shell[data-dashboard-theme="dark"] .border-emerald-100\/50 { border-color: rgba(52, 211, 153, 0.2) !important; }
+  .dashboard-shell[data-theme="dark"] .border-amber-100\/50,
+  .dashboard-shell[data-dashboard-theme="dark"] .border-amber-100\/50 { border-color: rgba(251, 191, 36, 0.2) !important; }
+
+  /* ═══════════════════════════════════════════════
+     LIGHT MODE — Swap dark Tailwind text that was
+     designed for the dark hero card
+     ═══════════════════════════════════════════════ */
+
+  .dashboard-shell[data-theme="light"] .text-white\/90,
+  .dashboard-shell[data-theme="light"] .text-white\/80,
+  .dashboard-shell[data-theme="light"] .text-white\/70,
+  .dashboard-shell[data-theme="light"] .text-white\/60,
+  .dashboard-shell[data-theme="light"] .text-white\/50,
+  .dashboard-shell[data-theme="light"] .text-white\/40,
+  .dashboard-shell[data-theme="light"] .text-white\/30,
+  .dashboard-shell[data-type="light"] .text-white\/25,
+  .dashboard-shell[data-theme="light"] .text-white\/20,
+  .dashboard-shell[data-theme="light"] .text-white,
+  .dashboard-shell[data-dashboard-theme="light"] .text-white\/90,
+  .dashboard-shell[data-dashboard-theme="light"] .text-white\/80,
+  .dashboard-shell[data-dashboard-theme="light"] .text-white\/70,
+  .dashboard-shell[data-dashboard-theme="light"] .text-white\/60,
+  .dashboard-shell[data-dashboard-theme="light"] .text-white\/50,
+  .dashboard-shell[data-dashboard-theme="light"] .text-white\/40,
+  .dashboard-shell[data-dashboard-theme="light"] .text-white\/30,
+  .dashboard-shell[data-dashboard-theme="light"] .text-white\/25,
+  .dashboard-shell[data-dashboard-theme="light"] .text-white\/20,
+  .dashboard-shell[data-dashboard-theme="light"] .text-white {
+    color: var(--dashboard-text-soft) !important;
+  }
+
+  .dashboard-shell[data-theme="light"] .text-slate-400,
+  .dashboard-shell[data-theme="light"] .text-slate-500,
+  .dashboard-shell[data-dashboard-theme="light"] .text-slate-400,
+  .dashboard-shell[data-dashboard-theme="light"] .text-slate-500 {
+    color: var(--dashboard-text-muted) !important;
+  }
+
+  .dashboard-shell[data-theme="light"] .border-white\/10,
+  .dashboard-shell[data-theme="light"] .border-white\/8,
+  .dashboard-shell[data-theme="light"] .border-white\/6,
+  .dashboard-shell[data-theme="light"] .border-white\/15,
+  .dashboard-shell[data-theme="light"] .border-white\/20,
+  .dashboard-shell[data-dashboard-theme="light"] .border-white\/10,
+  .dashboard-shell[data-dashboard-theme="light"] .border-white\/8,
+  .dashboard-shell[data-dashboard-theme="light"] .border-white\/6,
+  .dashboard-shell[data-dashboard-theme="light"] .border-white\/15,
+  .dashboard-shell[data-dashboard-theme="light"] .border-white\/20 {
+    border-color: var(--dashboard-border) !important;
+  }
+
+  .dashboard-shell[data-theme="light"] .bg-white\/10,
+  .dashboard-shell[data-theme="light"] .bg-white\/8,
+  .dashboard-shell[data-theme="light"] .bg-white\/7,
+  .dashboard-shell[data-theme="light"] .bg-white\/6,
+  .dashboard-shell[data-theme="light"] .bg-white\/5,
+  .dashboard-shell[data-theme="light"] .bg-white\/4,
+  .dashboard-shell[data-theme="light"] .bg-white\/3,
+  .dashboard-shell[data-dashboard-theme="light"] .bg-white\/10,
+  .dashboard-shell[data-dashboard-theme="light"] .bg-white\/8,
+  .dashboard-shell[data-dashboard-theme="light"] .bg-white\/7,
+  .dashboard-shell[data-dashboard-theme="light"] .bg-white\/6,
+  .dashboard-shell[data-dashboard-theme="light"] .bg-white\/5,
+  .dashboard-shell[data-dashboard-theme="light"] .bg-white\/4,
+  .dashboard-shell[data-dashboard-theme="light"] .bg-white\/3 {
+    background-color: rgba(54, 118, 245, 0.06) !important;
+  }
+
+  /* ═══════════════════════════════════════════════
+     SHARED — dashboard-card visual enhancements
+     ═══════════════════════════════════════════════ */
+
+  .dashboard-shell .dashboard-card {
+    background-color: var(--dashboard-card-bg) !important;
+    border-color: var(--dashboard-card-border) !important;
+    box-shadow: var(--dashboard-card-shadow) !important;
+  }
+  
+  .dashboard-shell .dashboard-card:hover {
+    box-shadow: var(--dashboard-card-hover-shadow) !important;
+  }
+
+  /* Card inner section chip — slightly tinted */
+  .dashboard-shell .dashboard-card .rounded-2xl[style*="--dashboard-card-chip"],
+  .dashboard-shell .dashboard-card .rounded-full[style*="--dashboard-card-chip"] {
+    background-color: var(--dashboard-card-chip) !important;
+    backdrop-filter: blur(8px);
+  }
+
+  /* Progress track — ensure visible in both modes */
+  .dashboard-shell .dashboard-progress-track {
+    background: var(--dashboard-progress-track) !important;
+  }
+}

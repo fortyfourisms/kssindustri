@@ -6,8 +6,6 @@ import { csirtService } from "@/services/csirt.service";
 import { useCompanyProfile } from "@/hooks/useCompanyProfile";
 import { useToast } from "@/hooks/use-toast";
 import { RequireCompanyProfile } from "@/components/RequireCompanyProfile";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
 import KseQuestionCard from "@/components/assessment/KseQuestionCard";
 import ProgressBar from "@/components/assessment/ProgressBar";
 import PaginationControl from "@/components/assessment/PaginationControl";
@@ -18,6 +16,7 @@ import {
     BarChart3, Scale, Loader2, AlertCircle, Eye, FileText, Lock, Send, Server
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { AppButton, AppTextarea, AppModal } from "@/ui";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface KseAnswer {
@@ -47,6 +46,9 @@ interface KseRespondentProfile {
 // ── Constants ────────────────────────────────────────────────────────────────
 const QUESTIONS_PER_PAGE = 10;
 const MAX_SCORE = 50;
+const SECONDARY_BUTTON_CLS = "dashboard-secondary-button inline-flex items-center justify-center gap-2 rounded-xl border px-5 py-2.5 text-sm font-bold transition";
+const PRIMARY_BUTTON_CLS = "dashboard-primary-button inline-flex items-center justify-center gap-2 rounded-xl px-6 py-2.5 text-sm font-bold text-white transition-all hover:-translate-y-0.5 active:translate-y-0";
+const WARNING_BUTTON_CLS = "dashboard-warning-button inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-[13px] font-bold text-white transition-all hover:-translate-y-0.5";
 
 const QUESTION_TO_FIELD: Record<string, string> = {
     '1.1': 'nilai_investasi',
@@ -621,7 +623,7 @@ export default function FormKse() {
                     </div>
                     <div className="flex-1">
                         <h1 className="font-black text-slate-900 font-display text-xl">
-                            {currentStep === 1 ? 'Data Responden' : 'Penilaian KSE'}
+                            {currentStep === 1 ? 'Data Responden' : 'Penilaian Kategorisasi Sistem Elektronik'}
                         </h1>
                         <p className="text-sm text-slate-500">
                             {currentStep === 1 ? 'Lengkapi informasi instansi dan sistem elektronik yang akan dinilai.' : 'Jawab pertanyaan kategorisasi sistem elektronik.'}
@@ -780,15 +782,14 @@ export default function FormKse() {
                                                 <button
                                                     type="button"
                                                     onClick={() => navigate('/dashboard/kse')}
-                                                    className="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 transition-colors flex items-center gap-2"
+                                                    className={SECONDARY_BUTTON_CLS}
                                                 >
                                                     <ArrowLeft className="w-4 h-4" /> Kembali
                                                 </button>
                                                 <button
                                                     type="submit"
                                                     disabled={isEditLocked}
-                                                    className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold text-sm shadow-md shadow-blue-500/25
-                                                        hover:shadow-blue-500/40 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:hover:scale-100"
+                                                    className={`${PRIMARY_BUTTON_CLS} w-full sm:w-auto disabled:opacity-60 disabled:hover:translate-y-0`}
                                                 >
                                                     {editId ? 'Lanjut ke Perubahan KSE' : 'Mulai Kategorisasi'}
                                                     <ChevronRight className="w-4 h-4" />
@@ -811,14 +812,14 @@ export default function FormKse() {
                             transition={{ duration: 0.3 }}
                         >
                             {/* Progress Bar */}
-                            <div className="sticky top-0 z-[99] mb-6 pt-2 pb-2 -mt-2 bg-[#f5f7ff]">
-                                <div className="bg-white/80 backdrop-blur-md border border-slate-200/60 rounded-2xl p-4 shadow-sm">
+                            <div className="sticky top-0 z-[99] -mt-2 mb-6 bg-[var(--dashboard-bg)] pt-2 pb-2">
+                                <div className="dashboard-surface rounded-2xl border p-4 shadow-sm backdrop-blur-md">
                                     <ProgressBar
                                         answered={answeredCount}
                                         total={totalQuestions}
                                         currentPage={currentPage}
                                         totalPages={totalPagesInCategory}
-                                        title="Kategorisasi SE"
+                                title="Kategorisasi Sistem Elektronik"
                                     />
                                 </div>
                             </div>
@@ -911,8 +912,7 @@ export default function FormKse() {
                                                     <button
                                                         onClick={handleEditData}
                                                         disabled={isEditLocked}
-                                                        className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-[14px] font-bold text-[13px] text-blue-600 bg-blue-50 border border-blue-100
-                                                                hover:bg-blue-100/80 hover:-translate-y-0.5 transition-all duration-300 disabled:opacity-60 disabled:hover:translate-y-0"
+                                                        className={`${WARNING_BUTTON_CLS} w-full disabled:opacity-60 disabled:hover:translate-y-0`}
                                                     >
                                                         <Edit2 className="w-4 h-4" /> Edit Data Responden
                                                     </button>
@@ -921,8 +921,7 @@ export default function FormKse() {
                                                 <button
                                                     onClick={handleEditAnswers}
                                                     disabled={isEditLocked}
-                                                    className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-[14px] font-bold text-[13px] text-amber-600 bg-amber-50 border border-amber-100
-                                                            hover:bg-amber-100/80 hover:-translate-y-0.5 transition-all duration-300 disabled:opacity-60 disabled:hover:translate-y-0"
+                                                    className={`${WARNING_BUTTON_CLS} w-full disabled:opacity-60 disabled:hover:translate-y-0`}
                                                 >
                                                     <Edit2 className="w-4 h-4" /> Ubah Draft Perubahan
                                                 </button>
@@ -1010,16 +1009,34 @@ export default function FormKse() {
                     )}
                 </AnimatePresence>
 
-                <Dialog open={showConfirmModal} onOpenChange={setShowConfirmModal}>
-                    <DialogContent className="sm:max-w-2xl rounded-3xl p-6">
-                        <DialogHeader>
-                            <DialogTitle className="text-xl font-bold text-slate-900">Konfirmasi Perubahan</DialogTitle>
-                            <DialogDescription className="text-sm text-slate-500">
-                                Tinjau kembali data KSE yang berubah. Setelah dikirim, perubahan akan menunggu persetujuan admin sebelum diterapkan.
-                            </DialogDescription>
-                        </DialogHeader>
-
-                        <div className="space-y-4 py-2">
+                <AppModal
+                    open={showConfirmModal}
+                    onOpenChange={setShowConfirmModal}
+                    title="Konfirmasi Perubahan"
+                    description="Tinjau kembali data kategorisasi sistem elektronik yang berubah. Setelah dikirim, perubahan akan menunggu persetujuan admin sebelum diterapkan."
+                    contentClassName="sm:max-w-2xl"
+                    footer={
+                        <>
+                            <AppButton
+                                type="button"
+                                variant="ghost"
+                                onClick={() => setShowConfirmModal(false)}
+                            >
+                                Cancel
+                            </AppButton>
+                            <AppButton
+                                type="button"
+                                onClick={handleSubmitEditRequest}
+                                disabled={isSaving || !editReason.trim() || !pendingChanges.length}
+                                loading={isSaving}
+                                leftIcon={!isSaving ? <Send className="w-4 h-4" /> : undefined}
+                            >
+                                Submit Perubahan
+                            </AppButton>
+                        </>
+                    }
+                >
+                    <div className="space-y-4 py-2">
                             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                                 <div className="flex items-center gap-2 mb-3 text-slate-700">
                                     <Eye className="w-4 h-4" />
@@ -1044,37 +1061,15 @@ export default function FormKse() {
                                 </div>
                             </div>
 
-                            <div>
-                                <label className="block text-sm font-semibold text-slate-700 mb-2">Alasan Edit</label>
-                                <Textarea
-                                    value={editReason}
-                                    onChange={(e) => setEditReason(e.target.value)}
-                                    placeholder="Jelaskan alasan perubahan data KSE yang diajukan."
-                                    className="min-h-[120px] rounded-2xl border-slate-200 focus-visible:ring-blue-500"
-                                />
-                            </div>
+                            <AppTextarea
+                                label="Alasan Edit"
+                                value={editReason}
+                                onChange={(e) => setEditReason(e.target.value)}
+                                placeholder="Jelaskan alasan perubahan data kategorisasi sistem elektronik yang diajukan."
+                                className="min-h-[120px]"
+                            />
                         </div>
-
-                        <DialogFooter className="gap-2 sm:gap-0">
-                            <button
-                                type="button"
-                                onClick={() => setShowConfirmModal(false)}
-                                className="inline-flex items-center justify-center rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-500 hover:bg-slate-100"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                type="button"
-                                onClick={handleSubmitEditRequest}
-                                disabled={isSaving || !editReason.trim() || !pendingChanges.length}
-                                className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-blue-500/25 transition-all hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
-                            >
-                                {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                                Submit Perubahan
-                            </button>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
+                </AppModal>
             </div>
         </RequireCompanyProfile>
     );
