@@ -1,16 +1,24 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { RequireCompanyProfile } from "@/components/RequireCompanyProfile";
-import { Info, UserCircle2, ArrowRight, ArrowLeft, ShieldCheck, AlertTriangle, Loader2 } from "lucide-react";
+import { Info, UserCircle2, ArrowRight, ArrowLeft, AlertTriangle, Loader2, Building2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useUser } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/services/apiClient";
 import { useSurveyStore } from "@/stores/survey.store";
 import { useToast } from "@/hooks/use-toast";
-import type { SurveyRiskResponse, SurveyScaleValue, UpsertSurveyRespondentPayload } from "@/types/survey.types";
+import { PageHeader } from "@/components/dashboard/PageHeader";
+import { STATIC_SURVEY_RISKS, STATIC_SURVEY_SECTORS } from "@/data/survey-static";
+import type { SurveyProgress, SurveyRespondent, SurveyRiskResponse, SurveyScaleValue, UpsertSurveyRespondentPayload } from "@/types/survey.types";
 
-const INPUT_CLS = "w-full px-4 py-3 rounded-xl border border-slate-200/80 bg-white/60 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:ring-4 focus:ring-blue-500/15 focus:border-blue-500 hover:border-slate-300 transition-all duration-300 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.03)]";
-const LABEL_CLS = "block text-sm font-semibold text-slate-700 mb-2 tracking-wide";
+const INPUT_CLS = "dashboard-input w-full rounded-xl border px-4 py-3 text-sm transition-all duration-300";
+const LABEL_CLS = "dashboard-label mb-2 block text-sm font-semibold tracking-wide";
+const PANEL_CLS = "dashboard-section-card rounded-2xl p-6 sm:p-8";
+const TABLE_PANEL_CLS = "dashboard-table-surface rounded-2xl shadow-sm overflow-hidden";
+const SECONDARY_BUTTON_CLS = "dashboard-table-surface dashboard-text-soft inline-flex items-center justify-center rounded-xl border px-6 py-3 text-sm font-semibold transition-all shadow-sm hover:bg-[var(--dashboard-surface)]";
+const PRIMARY_BUTTON_CLS = "dashboard-primary-button flex items-center justify-center gap-2 rounded-xl px-8 py-3 text-[15px] font-semibold transition-all hover:-translate-y-0.5 disabled:pointer-events-none disabled:opacity-50";
+const SELECTED_CARD_CLS = "dashboard-option-selected";
+const SELECTED_TEXT_CLS = "dashboard-option-selected-text";
 const DEFAULT_RISK_TITLE = "Pencurian Intellectual Property";
 const DEFAULT_RISK_DESCRIPTION = "Silakan evaluasi dan berikan estimasi dampak yang mungkin terjadi terkait perlindungan Hak Kekayaan Intelektual perusahaan Anda.";
 const IMPACT_TO_API: Record<string, SurveyScaleValue> = {
@@ -55,6 +63,32 @@ const DEFAULT_ANSWERS = {
     q4: 'ya',
     q5: ''
 };
+
+const STATIC_RESPONDENT_KEY = "survey-static-respondent-v1";
+const STATIC_PROGRESS_KEY = "survey-static-progress-v1";
+const STATIC_ANSWERS_KEY = "survey-static-answers-v1";
+
+type SurveyMode = "pending" | "backend" | "static";
+type StoredRiskAnswers = Record<number, Partial<typeof DEFAULT_ANSWERS>>;
+
+function canUseBrowserStorage() {
+    return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
+}
+
+function readStoredJson<T>(key: string, fallback: T): T {
+    if (!canUseBrowserStorage()) return fallback;
+    try {
+        const raw = window.localStorage.getItem(key);
+        return raw ? (JSON.parse(raw) as T) : fallback;
+    } catch {
+        return fallback;
+    }
+}
+
+function writeStoredJson(key: string, value: unknown) {
+    if (!canUseBrowserStorage()) return;
+    window.localStorage.setItem(key, JSON.stringify(value));
+}
 
 function hasNextRisk(risk: SurveyRiskResponse | null, progress: Record<string, any> | null): boolean {
     if (typeof risk?.has_next === "boolean") return risk.has_next;
@@ -119,43 +153,133 @@ export default function SurveiProfil() {
 
     const [step, setStep] = useState(0);
     const [isFinished, setIsFinished] = useState(false);
+    const [surveyMode, setSurveyMode] = useState<SurveyMode>("pending");
+    const [localRespondent, setLocalRespondent] = useState<SurveyRespondent | null>(null);
+    const [localProgress, setLocalProgress] = useState<SurveyProgress | null>(null);
+    const [localRiskIndex, setLocalRiskIndex] = useState(0);
+    const [localRiskAnswers, setLocalRiskAnswers] = useState<StoredRiskAnswers>({});
 
     useEffect(() => {
-        if (!user?.email) return;
-        void hydrateByEmail(user.email);
+        setLocalRespondent(readStoredJson<SurveyRespondent | null>(STATIC_RESPONDENT_KEY, null));
+        setLocalProgress(readStoredJson<SurveyProgress | null>(STATIC_PROGRESS_KEY, null));
+        setLocalRiskAnswers(readStoredJson<StoredRiskAnswers>(STATIC_ANSWERS_KEY, {}));
+    }, []);
+
+    useEffect(() => {
+        if (!user?.email) {
+            setSurveyMode("static");
+            return;
+        }
+
+        let cancelled = false;
+
+        const bootstrap = async () => {
+            const result = await hydrateByEmail(user.email);
+            if (cancelled) return;
+
+            if (result.success) {
+                setSurveyMode("backend");
+                return;
+            }
+
+            setSurveyMode("static");
+        };
+
+        void bootstrap();
+
+        return () => {
+            cancelled = true;
+        };
     }, [user?.email, hydrateByEmail]);
 
     useEffect(() => {
-        if (!currentRespondent && !currentRisk) return;
+        const storedIndex = typeof localProgress?.current_risk === "number" ? localProgress.current_risk : 0;
+        const maxIndex = Math.max(STATIC_SURVEY_RISKS.length - 1, 0);
+        setLocalRiskIndex(Math.min(Math.max(storedIndex, 0), maxIndex));
+    }, [localProgress]);
+
+    const fallbackSectors = useMemo(
+        () => (Array.isArray(subSektors) && subSektors.length > 0 ? subSektors : STATIC_SURVEY_SECTORS),
+        [subSektors]
+    );
+
+    const staticCurrentRisk = useMemo<SurveyRiskResponse | null>(() => {
+        const risk = STATIC_SURVEY_RISKS[localRiskIndex];
+        if (!risk) return null;
+
+        const storedAnswers = localRiskAnswers[risk.id] ?? {};
+        return {
+            id: risk.id,
+            risiko_id: risk.id,
+            current_risk: localRiskIndex,
+            total_risks: STATIC_SURVEY_RISKS.length,
+            has_next: localRiskIndex < STATIC_SURVEY_RISKS.length - 1,
+            has_previous: localRiskIndex > 0,
+            next_risk: localRiskIndex < STATIC_SURVEY_RISKS.length - 1 ? localRiskIndex + 1 : null,
+            previous_risk: localRiskIndex > 0 ? localRiskIndex - 1 : null,
+            nama_risiko: risk.nama_risiko,
+            deskripsi: risk.deskripsi,
+            pernah_terjadi: typeof storedAnswers.q1 === "string" ? storedAnswers.q1 === "ya" : undefined,
+            alasan: typeof storedAnswers.q1_alasan === "string" ? storedAnswers.q1_alasan : undefined,
+            dampak_reputasi: typeof storedAnswers.dampak_reputasi === "string" ? IMPACT_TO_API[storedAnswers.dampak_reputasi] : undefined,
+            dampak_operasional: typeof storedAnswers.dampak_operasional === "string" ? IMPACT_TO_API[storedAnswers.dampak_operasional] : undefined,
+            dampak_finansial: typeof storedAnswers.dampak_finansial === "string" ? IMPACT_TO_API[storedAnswers.dampak_finansial] : undefined,
+            dampak_hukum: typeof storedAnswers.dampak_hukum === "string" ? IMPACT_TO_API[storedAnswers.dampak_hukum] : undefined,
+            frekuensi: typeof storedAnswers.frekuensi === "string" ? FREQUENCY_TO_API[storedAnswers.frekuensi] : undefined,
+            ada_pengendalian: typeof storedAnswers.q4 === "string" ? storedAnswers.q4 === "ya" : undefined,
+            deskripsi_pengendalian: typeof storedAnswers.q5 === "string" ? storedAnswers.q5 : undefined,
+        };
+    }, [localRiskAnswers, localRiskIndex]);
+
+    const activeRespondent = surveyMode === "backend" ? currentRespondent : localRespondent;
+    const activeRisk = surveyMode === "backend" ? currentRisk : staticCurrentRisk;
+    const activeProgress = surveyMode === "backend"
+        ? progressState
+        : (
+            localProgress ?? {
+                current_risk: localRiskIndex,
+                total_risks: STATIC_SURVEY_RISKS.length,
+                has_next: localRiskIndex < STATIC_SURVEY_RISKS.length - 1,
+                has_previous: localRiskIndex > 0,
+                completed: false,
+            }
+        );
+    const isStaticMode = surveyMode === "static";
+    const isLoadingMode = surveyMode === "pending";
+
+    useEffect(() => {
+        if (!activeRespondent && !activeRisk) return;
 
         setAnswers({
             ...DEFAULT_ANSWERS,
-            responden_nama: currentRespondent?.nama_lengkap || DEFAULT_ANSWERS.responden_nama,
-            responden_jabatan: currentRespondent?.jabatan || DEFAULT_ANSWERS.responden_jabatan,
-            responden_perusahaan: currentRespondent?.perusahaan || DEFAULT_ANSWERS.responden_perusahaan,
-            responden_email: currentRespondent?.email || DEFAULT_ANSWERS.responden_email,
-            responden_telepon: currentRespondent?.no_telepon || DEFAULT_ANSWERS.responden_telepon,
-            responden_sektor: currentRespondent?.sektor || DEFAULT_ANSWERS.responden_sektor,
-            responden_sertifikat: currentRespondent?.sertifikat_training || DEFAULT_ANSWERS.responden_sertifikat,
-            q1: typeof currentRisk?.pernah_terjadi === "boolean" ? (currentRisk.pernah_terjadi ? "ya" : "tidak") : DEFAULT_ANSWERS.q1,
-            q1_alasan: typeof currentRisk?.alasan === "string" ? currentRisk.alasan : DEFAULT_ANSWERS.q1_alasan,
-            dampak_reputasi: typeof currentRisk?.dampak_reputasi === "number" ? (API_TO_IMPACT[currentRisk.dampak_reputasi] || DEFAULT_ANSWERS.dampak_reputasi) : DEFAULT_ANSWERS.dampak_reputasi,
-            dampak_operasional: typeof currentRisk?.dampak_operasional === "number" ? (API_TO_IMPACT[currentRisk.dampak_operasional] || DEFAULT_ANSWERS.dampak_operasional) : DEFAULT_ANSWERS.dampak_operasional,
-            dampak_finansial: typeof currentRisk?.dampak_finansial === "number" ? (API_TO_IMPACT[currentRisk.dampak_finansial] || DEFAULT_ANSWERS.dampak_finansial) : DEFAULT_ANSWERS.dampak_finansial,
-            dampak_hukum: typeof currentRisk?.dampak_hukum === "number" ? (API_TO_IMPACT[currentRisk.dampak_hukum] || DEFAULT_ANSWERS.dampak_hukum) : DEFAULT_ANSWERS.dampak_hukum,
-            frekuensi: typeof currentRisk?.frekuensi === "number" ? (API_TO_FREQUENCY[currentRisk.frekuensi] || DEFAULT_ANSWERS.frekuensi) : DEFAULT_ANSWERS.frekuensi,
-            q4: typeof currentRisk?.ada_pengendalian === "boolean" ? (currentRisk.ada_pengendalian ? "ya" : "tidak") : DEFAULT_ANSWERS.q4,
-            q5: typeof currentRisk?.deskripsi_pengendalian === "string" ? currentRisk.deskripsi_pengendalian : DEFAULT_ANSWERS.q5,
+            responden_nama: activeRespondent?.nama_lengkap || DEFAULT_ANSWERS.responden_nama,
+            responden_jabatan: activeRespondent?.jabatan || DEFAULT_ANSWERS.responden_jabatan,
+            responden_perusahaan: activeRespondent?.perusahaan || DEFAULT_ANSWERS.responden_perusahaan,
+            responden_email: activeRespondent?.email || user?.email || DEFAULT_ANSWERS.responden_email,
+            responden_telepon: activeRespondent?.no_telepon || DEFAULT_ANSWERS.responden_telepon,
+            responden_sektor: activeRespondent?.sektor || DEFAULT_ANSWERS.responden_sektor,
+            responden_sertifikat: activeRespondent?.sertifikat_training || DEFAULT_ANSWERS.responden_sertifikat,
+            q1: typeof activeRisk?.pernah_terjadi === "boolean" ? (activeRisk.pernah_terjadi ? "ya" : "tidak") : DEFAULT_ANSWERS.q1,
+            q1_alasan: typeof activeRisk?.alasan === "string" ? activeRisk.alasan : DEFAULT_ANSWERS.q1_alasan,
+            dampak_reputasi: typeof activeRisk?.dampak_reputasi === "number" ? (API_TO_IMPACT[activeRisk.dampak_reputasi] || DEFAULT_ANSWERS.dampak_reputasi) : DEFAULT_ANSWERS.dampak_reputasi,
+            dampak_operasional: typeof activeRisk?.dampak_operasional === "number" ? (API_TO_IMPACT[activeRisk.dampak_operasional] || DEFAULT_ANSWERS.dampak_operasional) : DEFAULT_ANSWERS.dampak_operasional,
+            dampak_finansial: typeof activeRisk?.dampak_finansial === "number" ? (API_TO_IMPACT[activeRisk.dampak_finansial] || DEFAULT_ANSWERS.dampak_finansial) : DEFAULT_ANSWERS.dampak_finansial,
+            dampak_hukum: typeof activeRisk?.dampak_hukum === "number" ? (API_TO_IMPACT[activeRisk.dampak_hukum] || DEFAULT_ANSWERS.dampak_hukum) : DEFAULT_ANSWERS.dampak_hukum,
+            frekuensi: typeof activeRisk?.frekuensi === "number" ? (API_TO_FREQUENCY[activeRisk.frekuensi] || DEFAULT_ANSWERS.frekuensi) : DEFAULT_ANSWERS.frekuensi,
+            q4: typeof activeRisk?.ada_pengendalian === "boolean" ? (activeRisk.ada_pengendalian ? "ya" : "tidak") : DEFAULT_ANSWERS.q4,
+            q5: typeof activeRisk?.deskripsi_pengendalian === "string" ? activeRisk.deskripsi_pengendalian : DEFAULT_ANSWERS.q5,
         });
 
-        if (currentRespondent || currentRisk) {
+        if (activeRespondent) {
             setStep(1);
+        } else {
+            setStep(0);
         }
-    }, [currentRespondent, currentRisk]);
+    }, [activeRespondent, activeRisk, user?.email]);
 
     useEffect(() => {
-        setIsFinished(Boolean(progressState?.completed || progressState?.finished_at));
-    }, [progressState]);
+        setIsFinished(Boolean(activeProgress?.completed || activeProgress?.finished_at));
+    }, [activeProgress]);
 
     const setAnswer = (key: string, val: any) => {
         setAnswers(prev => ({ ...prev, [key]: val }));
@@ -175,6 +299,68 @@ export default function SurveiProfil() {
         );
 
     const submitRisk = async (direction: "next" | "previous") => {
+        if (isStaticMode) {
+            const activeRiskId = STATIC_SURVEY_RISKS[localRiskIndex]?.id;
+            if (!activeRiskId) return false;
+
+            const nextAnswers = {
+                ...localRiskAnswers,
+                [activeRiskId]: {
+                    q1: answers.q1,
+                    q1_alasan: answers.q1_alasan,
+                    dampak_reputasi: answers.dampak_reputasi,
+                    dampak_operasional: answers.dampak_operasional,
+                    dampak_finansial: answers.dampak_finansial,
+                    dampak_hukum: answers.dampak_hukum,
+                    frekuensi: answers.frekuensi,
+                    q4: answers.q4,
+                    q5: answers.q5,
+                },
+            };
+            setLocalRiskAnswers(nextAnswers);
+            writeStoredJson(STATIC_ANSWERS_KEY, nextAnswers);
+
+            const shouldFinish = direction === "next" && localRiskIndex >= STATIC_SURVEY_RISKS.length - 1;
+            if (shouldFinish) {
+                const finishedProgress: SurveyProgress = {
+                    current_risk: localRiskIndex,
+                    total_risks: STATIC_SURVEY_RISKS.length,
+                    completed: true,
+                    finished_at: new Date().toISOString(),
+                    has_next: false,
+                    has_previous: localRiskIndex > 0,
+                };
+                setLocalProgress(finishedProgress);
+                writeStoredJson(STATIC_PROGRESS_KEY, finishedProgress);
+                setIsFinished(true);
+                toast({
+                    title: "Survei selesai",
+                    description: "Jawaban survei risiko statis berhasil disimpan di browser.",
+                });
+                return true;
+            }
+
+            const nextIndex = direction === "next"
+                ? Math.min(localRiskIndex + 1, STATIC_SURVEY_RISKS.length - 1)
+                : Math.max(localRiskIndex - 1, 0);
+            const nextProgress: SurveyProgress = {
+                current_risk: nextIndex,
+                total_risks: STATIC_SURVEY_RISKS.length,
+                completed: false,
+                has_next: nextIndex < STATIC_SURVEY_RISKS.length - 1,
+                has_previous: nextIndex > 0,
+            };
+            setLocalRiskIndex(nextIndex);
+            setLocalProgress(nextProgress);
+            writeStoredJson(STATIC_PROGRESS_KEY, nextProgress);
+
+            toast({
+                title: direction === "next" ? "Jawaban tersimpan" : "Kembali ke risiko sebelumnya",
+                description: "Data survei statis berhasil diperbarui di browser.",
+            });
+            return true;
+        }
+
         if (!currentRespondent?.id) {
             toast({
                 title: "Responden belum tersedia",
@@ -254,6 +440,33 @@ export default function SurveiProfil() {
                 sektor_lainnya: '',
             };
 
+            if (isStaticMode) {
+                const staticRespondent: SurveyRespondent = {
+                    id: localRespondent?.id ?? Date.now(),
+                    ...respondentPayload,
+                    created_at: localRespondent?.created_at ?? new Date().toISOString(),
+                    updated_at: new Date().toISOString(),
+                };
+                const initialProgress: SurveyProgress = localProgress ?? {
+                    current_risk: 0,
+                    total_risks: STATIC_SURVEY_RISKS.length,
+                    completed: false,
+                    has_next: true,
+                    has_previous: false,
+                };
+                setLocalRespondent(staticRespondent);
+                setLocalProgress(initialProgress);
+                writeStoredJson(STATIC_RESPONDENT_KEY, staticRespondent);
+                writeStoredJson(STATIC_PROGRESS_KEY, initialProgress);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                setStep(1);
+                toast({
+                    title: "Data responden tersimpan",
+                    description: "Mode statis aktif. Lanjutkan pengisian survei risiko.",
+                });
+                return;
+            }
+
             const respondentResult = await saveRespondent(respondentPayload, currentRespondent?.id);
             if (!respondentResult.success || !respondentResult.data) {
                 toast({
@@ -290,6 +503,34 @@ export default function SurveiProfil() {
 
     const handlePrev = async () => {
         if (step === 1) {
+            if (isStaticMode) {
+                if (localRiskIndex > 0) {
+                    if (isStep1Valid) {
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                        await submitRisk("previous");
+                        return;
+                    }
+
+                    const nextIndex = Math.max(localRiskIndex - 1, 0);
+                    const nextProgress: SurveyProgress = {
+                        current_risk: nextIndex,
+                        total_risks: STATIC_SURVEY_RISKS.length,
+                        completed: false,
+                        has_next: true,
+                        has_previous: nextIndex > 0,
+                    };
+                    setLocalRiskIndex(nextIndex);
+                    setLocalProgress(nextProgress);
+                    writeStoredJson(STATIC_PROGRESS_KEY, nextProgress);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                    return;
+                }
+
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                setStep(0);
+                return;
+            }
+
             if (hasPreviousRisk(currentRisk, progressState as Record<string, any> | null) && currentRespondent?.id) {
                 if (isStep1Valid) {
                     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -337,74 +578,72 @@ export default function SurveiProfil() {
     }
 
     const answeredFields = Object.values(activeAnswers).filter(v => v !== null && v !== '').length;
-    const progress = step === 0 ? 0 : Math.round((answeredFields / totalFields) * 100);
-    const riskTitle = String(currentRisk?.nama_risiko || currentRisk?.judul || DEFAULT_RISK_TITLE);
-    const riskDescription = typeof currentRisk?.deskripsi === "string" && currentRisk.deskripsi.trim()
-        ? currentRisk.deskripsi
+    const riskTitle = String(activeRisk?.nama_risiko || activeRisk?.judul || DEFAULT_RISK_TITLE);
+    const riskDescription = typeof activeRisk?.deskripsi === "string" && activeRisk.deskripsi.trim()
+        ? activeRisk.deskripsi
         : DEFAULT_RISK_DESCRIPTION;
-    const currentRiskNumber = getCurrentRiskIndex(currentRisk, progressState as Record<string, any> | null) + 1;
-    const totalRiskCount = typeof currentRisk?.total_risks === "number"
-        ? currentRisk.total_risks
-        : typeof progressState?.total_risks === "number"
-            ? progressState.total_risks
-            : typeof progressState?.total_steps === "number"
-                ? progressState.total_steps
+    const currentRiskNumber = getCurrentRiskIndex(activeRisk, activeProgress as Record<string, any> | null) + 1;
+    const totalRiskCount = typeof activeRisk?.total_risks === "number"
+        ? activeRisk.total_risks
+        : typeof activeProgress?.total_risks === "number"
+            ? activeProgress.total_risks
+            : typeof activeProgress?.total_steps === "number"
+                ? activeProgress.total_steps
                 : undefined;
+    const progress = step === 0
+        ? 0
+        : typeof totalRiskCount === "number" && totalRiskCount > 0
+            ? Math.round((currentRiskNumber / totalRiskCount) * 100)
+            : Math.round((answeredFields / totalFields) * 100);
     const nextLabel = step === 0
         ? "Simpan & Lanjut"
         : isFinished
             ? "Survei Selesai"
-            : hasNextRisk(currentRisk, progressState as Record<string, any> | null)
+            : hasNextRisk(activeRisk, activeProgress as Record<string, any> | null)
                 ? "Simpan & Berikutnya"
                 : "Simpan & Selesaikan";
+    const pageTitle = "Survei Profil Risiko";
+    const pageSubtitle = step === 0
+        ? "Lengkapi informasi responden untuk memulai penilaian risiko berjenjang."
+        : `Risiko ${currentRiskNumber}${typeof totalRiskCount === "number" ? ` dari ${totalRiskCount}` : ""}. Lengkapi jawaban sesuai kondisi aktual organisasi Anda.`;
 
     return (
         <RequireCompanyProfile>
-            <div className="min-h-screen bg-indigo-50/20 pb-24 font-sans relative overflow-hidden">
+            <div className="dashboard-page-wrap relative min-h-screen overflow-hidden font-sans">
                 {/* Gradient Progress Bar */}
-                <div className="fixed top-0 left-0 w-full h-1.5 bg-slate-200/50 z-50">
+                <div className="fixed top-0 left-0 z-50 h-1.5 w-full" style={{ background: "var(--dashboard-progress-track)" }}>
                     <div
-                        className="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 transition-all duration-700 ease-out shadow-[0_0_15px_rgba(99,102,241,0.5)]"
+                        className="dashboard-primary-button h-full transition-all duration-700 ease-out"
                         style={{ width: `${progress}%` }}
                     />
                 </div>
 
-                <div className="max-w-[55rem] mx-auto px-4 sm:px-6 mt-20 relative z-10">
-                    {/* Header Details */}
-                    <div className="text-center mb-10">
-                        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-                            <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 mb-4 rounded-full bg-blue-100/60 border border-blue-200/60 text-blue-800 text-[11px] font-bold tracking-widest uppercase shadow-sm">
-                                {step === 0 ? <UserCircle2 className="w-3.5 h-3.5" /> : <ShieldCheck className="w-3.5 h-3.5" />}
-                                {step === 0 ? "Survei Profil Risiko" : "Penilaian Risiko Berjenjang"}
-                            </span>
-                            <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">
-                                {step === 0 ? "Informasi Responden" : riskTitle}
-                            </h1>
-                            {step === 1 && (
-                                <p className="mt-3 text-slate-500 text-sm sm:text-base max-w-2xl mx-auto">
-                                    {riskDescription}
-                                </p>
-                            )}
-                        </motion.div>
-                    </div>
+                <div className="mx-auto max-w-7xl space-y-6 px-4 pb-12 pt-20 sm:px-6 relative z-10">
+                    <PageHeader
+                        icon={Building2}
+                        title={pageTitle}
+                        subtitle={pageSubtitle}
+                    />
+
+                    <div className="w-full">
 
                     <AnimatePresence mode="wait">
                         {step === 0 && (
                             <motion.div
                                 key="step0"
                                 initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.4 }}
-                                className="bg-white/80 backdrop-blur-xl border border-white/60 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-8 sm:p-10 mb-8"
+                                className="dashboard-section-card mb-8 rounded-[2rem] p-8 backdrop-blur-xl sm:p-10"
                             >
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-7">
 
-                                    <div className="col-span-1 md:col-span-2 pb-4 border-b border-slate-100 mb-2">
+                                    <div className="dashboard-divider col-span-1 mb-2 border-b pb-4 md:col-span-2">
                                         <div className="flex items-center gap-4">
-                                            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/20 text-white">
+                                            <div className="dashboard-primary-button flex h-12 w-12 items-center justify-center rounded-full text-white">
                                                 <UserCircle2 className="w-6 h-6" />
                                             </div>
                                             <div>
-                                                <h2 className="text-xl font-bold text-slate-900">Detail Responden</h2>
-                                                <p className="text-sm text-slate-500 mt-0.5">Lengkapi profil Anda untuk memulai pengisian survei.</p>
+                                                <h2 className="text-xl font-bold" style={{ color: "var(--dashboard-text)" }}>Detail Responden</h2>
+                                                <p className="mt-0.5 text-sm" style={{ color: "var(--dashboard-text-muted)" }}>Lengkapi profil Anda untuk memulai pengisian survei.</p>
                                             </div>
                                         </div>
                                     </div>
@@ -444,8 +683,8 @@ export default function SurveiProfil() {
 
                                     <div>
                                         <label className={LABEL_CLS}>Sektor <span className="text-red-500">*</span></label>
-                                        <p className="text-[13px] text-slate-500 mb-2 flex items-center gap-1.5">
-                                            <Info className="w-3.5 h-3.5 text-blue-500" /> Pilih salah satu opsi yang sesuai
+                                        <p className="mb-2 flex items-center gap-1.5 text-[13px]" style={{ color: "var(--dashboard-text-muted)" }}>
+                                            <Info className="h-3.5 w-3.5" style={{ color: "var(--dashboard-selection-text)" }} /> Pilih salah satu opsi yang sesuai
                                         </p>
                                         <select
                                             value={answers.responden_sektor}
@@ -453,7 +692,7 @@ export default function SurveiProfil() {
                                             className={`${INPUT_CLS} appearance-none cursor-pointer pr-10`}
                                         >
                                             <option value="">Harap pilih...</option>
-                                            {subSektors?.map((s: any) => (
+                                            {fallbackSectors?.map((s: any) => (
                                                 <option key={s.id} value={s.id}>{s.nama_sub_sektor}</option>
                                             ))}
                                         </select>
@@ -461,8 +700,8 @@ export default function SurveiProfil() {
 
                                     <div>
                                         <label className={LABEL_CLS}>Email Pekerjaan <span className="text-red-500">*</span></label>
-                                        <p className="text-[13px] text-slate-500 mb-2 flex items-center gap-1.5">
-                                            <Info className="w-3.5 h-3.5 text-blue-500" /> Pastikan format email sudah benar
+                                        <p className="mb-2 flex items-center gap-1.5 text-[13px]" style={{ color: "var(--dashboard-text-muted)" }}>
+                                            <Info className="h-3.5 w-3.5" style={{ color: "var(--dashboard-selection-text)" }} /> Pastikan format email sudah benar
                                         </p>
                                         <input
                                             type="email"
@@ -475,8 +714,8 @@ export default function SurveiProfil() {
 
                                     <div>
                                         <label className={LABEL_CLS}>Nomor Telepon/Whatsapp <span className="text-red-500">*</span></label>
-                                        <p className="text-[13px] text-slate-500 mb-2 flex items-center gap-1.5">
-                                            <Info className="w-3.5 h-3.5 text-blue-500" /> Berupa angka tanpa spasi
+                                        <p className="mb-2 flex items-center gap-1.5 text-[13px]" style={{ color: "var(--dashboard-text-muted)" }}>
+                                            <Info className="h-3.5 w-3.5" style={{ color: "var(--dashboard-selection-text)" }} /> Berupa angka tanpa spasi
                                         </p>
                                         <input
                                             type="tel"
@@ -501,23 +740,27 @@ export default function SurveiProfil() {
                             </motion.div>
                         )}
 
-                        {step === 1 && (
+                        {step === 1 && !isLoadingMode && (
                             <motion.div
                                 key="step1"
                                 initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.4 }}
                             >
                                 {/* Intro Card */}
-                                <div className="bg-gradient-to-br from-indigo-50/80 to-blue-50/50 border border-blue-100/70 rounded-[1.5rem] p-7 sm:p-9 mb-10 text-[15px] text-slate-700 leading-relaxed shadow-sm relative overflow-hidden backdrop-blur-md">
+                                    <div className="dashboard-section-emphasis relative mb-10 overflow-hidden rounded-[1.5rem] p-7 text-[15px] leading-relaxed shadow-sm backdrop-blur-md sm:p-9" style={{ color: "var(--dashboard-text-soft)" }}>
                                     <div className="relative z-10">
-                                        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white shadow-sm border border-blue-100/80 text-blue-700 font-semibold text-sm mb-6">
-                                            <AlertTriangle className="w-4 h-4 text-amber-500" />
+                                        <div className="dashboard-chip-info mb-6 inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm font-semibold shadow-sm">
+                                            <AlertTriangle className="dashboard-chip-warning h-4 w-4 rounded-full border p-0.5" />
                                             Risiko {currentRiskNumber}{typeof totalRiskCount === "number" ? ` dari ${totalRiskCount}` : ""}
                                         </div>
-                                        <p className="mb-4 text-slate-800 font-medium text-lg leading-snug">{riskTitle}</p>
-                                        <p className="mb-4 text-[15px] opacity-90 leading-relaxed">{riskDescription}</p>
-                                        <div className="bg-white/60 rounded-xl p-4 mt-6 border border-white">
-                                            <p className="opacity-95 italic text-sm text-slate-600 flex gap-3 items-start">
-                                                <Info className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
+                                        <h2 className="mb-4 text-2xl font-black tracking-tight sm:text-3xl" style={{ color: "var(--dashboard-text)" }}>
+                                            {riskTitle}
+                                        </h2>
+                                        <p className="mb-6 text-[15px] leading-relaxed opacity-90" style={{ color: "var(--dashboard-text-soft)" }}>
+                                            {riskDescription}
+                                        </p>
+                                        <div className="dashboard-section-card rounded-xl border p-4">
+                                            <p className="flex items-start gap-3 text-sm italic opacity-95" style={{ color: "var(--dashboard-text-soft)" }}>
+                                                <Info className="mt-0.5 h-5 w-5 shrink-0" style={{ color: "var(--dashboard-selection-text)" }} />
                                                 Sejauh mana organisasi Anda menyadari dan mengelola ancaman ini? Mohon berikan jawaban yang secara akurat merepresentasikan kondisi aktual.
                                             </p>
                                         </div>
@@ -531,10 +774,10 @@ export default function SurveiProfil() {
                                         </div>
                                     )}
                                     {/* Question 1 */}
-                                    <div className="bg-white/80 backdrop-blur-sm border border-slate-200/80 rounded-2xl p-6 sm:p-8 shadow-[0_4px_25px_rgb(0,0,0,0.02)] hover:shadow-[0_4px_25px_rgb(0,0,0,0.06)] transition-all duration-300">
-                                        <p className="text-base font-semibold text-slate-800 mb-4 flex items-start gap-2">
+                                    <div className={`${PANEL_CLS} backdrop-blur-sm transition-all duration-300 hover:shadow-[var(--dashboard-card-hover-shadow)]`}>
+                                        <p className="mb-4 flex items-start gap-2 text-base font-semibold" style={{ color: "var(--dashboard-text)" }}>
                                             <span className="text-rose-500 mt-0.5">*</span>
-                                            <span>Apakah perusahaan Anda berpotensi mengalami atau pernah mengalami insiden <strong className="text-blue-700">{riskTitle}</strong>?</span>
+                                            <span>Apakah perusahaan Anda berpotensi mengalami atau pernah mengalami insiden <strong className={SELECTED_TEXT_CLS}>{riskTitle}</strong>?</span>
                                         </p>
                                         
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
@@ -546,12 +789,12 @@ export default function SurveiProfil() {
                                                     key={opt.value} 
                                                     className={`relative flex flex-col p-5 rounded-xl border-2 cursor-pointer transition-all duration-200 ${
                                                         answers.q1 === opt.value 
-                                                        ? 'border-blue-500 bg-blue-50/40 shadow-sm' 
-                                                        : 'border-slate-200 bg-white hover:border-blue-200 hover:bg-slate-50'
+                                                        ? SELECTED_CARD_CLS
+                                                        : 'dashboard-table-surface hover:border-[var(--dashboard-selection-border)] hover:bg-[var(--dashboard-surface)]'
                                                     }`}
                                                 >
                                                     <div className="flex justify-between items-start mb-1">
-                                                        <span className={`text-base font-bold ${answers.q1 === opt.value ? 'text-blue-700' : 'text-slate-800'}`}>
+                                                        <span className={`text-base font-bold ${answers.q1 === opt.value ? SELECTED_TEXT_CLS : ''}`} style={answers.q1 === opt.value ? undefined : { color: "var(--dashboard-text)" }}>
                                                             {opt.label}
                                                         </span>
                                                         <input
@@ -560,20 +803,21 @@ export default function SurveiProfil() {
                                                             value={opt.value}
                                                             checked={answers.q1 === opt.value}
                                                             onChange={() => setAnswer('q1', opt.value)}
-                                                            className="w-5 h-5 text-blue-600 border-slate-300 focus:ring-blue-500"
+                                                            className="h-5 w-5 cursor-pointer"
+                                                            style={{ accentColor: "var(--dashboard-focus-ring)" }}
                                                         />
                                                     </div>
-                                                    <span className="text-[13px] text-slate-500">{opt.desc}</span>
+                                                    <span className="text-[13px]" style={{ color: "var(--dashboard-text-muted)" }}>{opt.desc}</span>
                                                 </label>
                                             ))}
                                         </div>
                                     </div>
 
                                     {answers.q1 === 'tidak' && (
-                                        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="bg-white/80 backdrop-blur-sm border border-slate-200/80 rounded-2xl p-6 sm:p-8 shadow-[0_4px_25px_rgb(0,0,0,0.02)]">
-                                            <p className="text-base font-semibold text-slate-800 mb-4 flex items-start gap-2">
+                                        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className={`${PANEL_CLS} backdrop-blur-sm`}>
+                                            <p className="mb-4 flex items-start gap-2 text-base font-semibold" style={{ color: "var(--dashboard-text)" }}>
                                                 <span className="text-rose-500 mt-0.5">*</span>
-                                                <span>Mengapa perusahaan Anda tidak berpotensi mengalami atau tidak pernah mengalami insiden <strong className="text-blue-700">{riskTitle}</strong>?</span>
+                                                <span>Mengapa perusahaan Anda tidak berpotensi mengalami atau tidak pernah mengalami insiden <strong className={SELECTED_TEXT_CLS}>{riskTitle}</strong>?</span>
                                             </p>
                                             <textarea
                                                 className={`${INPUT_CLS} min-h-[140px] resize-y`}
@@ -587,15 +831,15 @@ export default function SurveiProfil() {
                                     {answers.q1 === 'ya' && (
                                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }} className="space-y-8">
                                             {/* Question 2 Matrix */}
-                                            <div className="bg-white/80 backdrop-blur-sm border border-slate-200/80 rounded-2xl p-6 sm:p-8 shadow-[0_4px_25px_rgb(0,0,0,0.02)]">
-                                                <p className="text-base font-semibold text-slate-800 mb-6 flex items-start gap-2">
+                                            <div className={`${PANEL_CLS} backdrop-blur-sm`}>
+                                                <p className="mb-6 flex items-start gap-2 text-base font-semibold" style={{ color: "var(--dashboard-text)" }}>
                                                     <span className="text-rose-500 mt-0.5">*</span>
-                                                    <span>Seberapa besar dampak dari <strong className="text-blue-700">{riskTitle}</strong> pada kriteria berikut?</span>
+                                                    <span>Seberapa besar dampak dari <strong className={SELECTED_TEXT_CLS}>{riskTitle}</strong> pada kriteria berikut?</span>
                                                 </p>
-                                                <div className="overflow-hidden rounded-xl border border-slate-200/80">
+                                                <div className="dashboard-table-surface overflow-hidden rounded-xl border">
                                                     <table className="w-full text-sm min-w-[700px]">
                                                         <thead>
-                                                            <tr className="bg-slate-50 border-b border-slate-200 text-slate-600">
+                                                            <tr className="dashboard-table-head dashboard-table-divider border-b">
                                                                 <th className="p-4 text-left font-semibold w-[20%]">Kategori</th>
                                                                 <th className="p-4 text-center font-medium w-[20%] text-emerald-600">Tidak Signifikan</th>
                                                                 <th className="p-4 text-center font-medium w-[20%] text-amber-500">Cukup Signifikan</th>
@@ -603,15 +847,15 @@ export default function SurveiProfil() {
                                                                 <th className="p-4 text-center font-medium w-[20%] text-rose-500">Sangat Signifikan</th>
                                                             </tr>
                                                         </thead>
-                                                        <tbody className="divide-y divide-slate-100">
+                                                        <tbody className="dashboard-table-divider divide-y">
                                                             {[
                                                                 { id: 'reputasi', label: 'Dampak Reputasi' },
                                                                 { id: 'operasional', label: 'Dampak Operasional' },
                                                                 { id: 'finansial', label: 'Dampak Finansial' },
                                                                 { id: 'hukum', label: 'Dampak Hukum' }
                                                             ].map((row) => (
-                                                                <tr key={row.id} className="hover:bg-blue-50/30 transition-colors">
-                                                                    <td className="p-4 font-semibold text-slate-700 bg-slate-50/30">{row.label}</td>
+                                                                <tr key={row.id} className="dashboard-table-row-hover transition-colors">
+                                                                    <td className="dashboard-section-muted p-4 font-semibold" style={{ color: "var(--dashboard-text-soft)" }}>{row.label}</td>
                                                                     {['tidak_signifikan', 'cukup_signifikan', 'signifikan', 'sangat_signifikan'].map((val) => (
                                                                         <td key={val} className="p-4 text-center">
                                                                             <input
@@ -620,7 +864,8 @@ export default function SurveiProfil() {
                                                                                 value={val}
                                                                                 checked={answers[`dampak_${row.id}`] === val}
                                                                                 onChange={() => setAnswer(`dampak_${row.id}`, val)}
-                                                                                className="w-5 h-5 text-blue-600 border-slate-300 focus:ring-blue-500 cursor-pointer shadow-sm"
+                                                                                className="h-5 w-5 cursor-pointer shadow-sm"
+                                                                                style={{ accentColor: "var(--dashboard-focus-ring)" }}
                                                                             />
                                                                         </td>
                                                                     ))}
@@ -632,24 +877,24 @@ export default function SurveiProfil() {
                                             </div>
 
                                             {/* Dampak Table Reference */}
-                                            <div className="bg-slate-50 border border-slate-200/80 rounded-2xl shadow-sm overflow-hidden text-slate-700">
-                                                <div className="p-5 border-b border-slate-200 flex items-center justify-between bg-zinc-100/50 backdrop-blur-sm">
+                                            <div className={TABLE_PANEL_CLS} style={{ color: "var(--dashboard-text-soft)" }}>
+                                                <div className="dashboard-section-muted dashboard-divider flex items-center justify-between border-b p-5 backdrop-blur-sm">
                                                     <div className="flex items-center gap-3">
-                                                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-                                                            <Info className="w-4 h-4 text-blue-600" />
+                                                        <div className="dashboard-icon-info flex h-8 w-8 items-center justify-center rounded-full">
+                                                            <Info className="h-4 w-4" />
                                                         </div>
-                                                        <h3 className="font-semibold text-slate-800 text-[15px] tracking-wide">Panduan Referensi Kriteria Dampak</h3>
+                                                        <h3 className="text-[15px] font-semibold tracking-wide" style={{ color: "var(--dashboard-text)" }}>Panduan Referensi Kriteria Dampak</h3>
                                                     </div>
                                                 </div>
-                                                <div className="overflow-x-auto p-4 sm:p-6 bg-white">
-                                                    <table className="w-full text-[11px] sm:text-xs lg:text-[13px] border-collapse min-w-[600px] lg:min-w-full rounded-lg overflow-hidden ring-1 ring-slate-200">
+                                                <div className="dashboard-table-surface overflow-x-auto p-4 sm:p-6">
+                                                    <table className="min-w-[600px] w-full overflow-hidden rounded-lg border-collapse text-[11px] ring-1 sm:text-xs lg:min-w-full lg:text-[13px]" style={{ ["--tw-ring-color" as string]: "var(--dashboard-border)" }}>
                                                         <thead>
                                                             <tr>
-                                                                <th className="bg-slate-100 text-slate-700 p-3 text-left w-[12%] border-b border-r border-slate-200 font-semibold">Kategori Dampak</th>
-                                                                <th className="bg-[#10b981]/10 text-emerald-700 p-3 text-center w-[22%] border-b border-slate-200 font-semibold">Tidak Signifikan (1)</th>
-                                                                <th className="bg-[#fbbf24]/10 text-amber-700 p-3 text-center w-[22%] border-b border-slate-200 font-semibold">Cukup Signifikan (2)</th>
-                                                                <th className="bg-[#f97316]/10 text-orange-700 p-3 text-center w-[22%] border-b border-slate-200 font-semibold">Signifikan (3)</th>
-                                                                <th className="bg-[#ef4444]/10 text-rose-700 p-3 text-center w-[22%] border-b border-slate-200 font-semibold">Sangat Signifikan (4)</th>
+                                                                <th className="dashboard-table-head dashboard-table-divider border-b border-r p-3 text-left font-semibold" style={{ width: "12%", color: "var(--dashboard-text-soft)" }}>Kategori Dampak</th>
+                                                                <th className="dashboard-table-divider border-b p-3 text-center font-semibold" style={{ width: "22%", background: "var(--dashboard-success-soft-bg)", color: "var(--dashboard-success-soft-fg)" }}>Tidak Signifikan (1)</th>
+                                                                <th className="dashboard-table-divider border-b p-3 text-center font-semibold" style={{ width: "22%", background: "var(--dashboard-warning-soft-bg)", color: "var(--dashboard-warning-soft-fg)" }}>Cukup Signifikan (2)</th>
+                                                                <th className="dashboard-table-divider border-b p-3 text-center font-semibold" style={{ width: "22%", background: "var(--dashboard-nav-warning-icon)", color: "var(--text-inverse)" }}>Signifikan (3)</th>
+                                                                <th className="dashboard-table-divider border-b p-3 text-center font-semibold" style={{ width: "22%", background: "var(--dashboard-danger-soft-bg)", color: "var(--dashboard-danger-soft-fg)" }}>Sangat Signifikan (4)</th>
                                                             </tr>
                                                         </thead>
                                                         <tbody>
@@ -659,10 +904,10 @@ export default function SurveiProfil() {
                                                                 { title: "Finansial", cols: ["Kerugian tambahan s/d 5% dari revenue.", "Kerugian tambahan 6% - 10% dari revenue.", "Kerugian tambahan 11% - 20% dari revenue.", "Kerugian lebih dari 20% dari revenue."] },
                                                                 { title: "Hukum", cols: ["Masalah hukum kecil, belum ada tuntutan.", "Tuntutan hukum yang berdampak kecil.", "Tuntutan memengaruhi kinerja organisasi.", "Tuntutan yang mengancam kelangsungan organisasi."] }
                                                             ].map((row, i) => (
-                                                                <tr key={i} className="hover:bg-slate-50 transition-colors">
-                                                                    <td className="p-3 bg-slate-50 border-r border-slate-200 border-b border-slate-100 font-medium text-slate-800">{row.title}</td>
+                                                                <tr key={i} className="dashboard-table-row-hover transition-colors">
+                                                                    <td className="dashboard-section-muted dashboard-table-divider border-b border-r p-3 font-medium" style={{ color: "var(--dashboard-text)" }}>{row.title}</td>
                                                                     {row.cols.map((col, j) => (
-                                                                        <td key={j} className="p-3 border-b border-slate-100 border-r border-slate-100/50 text-slate-600">{col}</td>
+                                                                        <td key={j} className="dashboard-table-divider border-b border-r p-3" style={{ color: "var(--dashboard-text-soft)" }}>{col}</td>
                                                                     ))}
                                                                 </tr>
                                                             ))}
@@ -674,31 +919,31 @@ export default function SurveiProfil() {
                                             {/* Frekuensi Section */}
                                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                                                 {/* Kriteria Frekuensi Ref */}
-                                                <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-6 shadow-sm">
+                                                <div className={`${TABLE_PANEL_CLS} p-6`}>
                                                     <div className="flex items-center gap-2 mb-4">
                                                         <Info className="w-5 h-5 text-indigo-500" />
-                                                        <h3 className="font-semibold text-slate-800">Panduan Kriteria Frekuensi</h3>
+                                                        <h3 className="font-semibold" style={{ color: "var(--dashboard-text)" }}>Panduan Kriteria Frekuensi</h3>
                                                     </div>
                                                     <div className="space-y-3">
                                                         {[
-                                                            { label: 'Kecil', desc: '≤ 2 kali per tahun', color: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
-                                                            { label: 'Sedang', desc: '> 2 s/d 5 kali per tahun', color: 'bg-blue-100 text-blue-700 border-blue-200' },
-                                                            { label: 'Besar', desc: '> 5 s/d 10 kali per tahun', color: 'bg-amber-100 text-amber-700 border-amber-200' },
-                                                            { label: 'Sangat Besar', desc: '> 10 kali per tahun', color: 'bg-rose-100 text-rose-700 border-rose-200' },
+                                                            { label: 'Kecil', desc: '≤ 2 kali per tahun', color: 'dashboard-chip-success' },
+                                                            { label: 'Sedang', desc: '> 2 s/d 5 kali per tahun', color: 'dashboard-chip-info' },
+                                                            { label: 'Besar', desc: '> 5 s/d 10 kali per tahun', color: 'dashboard-chip-warning' },
+                                                            { label: 'Sangat Besar', desc: '> 10 kali per tahun', color: 'dashboard-chip-danger' },
                                                         ].map((item, idx) => (
-                                                            <div key={idx} className="flex justify-between items-center p-3.5 bg-white rounded-xl border border-slate-100 shadow-sm">
-                                                                <span className={`px-3 py-1 rounded-[8px] text-[13px] font-bold border ${item.color}`}>{item.label}</span>
-                                                                <span className="text-sm text-slate-600 font-medium">{item.desc}</span>
+                                                            <div key={idx} className="dashboard-table-surface dashboard-table-divider flex items-center justify-between rounded-xl border p-3.5 shadow-sm">
+                                                                <span className={`rounded-[8px] border px-3 py-1 text-[13px] font-bold ${item.color}`}>{item.label}</span>
+                                                                <span className="text-sm font-medium" style={{ color: "var(--dashboard-text-soft)" }}>{item.desc}</span>
                                                             </div>
                                                         ))}
                                                     </div>
                                                 </div>
 
                                                 {/* Question 3 Matrix (Frekuensi Input) */}
-                                                <div className="bg-white/80 backdrop-blur-sm border border-slate-200/80 rounded-2xl p-6 shadow-[0_4px_25px_rgb(0,0,0,0.02)]">
-                                                    <p className="text-[15px] font-semibold text-slate-800 mb-6 flex items-start gap-2">
+                                                <div className={`${PANEL_CLS} p-6 backdrop-blur-sm`}>
+                                                    <p className="mb-6 flex items-start gap-2 text-[15px] font-semibold" style={{ color: "var(--dashboard-text)" }}>
                                                         <span className="text-rose-500 mt-0.5">*</span>
-                                                        <span>Seberapa sering dalam setahun risiko <strong className="text-blue-700">{riskTitle}</strong> ini berpotensi terjadi?</span>
+                                                        <span>Seberapa sering dalam setahun risiko <strong className={SELECTED_TEXT_CLS}>{riskTitle}</strong> ini berpotensi terjadi?</span>
                                                     </p>
                                                     <div className="space-y-3">
                                                         {[
@@ -707,15 +952,16 @@ export default function SurveiProfil() {
                                                             { id: 'besar', label: 'Besar' },
                                                             { id: 'sangat_besar', label: 'Sangat Besar' }
                                                         ].map((row) => (
-                                                            <label key={row.id} className={`flex items-center justify-between p-4 rounded-xl border-2 cursor-pointer transition-all ${answers.frekuensi === row.id ? 'border-blue-500 bg-blue-50/40 shadow-sm' : 'border-slate-100 bg-slate-50 hover:border-blue-200 hover:bg-white'}`}>
-                                                                <span className={`font-semibold ${answers.frekuensi === row.id ? 'text-blue-700' : 'text-slate-700'}`}>{row.label}</span>
+                                                            <label key={row.id} className={`flex items-center justify-between rounded-xl border-2 p-4 transition-all ${answers.frekuensi === row.id ? SELECTED_CARD_CLS : 'dashboard-section-muted hover:border-[var(--dashboard-selection-border)] hover:bg-[var(--dashboard-surface)]'}`}>
+                                                                <span className={`font-semibold ${answers.frekuensi === row.id ? SELECTED_TEXT_CLS : ''}`} style={answers.frekuensi === row.id ? undefined : { color: "var(--dashboard-text-soft)" }}>{row.label}</span>
                                                                 <input
                                                                     type="radio"
                                                                     name="frekuensi"
                                                                     value={row.id}
                                                                     checked={answers.frekuensi === row.id}
                                                                     onChange={() => setAnswer('frekuensi', row.id)}
-                                                                    className="w-5 h-5 text-blue-600 border-slate-300 focus:ring-blue-500 shadow-sm"
+                                                                    className="h-5 w-5 shadow-sm"
+                                                                    style={{ accentColor: "var(--dashboard-focus-ring)" }}
                                                                 />
                                                             </label>
                                                         ))}
@@ -724,10 +970,10 @@ export default function SurveiProfil() {
                                             </div>
 
                                             {/* Question 4 & 5 */}
-                                            <div className="bg-white/80 backdrop-blur-sm border border-slate-200/80 rounded-2xl p-6 sm:p-8 shadow-[0_4px_25px_rgb(0,0,0,0.02)]">
-                                                <p className="text-base font-semibold text-slate-800 mb-4 flex items-start gap-2">
+                                            <div className={`${PANEL_CLS} backdrop-blur-sm`}>
+                                                <p className="mb-4 flex items-start gap-2 text-base font-semibold" style={{ color: "var(--dashboard-text)" }}>
                                                     <span className="text-rose-500 mt-0.5">*</span>
-                                                    <span>Apakah perusahaan Anda memiliki tindakan pengendalian terhadap risiko <strong className="text-blue-700">{riskTitle}</strong>?</span>
+                                                    <span>Apakah perusahaan Anda memiliki tindakan pengendalian terhadap risiko <strong className={SELECTED_TEXT_CLS}>{riskTitle}</strong>?</span>
                                                 </p>
                                                 
                                                 <div className="flex gap-4 mt-5 mb-8">
@@ -735,22 +981,23 @@ export default function SurveiProfil() {
                                                         { value: 'ya', label: 'Mempunyai Pengendalian' },
                                                         { value: 'tidak', label: 'Belum Mempunyai' }
                                                     ].map((opt) => (
-                                                        <label key={opt.value} className={`flex-1 flex items-center justify-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${answers.q4 === opt.value ? 'border-blue-500 bg-blue-50/40 shadow-sm text-blue-700' : 'border-slate-200 bg-white hover:border-blue-200 text-slate-700'}`}>
+                                                        <label key={opt.value} className={`flex-1 flex items-center justify-center gap-3 rounded-xl border-2 p-4 transition-all ${answers.q4 === opt.value ? SELECTED_CARD_CLS : 'dashboard-table-surface hover:border-[var(--dashboard-selection-border)]'}`} style={{ color: answers.q4 === opt.value ? "var(--dashboard-selection-text)" : "var(--dashboard-text-soft)" }}>
                                                             <input
                                                                 type="radio"
                                                                 name="q4"
                                                                 value={opt.value}
                                                                 checked={answers.q4 === opt.value}
                                                                 onChange={() => setAnswer('q4', opt.value)}
-                                                                className="w-5 h-5 text-blue-600 focus:ring-blue-500"
+                                                                className="h-5 w-5"
+                                                                style={{ accentColor: "var(--dashboard-focus-ring)" }}
                                                             />
                                                             <span className="font-semibold text-[15px]">{opt.label}</span>
                                                         </label>
                                                     ))}
                                                 </div>
 
-                                                <div className="pt-6 border-t border-slate-100">
-                                                    <p className="text-[15px] font-medium text-slate-800 mb-3 flex items-start gap-2">
+                                                <div className="dashboard-divider border-t pt-6">
+                                                    <p className="mb-3 flex items-start gap-2 text-[15px] font-medium" style={{ color: "var(--dashboard-text)" }}>
                                                         <span className="text-rose-500 mt-0.5">*</span>
                                                         <span>Sebutkan tindakan pengendalian yang telah dilakukan:</span>
                                                     </p>
@@ -773,26 +1020,27 @@ export default function SurveiProfil() {
                     {/* Navigation Footer */}
                     <motion.div 
                         initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}
-                        className="flex flex-col-reverse sm:flex-row items-center justify-between gap-4 mt-12 mb-10 pt-8 border-t border-slate-200/60 relative z-10"
+                        className="dashboard-divider relative z-10 mt-12 mb-10 flex flex-col-reverse items-center justify-between gap-4 border-t pt-8 sm:flex-row"
                     >
                         <button
                             onClick={() => { void handlePrev(); }}
-                            className={`flex items-center justify-center gap-2 px-6 py-3 rounded-xl border ${step === 0 ? 'opacity-0 pointer-events-none' : 'opacity-100'} bg-white border-slate-200 text-slate-700 font-semibold text-sm hover:bg-slate-50 hover:border-slate-300 transition-all shadow-sm w-full sm:w-auto`}
+                            className={`${SECONDARY_BUTTON_CLS} ${step === 0 || isLoadingMode ? 'pointer-events-none opacity-0' : 'opacity-100'} w-full gap-2 sm:w-auto`}
                         >
                             <ArrowLeft className="w-4 h-4" />
-                            {hasPreviousRisk(currentRisk, progressState as Record<string, any> | null) ? "Risiko Sebelumnya" : "Kembali ke Responden"}
+                            {hasPreviousRisk(activeRisk, activeProgress as Record<string, any> | null) ? "Risiko Sebelumnya" : "Kembali ke Responden"}
                         </button>
                         
                         <button
                             onClick={() => { void handleNext(); }}
-                            disabled={saving || isFinished || (step === 0 ? !isStep0Valid : !isStep1Valid)}
-                            className="group flex items-center justify-center gap-2 px-8 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold text-[15px] transition-all shadow-lg hover:shadow-indigo-500/30 hover:-translate-y-0.5 disabled:opacity-50 disabled:pointer-events-none disabled:shadow-none w-full sm:w-auto cursor-pointer"
+                            disabled={saving || isLoadingMode || isFinished || (step === 0 ? !isStep0Valid : !isStep1Valid)}
+                            className={`${PRIMARY_BUTTON_CLS} group w-full cursor-pointer sm:w-auto`}
                         >
                             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                             {nextLabel}
                             {!saving ? <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" /> : null}
                         </button>
                     </motion.div>
+                    </div>
 
                 </div>
             </div>
