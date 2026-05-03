@@ -1,5 +1,5 @@
 export function getCoursesRoute(): string {
-    return "/courses";
+    return "/lms/courses";
 }
 
 export function getLegacyCoursesRoute(): string {

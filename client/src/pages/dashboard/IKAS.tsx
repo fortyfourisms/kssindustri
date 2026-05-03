@@ -379,6 +379,16 @@ export default function IKAS() {
         },
     ];
 
+    const ikasRowsByDomain = useMemo(() => {
+        return ikasDetailRows.reduce<Record<string, typeof ikasDetailRows>>((acc, row) => {
+            if (!acc[row.domain]) {
+                acc[row.domain] = [];
+            }
+            acc[row.domain].push(row);
+            return acc;
+        }, {});
+    }, [ikasDetailRows]);
+
     const triggerFileInput = () => {
         fileInputRef.current?.click();
     };
@@ -608,58 +618,116 @@ export default function IKAS() {
                                 {/* Identifikasi */}
                                 <div className="rounded-2xl p-4 flex items-center gap-4 bg-gradient-to-br from-blue-900 to-blue-600 shadow-lg shadow-blue-500/20 overflow-hidden relative">
                                     <div className="absolute right-0 top-0 w-24 h-24 bg-white/5 rounded-full blur-2xl -mr-4 -mt-4"></div>
-                                    <div className="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-md shrink-0 ring-1 ring-white/30 text-white">
+                                    <div className="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-md shrink-0 ring-1 ring-white/30 !text-white">
                                         <Search className="w-5 h-5" />
                                     </div>
-                                    <div className="text-white relative z-10">
-                                        <div className="text-2xl font-black leading-none">{formatValue(ikasDataDynamic.identifikasi.nilai)}</div>
-                                        <div className="text-[11px] font-bold text-white/80 uppercase tracking-wide mt-1">Identifikasi</div>
-                                        <div className="text-[11px] text-white/90 italic mt-0.5 opacity-90">{ikasDataDynamic.identifikasi.kategori}</div>
+                                    <div className="relative z-10 !text-white">
+                                        <div className="text-2xl font-black leading-none !text-white">{formatValue(ikasDataDynamic.identifikasi.nilai)}</div>
+                                        <div className="mt-1 text-[11px] font-bold uppercase tracking-wide !text-white">Identifikasi</div>
+                                        <div className="mt-0.5 text-[11px] italic !text-white">{ikasDataDynamic.identifikasi.kategori}</div>
                                     </div>
                                 </div>
 
                                 {/* Proteksi */}
                                 <div className="rounded-2xl p-4 flex items-center gap-4 bg-gradient-to-br from-purple-900 to-purple-600 shadow-lg shadow-purple-500/20 overflow-hidden relative">
                                     <div className="absolute right-0 top-0 w-24 h-24 bg-white/5 rounded-full blur-2xl -mr-4 -mt-4"></div>
-                                    <div className="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-md shrink-0 ring-1 ring-white/30 text-white">
+                                    <div className="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-md shrink-0 ring-1 ring-white/30 !text-white">
                                         <Shield className="w-5 h-5" />
                                     </div>
-                                    <div className="text-white relative z-10">
-                                        <div className="text-2xl font-black leading-none">{formatValue(ikasDataDynamic.proteksi.nilai)}</div>
-                                        <div className="text-[11px] font-bold text-white/80 uppercase tracking-wide mt-1">Proteksi</div>
-                                        <div className="text-[11px] text-white/90 italic mt-0.5 opacity-90">{ikasDataDynamic.proteksi.kategori}</div>
+                                    <div className="relative z-10 !text-white">
+                                        <div className="text-2xl font-black leading-none !text-white">{formatValue(ikasDataDynamic.proteksi.nilai)}</div>
+                                        <div className="mt-1 text-[11px] font-bold uppercase tracking-wide !text-white">Proteksi</div>
+                                        <div className="mt-0.5 text-[11px] italic !text-white">{ikasDataDynamic.proteksi.kategori}</div>
                                     </div>
                                 </div>
 
                                 {/* Deteksi */}
                                 <div className="rounded-2xl p-4 flex items-center gap-4 bg-gradient-to-br from-amber-900 to-amber-600 shadow-lg shadow-amber-500/20 overflow-hidden relative">
                                     <div className="absolute right-0 top-0 w-24 h-24 bg-white/5 rounded-full blur-2xl -mr-4 -mt-4"></div>
-                                    <div className="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-md shrink-0 ring-1 ring-white/30 text-white">
+                                    <div className="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-md shrink-0 ring-1 ring-white/30 !text-white">
                                         <Radar className="w-5 h-5" />
                                     </div>
-                                    <div className="text-white relative z-10">
-                                        <div className="text-2xl font-black leading-none">{formatValue(ikasDataDynamic.deteksi.nilai)}</div>
-                                        <div className="text-[11px] font-bold text-white/80 uppercase tracking-wide mt-1">Deteksi</div>
-                                        <div className="text-[11px] text-white/90 italic mt-0.5 opacity-90">{ikasDataDynamic.deteksi.kategori}</div>
+                                    <div className="relative z-10 !text-white">
+                                        <div className="text-2xl font-black leading-none !text-white">{formatValue(ikasDataDynamic.deteksi.nilai)}</div>
+                                        <div className="mt-1 text-[11px] font-bold uppercase tracking-wide !text-white">Deteksi</div>
+                                        <div className="mt-0.5 text-[11px] italic !text-white">{ikasDataDynamic.deteksi.kategori}</div>
                                     </div>
                                 </div>
 
                                 {/* Penanggulangan */}
                                 <div className="rounded-2xl p-4 flex items-center gap-4 bg-gradient-to-br from-emerald-900 to-emerald-600 shadow-lg shadow-emerald-500/20 overflow-hidden relative">
                                     <div className="absolute right-0 top-0 w-24 h-24 bg-white/5 rounded-full blur-2xl -mr-4 -mt-4"></div>
-                                    <div className="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-md shrink-0 ring-1 ring-white/30 text-white">
+                                    <div className="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-md shrink-0 ring-1 ring-white/30 !text-white">
                                         <Activity className="w-5 h-5" />
                                     </div>
-                                    <div className="text-white relative z-10">
-                                        <div className="text-2xl font-black leading-none">{formatValue(ikasDataDynamic.gulih.nilai)}</div>
-                                        <div className="text-[11px] font-bold text-white/80 uppercase tracking-wide mt-1 leading-tight">Penanggulangan &amp; Pemulihan</div>
-                                        <div className="text-[11px] text-white/90 italic mt-0.5 opacity-90">{ikasDataDynamic.gulih.kategori}</div>
+                                    <div className="relative z-10 !text-white">
+                                        <div className="text-2xl font-black leading-none !text-white">{formatValue(ikasDataDynamic.gulih.nilai)}</div>
+                                        <div className="mt-1 text-[11px] font-bold uppercase tracking-wide leading-tight !text-white">Penanggulangan &amp; Pemulihan</div>
+                                        <div className="mt-0.5 text-[11px] italic !text-white">{ikasDataDynamic.gulih.kategori}</div>
                                     </div>
                                 </div>
                             </div>
 
                             {/* Maturity Table */}
-                            <div className="overflow-x-auto rounded-xl border border-slate-200">
+                            <div className="space-y-4 md:hidden">
+                                <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+                                    <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">Ringkasan Tingkat Kematangan</p>
+                                    <div className="mt-3 grid grid-cols-2 gap-3">
+                                        <div className="rounded-xl bg-white p-3 shadow-sm">
+                                            <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">Target Total</p>
+                                            <p className="mt-1 text-lg font-black text-slate-900">2.51</p>
+                                        </div>
+                                        <div className="rounded-xl bg-white p-3 shadow-sm">
+                                            <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">Nilai Total</p>
+                                            <p className="mt-1 text-lg font-black text-slate-900">{formatValue(ikasDataDynamic.total_rata_rata)}</p>
+                                        </div>
+                                    </div>
+                                    <div className="mt-3 rounded-xl bg-white p-3 shadow-sm">
+                                        <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">Kategori Keamanan Siber</p>
+                                        <p className="mt-1 text-base font-black text-[#1e3a5f]">{ikasDataDynamic.total_kategori}</p>
+                                    </div>
+                                </div>
+
+                                {Object.entries(ikasRowsByDomain).map(([domain, rows]) => (
+                                    <div key={domain} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                                        <div className="flex items-start justify-between gap-3">
+                                            <div className="min-w-0">
+                                                <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">{domain}</p>
+                                                <p className="mt-1 text-sm font-semibold text-slate-500">Detail indikator domain {domain.toLowerCase()}.</p>
+                                            </div>
+                                            <div className="shrink-0 text-right">
+                                                <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">Nilai Domain</p>
+                                                <p className="mt-1 text-lg font-black text-slate-900">{rows[0]?.nilaiDomain}</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="mt-3 rounded-xl bg-slate-50 px-3 py-2">
+                                            <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">Kategori Domain</p>
+                                            <p className="mt-1 text-sm font-bold text-slate-700">{rows[0]?.kategoriDomain || "-"}</p>
+                                        </div>
+
+                                        <div className="mt-4 space-y-3">
+                                            {rows.map((row, index) => (
+                                                <div key={`${domain}-${index}`} className="rounded-xl border border-slate-100 bg-slate-50/70 p-3">
+                                                    <p className="text-sm font-semibold leading-relaxed text-slate-800">{row.indikator}</p>
+                                                    <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
+                                                        <div>
+                                                            <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">Target</p>
+                                                            <p className="mt-1 font-bold text-slate-700">{row.target}</p>
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">Nilai</p>
+                                                            <p className="mt-1 font-bold text-slate-900">{row.nilai}</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div className="hidden overflow-x-auto rounded-xl border border-slate-200 md:block">
                                 <table className="w-full text-[12px] border-collapse bg-white">
                                     <thead className="bg-[#f3f4f6] text-slate-600 text-[10px] uppercase font-extrabold tracking-wider border-b border-slate-200">
                                         <tr>
@@ -799,6 +867,12 @@ export default function IKAS() {
                             </div>
 
                             {/* Action Bar */}
+                            <div className="mt-6 rounded-2xl border border-slate-100 bg-slate-50/70 p-4 md:hidden">
+                                <p className="text-sm font-semibold text-slate-700">
+                                    Semua detail IKAS sudah diringkas ke dalam kartu mobile. Buka layar tablet atau desktop jika Anda ingin melihat tabel lengkap versi matriks.
+                                </p>
+                            </div>
+
                             <div className="flex flex-wrap justify-end items-center gap-3 mt-6 pt-5 border-t border-slate-100">
                                 <input
                                     type="file"
@@ -859,14 +933,14 @@ export default function IKAS() {
                                 className="resize-none"
                             />
                         </div>
-                        <DialogFooter>
+                        <DialogFooter className="gap-3 sm:space-x-0">
                             <button
                                 type="button"
                                 onClick={() => {
                                     setShowEditRequestModal(false);
                                     setEditReason("");
                                 }}
-                                className="inline-flex items-center justify-center rounded-xl border border-slate-200 px-4 py-2 text-sm font-bold text-slate-600 transition hover:bg-slate-50"
+                                className="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-200 px-4 py-2 text-sm font-bold text-slate-600 transition hover:bg-slate-50"
                             >
                                 Batal
                             </button>
@@ -874,7 +948,7 @@ export default function IKAS() {
                                 type="button"
                                 onClick={handleSubmitEditRequest}
                                 disabled={isSubmittingEditRequest}
-                                className="inline-flex items-center justify-center rounded-xl bg-amber-500 px-4 py-2 text-sm font-bold text-white transition hover:bg-amber-600 disabled:opacity-70"
+                                className="inline-flex min-h-11 items-center justify-center rounded-xl bg-amber-500 px-4 py-2 text-sm font-bold text-white transition hover:bg-amber-600 disabled:opacity-70"
                             >
                                 {isSubmittingEditRequest ? "Mengirim..." : "Kirim Pengajuan"}
                             </button>

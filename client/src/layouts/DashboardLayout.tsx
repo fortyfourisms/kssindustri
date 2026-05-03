@@ -49,7 +49,7 @@ export function DashboardLayout() {
 
                 <div className="flex-1 flex flex-col min-w-0 relative z-10">
                     <Topbar title={title} onMenuClick={() => setSidebarOpen(true)} />
-                    <main className="flex-1 p-4 md:p-8 overflow-y-auto">
+                    <main className="flex-1 overflow-x-hidden overflow-y-auto px-4 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
                         <Outlet />
                     </main>
                 </div>

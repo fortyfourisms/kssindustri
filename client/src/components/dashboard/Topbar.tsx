@@ -41,7 +41,7 @@ export function Topbar({ title, onMenuClick, hideThemeToggle = false }: TopbarPr
 
     return (
         <header
-            className="h-16 flex items-center justify-between px-4 md:px-8 sticky top-0 z-30"
+            className="sticky top-0 z-30 flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8"
             style={{
                 background: "var(--dashboard-topbar-bg)",
                 backdropFilter: "blur(20px)",
@@ -54,7 +54,7 @@ export function Topbar({ title, onMenuClick, hideThemeToggle = false }: TopbarPr
             <div className="flex items-center gap-3">
                 <button
                     onClick={onMenuClick}
-                    className="md:hidden p-2 rounded-xl transition"
+                    className="rounded-xl p-2 transition lg:hidden"
                     style={{ color: "var(--dashboard-text-muted)" }}
                     aria-label="Open menu"
                 >
@@ -93,7 +93,7 @@ export function Topbar({ title, onMenuClick, hideThemeToggle = false }: TopbarPr
                         ) : (
                             <Moon className="h-4 w-4" style={{ color: "var(--dashboard-text-soft)" }} />
                         )}
-                        <span className="hidden md:inline">{isDark ? "Light" : "Dark"}</span>
+                        <span className="hidden lg:inline">{isDark ? "Light" : "Dark"}</span>
                     </button>
                 )}
 

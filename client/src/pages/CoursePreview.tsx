@@ -12,8 +12,9 @@ import {
   Shield,
   UserRound,
 } from "lucide-react";
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
+import { useScrollToTop } from "@/hooks/useScrollToTop";
 
 const typeIconMap = {
   Video: PlayCircle,
@@ -27,10 +28,7 @@ export default function CoursePreview() {
   const { slug } = useParams<{ slug: string }>();
 
   const course = useMemo(() => (slug ? getCourseShowcaseBySlug(slug) : undefined), [slug]);
-
-  useEffect(() => {
-    window.scrollTo({ top: 0, behavior: "auto" });
-  }, [slug]);
+  useScrollToTop(slug);
 
   if (!course) {
     return <Navigate to="/" replace />;
@@ -49,11 +47,11 @@ export default function CoursePreview() {
       <main className="relative z-10 pt-28 pb-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <button
-            onClick={() => navigate("/")}
+            onClick={() => navigate("/courses")}
             className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-blue-600 transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />
-            Kembali ke landing page
+            Kembali ke daftar course
           </button>
 
           <motion.section
@@ -256,7 +254,7 @@ export default function CoursePreview() {
                   Preview ini dirancang untuk membantu peserta memahami struktur kelas sebelum mendaftar. Konten akhir dapat berkembang mengikuti kebutuhan program.
                 </p>
                 <button
-                  onClick={() => navigate("/#courses")}
+                  onClick={() => navigate("/courses")}
                   className="mt-5 w-full rounded-2xl border border-slate-200 px-5 py-3 text-sm font-bold text-slate-700 transition-colors hover:border-blue-200 hover:text-blue-600"
                 >
                   Lihat kelas lainnya

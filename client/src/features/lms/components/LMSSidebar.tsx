@@ -45,8 +45,8 @@ export function LMSSidebar({ mobileOpen = false, onClose }: LMSSidebarProps) {
     const { courseMateri, courseQuizzes, completedMateriIds, quizProgressById } = useLmsStore();
     const role = getUserRole(currentUser);
     const navItems = [
-        { label: role === ROLE_USER_PIC ? "LMS" : "LMS / My Learning", href: "/lms", icon: LayoutDashboard },
-        { label: "Courses", href: getCoursesRoute(), icon: BookOpen, description: "Materi Pembelajaran" },
+        { label: role === ROLE_USER_PIC ? "LMS" : "LMS / Pembelajaran Saya", href: "/lms", icon: LayoutDashboard },
+        { label: "Daftar Kelas", href: getCoursesRoute(), icon: BookOpen, description: "Materi Pembelajaran" },
         { label: "Progress Belajar", href: "/lms/progress", icon: TrendingUp },
     ];
 
@@ -119,7 +119,7 @@ export function LMSSidebar({ mobileOpen = false, onClose }: LMSSidebarProps) {
                                 <div className="mt-3 ml-4 border-l border-slate-200 pl-4 pr-1">
                                     <div className="max-h-[calc(100vh-20rem)] overflow-y-auto session-scrollbar pr-2">
                                         <div className="flex items-center justify-between mb-3">
-                                            <div className="text-[11px] font-black text-slate-400 tracking-[0.22em] uppercase">Table of Contents</div>
+                                            <div className="text-[11px] font-black text-slate-400 tracking-[0.22em] uppercase">Daftar Isi</div>
                                             <span className="text-[11px] font-bold text-slate-400">{sortedMateri.length}</span>
                                         </div>
 
@@ -168,7 +168,7 @@ export function LMSSidebar({ mobileOpen = false, onClose }: LMSSidebarProps) {
                                                                                     {materi.judul}
                                                                                 </span>
                                                                                 <div className="mt-1 flex items-center gap-2 text-[11px] font-medium text-slate-400">
-                                                                                    <span>Lesson {idx + 1}</span>
+                                                                                    <span>Materi {idx + 1}</span>
                                                                                     {materi.tipe === "video" && materi.durasi_detik && (
                                                                                         <>
                                                                                             <span>/</span>
@@ -246,7 +246,7 @@ export function LMSSidebar({ mobileOpen = false, onClose }: LMSSidebarProps) {
                                                             >
                                                                 {isFinalLocked ? <Lock className="w-4 h-4 text-slate-400 shrink-0" /> : quizPassed ? <CheckCircle2 className="w-4 h-4 text-teal-500 shrink-0" /> : <Sparkles className="w-4 h-4 text-amber-500 shrink-0" />}
                                                                 <span className={cn("text-sm font-bold flex-1 min-w-0 line-clamp-2", isFinalLocked ? "text-slate-500" : quizPassed ? "text-teal-700" : "text-amber-900")}>
-                                                                    Final: {kuis.judul}
+                                                                    Kuis Akhir: {kuis.judul}
                                                                 </span>
                                                             </button>
                                                             );
@@ -302,7 +302,7 @@ export function LMSSidebar({ mobileOpen = false, onClose }: LMSSidebarProps) {
             {/* Overlay backdrop */}
             {mobileOpen && (
                 <div
-                    className="fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-sm md:hidden"
+                    className="fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-sm lg:hidden"
                     onClick={onClose}
                 />
             )}
@@ -310,7 +310,7 @@ export function LMSSidebar({ mobileOpen = false, onClose }: LMSSidebarProps) {
             {/* Mobile slide-in sidebar */}
             <aside
                 className={cn(
-                    "fixed top-0 left-0 h-screen z-50 flex flex-col transition-transform duration-300 md:hidden",
+                    "fixed top-0 left-0 h-screen z-50 flex flex-col transition-transform duration-300 lg:hidden",
                     "bg-white/95 backdrop-blur-xl border-r border-white/50 shadow-2xl",
                     "w-72",
                     mobileOpen ? "translate-x-0" : "-translate-x-full"
@@ -322,7 +322,7 @@ export function LMSSidebar({ mobileOpen = false, onClose }: LMSSidebarProps) {
             {/* ── DESKTOP SIDEBAR ── */}
             <aside
                 className={cn(
-                    "fixed top-0 left-0 h-screen z-40 flex-col transition-all duration-300 hidden md:flex",
+                    "fixed top-0 left-0 h-screen z-40 hidden flex-col transition-all duration-300 lg:flex",
                     "bg-[#f8fafc]/92 backdrop-blur-xl border-r border-white/60 shadow-xl shadow-slate-900/5",
                     collapsed ? "w-[72px]" : desktopSidebarWidth
                 )}
@@ -340,7 +340,7 @@ export function LMSSidebar({ mobileOpen = false, onClose }: LMSSidebarProps) {
             </aside>
 
             {/* Desktop Spacer */}
-            <div className={cn("flex-shrink-0 transition-all duration-300 hidden md:block", collapsed ? "w-[72px]" : desktopSidebarWidth)} />
+            <div className={cn("hidden flex-shrink-0 transition-all duration-300 lg:block", collapsed ? "w-[72px]" : desktopSidebarWidth)} />
         </>
     );
 }

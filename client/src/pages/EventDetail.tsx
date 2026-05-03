@@ -5,6 +5,7 @@ import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
 import { EventRegistrationModal } from "@/components/events/EventRegistrationModal";
 import { useEventDetail } from "@/hooks/useEvents";
+import { useScrollToTop } from "@/hooks/useScrollToTop";
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("id-ID", {
@@ -21,6 +22,7 @@ export default function EventDetail() {
   const { eventId } = useParams();
   const { data: event, isLoading, isError } = useEventDetail(eventId);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  useScrollToTop(eventId);
 
   return (
     <div className="min-h-screen bg-background font-sans selection:bg-primary selection:text-white">

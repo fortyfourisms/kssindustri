@@ -7,11 +7,11 @@ import {
   ArrowRight,
   BookOpen,
   CalendarDays,
-  Clock3,
   Tag,
 } from "lucide-react";
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
+import { useScrollToTop } from "@/hooks/useScrollToTop";
 
 export default function BlogArticle() {
   const navigate = useNavigate();
@@ -22,10 +22,7 @@ export default function BlogArticle() {
     () => blogArticles.filter((item) => item.slug !== slug).slice(0, 2),
     [slug]
   );
-
-  useEffect(() => {
-    window.scrollTo({ top: 0, behavior: "auto" });
-  }, [slug]);
+  useScrollToTop(slug);
 
   if (!article) {
     return <Navigate to="/" replace />;
@@ -45,11 +42,11 @@ export default function BlogArticle() {
       <main className="relative z-10 pt-28 pb-16">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <button
-            onClick={() => navigate("/#blog")}
+            onClick={() => navigate("/blog")}
             className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 transition-colors hover:text-blue-600"
           >
             <ArrowLeft className="h-4 w-4" />
-            Kembali ke blog
+            Kembali ke daftar blog
           </button>
 
           <motion.section
@@ -67,10 +64,6 @@ export default function BlogArticle() {
                   <span className="inline-flex items-center gap-2 rounded-full border border-[#0061ff]/15 bg-[#eff6ff] px-3 py-1 text-xs font-semibold text-[#1f3c88]">
                     <CalendarDays className="h-3.5 w-3.5" />
                     {article.publishedAt}
-                  </span>
-                  <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600">
-                    <Clock3 className="h-3.5 w-3.5 text-cyan-600" />
-                    {article.readingTime}
                   </span>
                 </div>
                 <h1 className="mt-5 text-3xl md:text-5xl font-display font-semibold tracking-tight text-slate-900 leading-tight">

@@ -162,7 +162,7 @@ export default function LMSCertificate() {
                             className="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-white font-black text-sm rounded-2xl transition-all shadow-lg shadow-amber-200 hover:scale-[1.01]"
                         >
                             <Download className="w-4 h-4" />
-                            Download Sertifikat
+                            Unduh Sertifikat
                         </button>
                         {/* pdf_path: PDF download */}
                         {courseCertificate.pdf_path && (
@@ -219,7 +219,7 @@ export default function LMSCertificate() {
                         ) : (
                             <>
                                 <Award className="w-5 h-5" />
-                                Generate Sertifikat Saya
+                                Buat Sertifikat Saya
                             </>
                         )}
                     </button>

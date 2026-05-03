@@ -339,7 +339,7 @@ export default function LMSLearn() {
             </span>
             <span className="mx-2">/</span>
             <span className="hover:text-slate-600 cursor-pointer transition-colors" onClick={() => navigate(getCourseRoute(courseId!))}>
-              {activeCourse?.judul || "Course"}
+              {activeCourse?.judul || "Kelas"}
             </span>
             <span className="mx-2">/</span>
             <span className="text-slate-600 font-bold">{materi.judul}</span>
@@ -381,7 +381,7 @@ export default function LMSLearn() {
                   <div className="flex flex-wrap items-center gap-3 text-white/80 text-[11px] font-black uppercase tracking-[0.22em]">
                     <span className="inline-flex items-center gap-2">
                       <Sparkles className="w-3.5 h-3.5" />
-                      Learning Module
+                      Modul Pembelajaran
                     </span>
                     {materi.tipe === "video" && materi.durasi_detik && (
                       <span className="inline-flex items-center gap-2">
@@ -412,7 +412,7 @@ export default function LMSLearn() {
                       </button>
                     ))}
                   </div>
-                  <div className="hidden sm:block text-xs font-black text-slate-400 tracking-widest px-4 pb-3">NOTES</div>
+                  <div className="hidden sm:block text-xs font-black text-slate-400 tracking-widest px-4 pb-3">CATATAN</div>
                 </div>
               </div>
             </div>

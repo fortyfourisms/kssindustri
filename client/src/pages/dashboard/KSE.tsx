@@ -16,6 +16,7 @@ import {
 import { useUser } from "@/hooks/useAuth";
 import { useCompanyProfile } from "@/hooks/useCompanyProfile";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 import { Building2, Download, Loader2, Monitor, Plus, Send, ServerCrash } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -201,8 +202,78 @@ export default function KSE() {
                             </button>
                         </div>
                     ) : (
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-sm">
+                        <>
+                            <div className="space-y-4 p-4 md:hidden">
+                                {seList.map((se, idx) => {
+                                    const bobot = computeBobot(se);
+                                    const kategori = se.kategori_se || getKategoriSE(bobot).kategori;
+                                    const editStatus = getKseEditRequestStatus(se, requestList);
+                                    const latestRequest = getLatestKseEditRequest(se, requestList);
+                                    const statusMeta = getKseEditStatusMeta(editStatus);
+                                    const isPendingApproval = editStatus === "pending_approval";
+
+                                    return (
+                                        <div key={se.id ?? idx} className="rounded-2xl border border-[var(--dashboard-border)] bg-[var(--dashboard-surface)] p-4 shadow-sm">
+                                            <div className="flex items-start justify-between gap-3">
+                                                <div className="min-w-0">
+                                                    <p className="text-xs font-bold uppercase tracking-wider text-[var(--dashboard-text-muted)]">SE #{idx + 1}</p>
+                                                    <h4 className="mt-1 text-base font-bold text-[var(--dashboard-text)]">{se.nama_se || "-"}</h4>
+                                                </div>
+                                                <span className={SCORE_BADGE_CLS}>{bobot}</span>
+                                            </div>
+
+                                            <div className="mt-4 flex flex-wrap gap-2">
+                                                <KategoriBadge kategori={kategori} />
+                                                <EditRequestBadge status={editStatus} />
+                                            </div>
+
+                                            <div className="mt-4 space-y-3 text-sm">
+                                                <div>
+                                                    <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--dashboard-text-muted)]">Status edit</p>
+                                                    <p className="mt-1 text-[var(--dashboard-text-soft)]">{statusMeta.description}</p>
+                                                </div>
+                                                {latestRequest?.catatan_user && (
+                                                    <div>
+                                                        <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--dashboard-text-muted)]">Catatan user</p>
+                                                        <p className="mt-1 text-[var(--dashboard-text-soft)]">{latestRequest.catatan_user}</p>
+                                                    </div>
+                                                )}
+                                                {latestRequest?.catatan && (
+                                                    <div>
+                                                        <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--dashboard-text-muted)]">Catatan admin</p>
+                                                        <p className="mt-1 text-[var(--dashboard-text-soft)]">{latestRequest.catatan}</p>
+                                                    </div>
+                                                )}
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    <div>
+                                                        <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--dashboard-text-muted)]">Dibuat</p>
+                                                        <p className="mt-1 text-[var(--dashboard-text-soft)]">{formatDate(se.created_at)}</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--dashboard-text-muted)]">Diperbarui</p>
+                                                        <p className="mt-1 text-[var(--dashboard-text-soft)]">{formatDate(se.updated_at)}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <button
+                                                onClick={() => navigate(`/dashboard/form-kse?id=${se.id}`)}
+                                                disabled={isPendingApproval}
+                                                className={cn(
+                                                    "mt-4 inline-flex w-full items-center justify-center gap-1.5 rounded-xl px-3 py-3 text-sm font-bold transition-all",
+                                                    isPendingApproval ? ACTION_BUTTON_DISABLED_CLS : ACTION_BUTTON_ACTIVE_CLS
+                                                )}
+                                            >
+                                                {isPendingApproval ? <Loader2 className="h-4 w-4" /> : <Send className="h-4 w-4" />}
+                                                {isPendingApproval ? "Menunggu Admin" : "Ajukan Perubahan Data"}
+                                            </button>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+
+                            <div className="hidden overflow-x-auto md:block">
+                                <table className="w-full text-sm">
                                 <thead>
                                     <tr className={TABLE_HEAD_CLS}>
                                         <th className={TABLE_HEAD_CELL_CLS}>No</th>
@@ -277,7 +348,8 @@ export default function KSE() {
                                         );
                                     })}
                                 </tbody>
-                            </table>
+                                </table>
+                            </div>
 
                             <div className={FOOTER_CLS}>
                                 <p className={FOOTER_TEXT_CLS}>
@@ -285,7 +357,7 @@ export default function KSE() {
                                     {seData?.total_count != null ? ` (total: ${seData.total_count})` : ""}
                                 </p>
                             </div>
-                        </div>
+                        </>
                     )}
                 </motion.div>
             </div>

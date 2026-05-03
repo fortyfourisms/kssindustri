@@ -16,15 +16,15 @@ export function PageHeader({ icon: Icon, title, subtitle }: PageHeaderProps) {
             className="dashboard-page-header relative overflow-hidden rounded-[2rem] border px-6 py-7 shadow-xl sm:px-8 lg:px-10"
         >
             <div className="absolute inset-0" style={{ background: "var(--dashboard-page-header-overlay)" }} />
-            <div className="absolute -right-24 top-8 h-44 w-[28rem] rounded-full blur-3xl" style={{ background: "var(--dashboard-page-header-chip-soft)" }} />
+            <div className="absolute -right-24 top-8 hidden h-44 w-[28rem] rounded-full blur-3xl sm:block" style={{ background: "var(--dashboard-page-header-chip-soft)" }} />
             <div
-                className="absolute left-24 top-10 h-40 w-[24rem] rounded-full border"
+                className="absolute left-24 top-10 hidden h-40 w-[24rem] rounded-full border lg:block"
                 style={{
                     background: "var(--dashboard-page-header-panel)",
                     borderColor: "var(--dashboard-page-header-outline)",
                 }}
             />
-            <div className="absolute left-1/3 top-5 h-32 w-[36rem] rounded-full" style={{ background: "var(--dashboard-page-header-panel)" }} />
+            <div className="absolute left-1/3 top-5 hidden h-32 w-[36rem] rounded-full lg:block" style={{ background: "var(--dashboard-page-header-panel)" }} />
 
             <div className="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
                 <div className="min-w-0">
@@ -42,7 +42,7 @@ export function PageHeader({ icon: Icon, title, subtitle }: PageHeaderProps) {
                             </div>
                         )}
                         <div className="min-w-0">
-                            <h1 className="text-2xl font-black tracking-tight sm:text-3xl">
+                            <h1 className="text-xl font-black tracking-tight sm:text-2xl lg:text-3xl">
                                 {title}
                             </h1>
                             {subtitle && (

@@ -1,7 +1,9 @@
 import { blogArticles } from "@/data/blog";
 import { motion } from "framer-motion";
-import { ArrowRight, CalendarDays, Clock3, Tag } from "lucide-react";
+import { ArrowRight, CalendarDays, Tag } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+
+const BLOG_PREVIEW_LIMIT = 5;
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -24,6 +26,8 @@ const itemVariants = {
 
 export function BlogSection() {
   const navigate = useNavigate();
+  const previewArticles = blogArticles.slice(0, BLOG_PREVIEW_LIMIT);
+  const hasMoreArticles = blogArticles.length > BLOG_PREVIEW_LIMIT;
 
   return (
     <section id="blog" className="relative py-16 md:py-28 overflow-hidden">
@@ -44,6 +48,18 @@ export function BlogSection() {
               </span>
             </h2>
           </div>
+          {hasMoreArticles ? (
+            <div className="hidden justify-end lg:flex">
+              <button
+                type="button"
+                onClick={() => navigate("/blog")}
+                className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition hover:border-blue-200 hover:text-[#0061ff]"
+              >
+                Show More
+                <ArrowRight className="h-4 w-4" />
+              </button>
+            </div>
+          ) : null}
         </div>
 
         <motion.div
@@ -53,7 +69,7 @@ export function BlogSection() {
           viewport={{ once: true, margin: "-100px" }}
           className="mt-12 grid grid-cols-1 gap-6 xl:grid-cols-3"
         >
-          {blogArticles.map((article, index) => (
+          {previewArticles.map((article, index) => (
             <motion.article
               key={article.slug}
               variants={itemVariants}
@@ -82,10 +98,6 @@ export function BlogSection() {
                   <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">
                     <CalendarDays className="h-3.5 w-3.5 text-[#0061ff]" />
                     {article.publishedAt}
-                  </span>
-                  <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600">
-                    <Clock3 className="h-3.5 w-3.5 text-cyan-600" />
-                    {article.readingTime}
                   </span>
                 </div>
 
@@ -128,6 +140,19 @@ export function BlogSection() {
             </motion.article>
           ))}
         </motion.div>
+
+        {hasMoreArticles ? (
+          <div className="mt-6 lg:hidden">
+            <button
+              type="button"
+              onClick={() => navigate("/blog")}
+              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition hover:border-blue-200 hover:text-[#0061ff]"
+            >
+              Show More
+              <ArrowRight className="h-4 w-4" />
+            </button>
+          </div>
+        ) : null}
       </div>
     </section>
   );

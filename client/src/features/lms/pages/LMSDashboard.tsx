@@ -31,8 +31,8 @@ export function LMSDashboard() {
     const navigate = useNavigate();
     const { courses, isLoadingCourses, coursesError, fetchCourses } = useLmsStore();
     const currentUser = useAuthStore((state) => state.currentUser);
-    const [selectedCategory, setSelectedCategory] = useState("All");
-    const userDisplayName = currentUser?.displayName || currentUser?.name || currentUser?.username || "User";
+    const [selectedCategory, setSelectedCategory] = useState("Semua");
+    const userDisplayName = currentUser?.displayName || currentUser?.name || currentUser?.username || "Pengguna";
 
     useEffect(() => {
         fetchCourses();
@@ -66,12 +66,12 @@ export function LMSDashboard() {
     );
 
     const categoryOptions = useMemo(
-        () => ["All", ...Array.from(new Set(baseCourseInsights.map((item, index) => inferLmsCategory(item.title, index))))],
+        () => ["Semua", ...Array.from(new Set(baseCourseInsights.map((item, index) => inferLmsCategory(item.title, index))))],
         [baseCourseInsights]
     );
-    const safeSelectedCategory = categoryOptions.includes(selectedCategory) ? selectedCategory : "All";
+    const safeSelectedCategory = categoryOptions.includes(selectedCategory) ? selectedCategory : "Semua";
     const filteredBaseCourses = useMemo(
-        () => safeSelectedCategory === "All"
+        () => safeSelectedCategory === "Semua"
             ? baseCourseInsights
             : baseCourseInsights.filter((item) => item.category === safeSelectedCategory),
         [baseCourseInsights, safeSelectedCategory]
@@ -142,17 +142,17 @@ export function LMSDashboard() {
 
     useEffect(() => {
         if (!categoryOptions.includes(selectedCategory)) {
-            setSelectedCategory("All");
+            setSelectedCategory("Semua");
         }
     }, [categoryOptions, selectedCategory]);
 
     return (
         <div className="h-full overflow-y-auto bg-[#f8fafc]">
-            <div className="mx-auto max-w-[1480px] px-6 py-6">
-                <div className="flex gap-8 xl:gap-10">
+            <div className="mx-auto max-w-[1480px] px-4 py-4 sm:px-6 sm:py-6">
+                <div className="flex flex-col gap-8 xl:flex-row xl:gap-10">
                     <div className="min-w-0 flex-1">
                         <div className="mb-6 rounded-3xl bg-white px-6 py-5 shadow-sm ring-1 ring-slate-200">
-                            <p className="text-sm font-medium text-slate-500">Dashboard LMS</p>
+                            <p className="text-sm font-medium text-slate-500">Beranda LMS</p>
                             <h1 className="mt-1 text-2xl font-black tracking-tight text-slate-950">
                                 Selamat datang {userDisplayName}
                             </h1>
@@ -248,16 +248,62 @@ export function LMSDashboard() {
 
                         <div className="mt-10">
                             <div className="mb-4 flex items-center justify-between">
-                                <h2 className="text-xl font-black tracking-tight text-slate-950">My lessons</h2>
+                                <h2 className="text-xl font-black tracking-tight text-slate-950">Materi Saya</h2>
                                 <button
                                     onClick={() => navigate(getCoursesRoute())}
                                     className="text-sm font-medium text-slate-500 transition hover:text-[#4f46e5]"
                                 >
-                                    View all lessons
+                                    Lihat semua materi
                                 </button>
                             </div>
 
-                            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                            <div className="space-y-3 md:hidden">
+                                {lessonRowSlots.map((course, index) => {
+                                    if (!course) {
+                                        return (
+                                            <div key={`msk-${index}`} className="rounded-2xl border border-slate-200 bg-white p-4">
+                                                <div className="h-5 w-1/2 animate-pulse rounded bg-slate-100" />
+                                                <div className="mt-4 h-4 w-full animate-pulse rounded bg-slate-100" />
+                                                <div className="mt-2 h-4 w-4/5 animate-pulse rounded bg-slate-100" />
+                                            </div>
+                                        );
+                                    }
+
+                                    return (
+                                        <button
+                                            key={course.id}
+                                            onClick={() => navigate(getCourseRoute(course.id))}
+                                            className="w-full rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+                                        >
+                                            <div className="flex items-start gap-3">
+                                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-900 text-xs font-black text-white">
+                                                    {String(index + 1).padStart(2, "0")}
+                                                </div>
+                                                <div className="min-w-0 flex-1">
+                                                    <span className="block text-sm font-semibold text-slate-900">{course.title}</span>
+                                                    <span className="mt-1 block text-xs text-slate-500">{course.lastItemLabel}</span>
+                                                </div>
+                                            </div>
+                                            <div className="mt-4 grid grid-cols-3 gap-2 text-left">
+                                                <div className="rounded-xl bg-slate-50 px-3 py-2">
+                                                    <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Materi</div>
+                                                    <div className="mt-1 text-sm font-bold text-slate-900">{course.completedMateri}/{course.totalMateri}</div>
+                                                </div>
+                                                <div className="rounded-xl bg-slate-50 px-3 py-2">
+                                                    <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Durasi</div>
+                                                    <div className="mt-1 text-sm font-bold text-slate-900">{course.totalDurationLabel}</div>
+                                                </div>
+                                                <div className="rounded-xl bg-slate-50 px-3 py-2">
+                                                    <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Progress</div>
+                                                    <div className="mt-1 text-sm font-bold text-slate-900">{course.progress}%</div>
+                                                </div>
+                                            </div>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+
+                            <div className="hidden overflow-hidden rounded-2xl border border-slate-200 bg-white md:block">
                                 <div className="grid grid-cols-[1fr,140px,140px,120px] border-b border-slate-100 px-6 py-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
                                     <span>Kelas</span>
                                     <span>Materi</span>
@@ -307,15 +353,15 @@ export function LMSDashboard() {
                         </div>
                     </div>
 
-                    <aside className="hidden w-[320px] shrink-0 space-y-8 xl:block">
+                    <aside className="space-y-8 xl:w-[320px] xl:shrink-0">
                         <section>
                             <div className="mb-4 flex items-center justify-between">
-                                <h2 className="text-lg font-black tracking-tight text-slate-950">Learning process</h2>
+                                <h2 className="text-lg font-black tracking-tight text-slate-950">Proses Belajar</h2>
                                 <button
                                     onClick={() => navigate("/lms/progress")}
                                     className="text-sm font-medium text-slate-400 transition hover:text-[#4f46e5]"
                                 >
-                                    See all
+                                    Lihat semua
                                 </button>
                             </div>
 
@@ -353,12 +399,12 @@ export function LMSDashboard() {
 
                         <section>
                             <div className="mb-4 flex items-center justify-between">
-                                <h2 className="text-lg font-black tracking-tight text-slate-950">You might like it</h2>
+                                <h2 className="text-lg font-black tracking-tight text-slate-950">Rekomendasi Untuk Anda</h2>
                                 <button
                                     onClick={() => navigate(getCoursesRoute())}
                                     className="text-sm font-medium text-slate-400 transition hover:text-[#4f46e5]"
                                 >
-                                    See all
+                                    Lihat semua
                                 </button>
                             </div>
 
@@ -378,7 +424,7 @@ export function LMSDashboard() {
                                     <p className="mt-3 text-sm leading-relaxed text-white/80">
                                         {suggestedCourse?.description
                                             ? `${suggestedCourse.description.slice(0, 100)}...`
-                                            : "Jelajahi kelas pilihan yang dirancang agar proses belajar terasa lebih terarah dan engaging."}
+                                            : "Jelajahi kelas pilihan yang dirancang agar proses belajar terasa lebih terarah dan menarik."}
                                     </p>
 
                                     <div className="mt-6 grid grid-cols-3 gap-2 text-xs text-white/80">
@@ -388,7 +434,7 @@ export function LMSDashboard() {
                                         </div>
                                         <div className="rounded-xl bg-white/10 px-3 py-2">
                                             <div className="text-[10px] uppercase tracking-wider text-white/60">Durasi</div>
-                                            <div className="mt-1 font-black text-white">{suggestedCourse?.totalDurationLabel ?? "0 min"}</div>
+                                            <div className="mt-1 font-black text-white">{suggestedCourse?.totalDurationLabel ?? "0 menit"}</div>
                                         </div>
                                         <div className="rounded-xl bg-white/10 px-3 py-2">
                                             <div className="text-[10px] uppercase tracking-wider text-white/60">Status</div>
@@ -403,7 +449,7 @@ export function LMSDashboard() {
                                         }}
                                         className="mt-5 w-full rounded-xl bg-white py-3 text-sm font-bold text-slate-900 transition hover:bg-slate-50 active:scale-[0.98]"
                                     >
-                                        Learn more
+                                        Lihat Detail
                                     </button>
                                 </div>
                             </div>

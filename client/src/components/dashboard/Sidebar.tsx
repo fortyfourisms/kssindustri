@@ -17,6 +17,7 @@ import { useLogout } from "@/hooks/useAuth";
 import { useAuthStore } from "@/stores/auth.store";
 import { getUserRole, ROLE_USER } from "@/lib/access-control";
 import { LogoutConfirmDialog } from "@/components/auth/LogoutConfirmDialog";
+import { getCoursesRoute } from "@/features/lms/lib/lms-routes";
 import kssiLogo from "@/assets/KSSI.svg";
 import fortyfourLogo from "@/assets/d44.svg";
 
@@ -34,7 +35,7 @@ const NAV_TONES: Record<string, NavTone> = {
     "/csirt": "success",
     "/survei-resiko": "warning",
     "/lms": "learning",
-    "/courses": "learning",
+    "/lms/courses": "learning",
 };
 
 function getNavToneVars(tone: NavTone): CSSProperties {
@@ -57,7 +58,7 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
     const navItems = role === ROLE_USER
         ? [
             { label: "LMS / My Learning", href: "/lms", icon: BookOpen },
-            { label: "Courses", href: "/courses", icon: LayoutDashboard },
+            { label: "Courses", href: getCoursesRoute(), icon: LayoutDashboard },
         ]
         : [
             { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -214,7 +215,7 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
             {/* ── MOBILE DRAWER ── */}
             {mobileOpen && (
                 <div
-                    className="fixed inset-0 z-40 backdrop-blur-sm md:hidden"
+                    className="fixed inset-0 z-40 backdrop-blur-sm lg:hidden"
                     style={{ background: "var(--dashboard-overlay)" }}
                     onClick={onClose}
                 />
@@ -223,7 +224,7 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
             {/* Mobile slide-in sidebar */}
             <aside
                 className={cn(
-                    "fixed top-0 left-0 h-screen z-50 flex flex-col transition-transform duration-300 md:hidden",
+                    "fixed top-0 left-0 h-screen z-50 flex flex-col transition-transform duration-300 lg:hidden",
                     "border-r shadow-2xl",
                     "w-72",
                     mobileOpen ? "translate-x-0" : "-translate-x-full"
@@ -239,7 +240,7 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
             {/* ── DESKTOP SIDEBAR ── */}
             <aside
                 className={cn(
-                    "fixed top-0 left-0 h-screen z-40 flex-col transition-all duration-300 hidden md:flex",
+                    "fixed top-0 left-0 h-screen z-40 hidden flex-col transition-all duration-300 lg:flex",
                     "border-r shadow-2xl",
                     collapsed ? "w-[72px]" : "w-64"
                 )}
@@ -267,7 +268,7 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
             </aside>
 
             {/* Desktop Spacer */}
-            <div className={cn("flex-shrink-0 transition-all duration-300 hidden md:block", collapsed ? "w-[72px]" : "w-64")} />
+            <div className={cn("hidden flex-shrink-0 transition-all duration-300 lg:block", collapsed ? "w-[72px]" : "w-64")} />
         </>
     );
 }

@@ -91,8 +91,8 @@ export default function LMSCourse() {
   }
 
   return (
-    <div className="h-screen w-full flex bg-[#f4f7fb] overflow-hidden">
-      <div className="flex-1 flex flex-col h-full overflow-y-auto bg-transparent relative">
+    <div className="flex min-h-full w-full bg-[#f4f7fb]">
+      <div className="relative flex flex-1 min-h-0 flex-col bg-transparent">
         <div className="lg:hidden flex items-center p-4 border-b border-slate-100 bg-white/90 backdrop-blur-xl sticky top-0 z-10">
           <button onClick={() => navigate(getCoursesRoute())} className="p-2 hover:bg-slate-100 text-slate-600 rounded-lg transition-colors mr-3">
             <ArrowLeft className="w-5 h-5" />

@@ -92,8 +92,8 @@ export function EventRegistrationModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-3xl rounded-[2rem] bg-white shadow-[0_30px_120px_rgba(15,23,42,0.24)]">
+    <div className="fixed inset-0 z-[80] flex items-stretch justify-center bg-slate-950/40 p-0 backdrop-blur-sm sm:items-center sm:p-4">
+      <div className="flex h-full w-full flex-col overflow-hidden bg-white shadow-[0_30px_120px_rgba(15,23,42,0.24)] sm:h-auto sm:max-h-[calc(100dvh-2rem)] sm:max-w-3xl sm:rounded-[2rem]">
         <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-6 py-5">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.22em] text-slate-400">RSVP Flow</p>
@@ -110,7 +110,7 @@ export function EventRegistrationModal({
           </button>
         </div>
 
-        <div className="p-6">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
           {uiState.status === "success" ? (
             <EventTicketCard
               ticket={uiState.ticket}

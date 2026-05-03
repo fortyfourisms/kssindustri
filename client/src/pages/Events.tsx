@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { useUpcomingEvents } from "@/hooks/useEvents";
+import { useScrollToTop } from "@/hooks/useScrollToTop";
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("id-ID", {
@@ -17,6 +18,7 @@ function formatDate(value: string) {
 export default function Events() {
   const navigate = useNavigate();
   const { data, isLoading, isError } = useUpcomingEvents();
+  useScrollToTop();
 
   return (
     <div className="min-h-screen bg-background font-sans selection:bg-primary selection:text-white">
@@ -37,9 +39,6 @@ export default function Events() {
                 workshop, briefing, dan simulation
               </span>
             </h1>
-            <p className="mt-5 max-w-3xl text-base md:text-lg leading-relaxed text-slate-600">
-              Halaman ini menjadi destination dari tombol Show More pada landing page. Pengguna dapat meninjau seluruh event upcoming lalu masuk ke halaman detail untuk RSVP.
-            </p>
           </div>
 
           <div className="mt-12">

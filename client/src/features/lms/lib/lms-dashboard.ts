@@ -1,21 +1,21 @@
 import type { Kelas, MateriItem, SertifikatItem } from "@/features/lms/types/lms.types";
 
-const CATEGORY_FALLBACKS = ["Network", "Awareness", "Policy", "Incident", "Cloud", "Defense"];
+const CATEGORY_FALLBACKS = ["Jaringan", "Kesadaran", "Kebijakan", "Insiden", "Cloud", "Pertahanan"];
 
 export function inferLmsCategory(title: string, index: number): string {
     const lower = title.toLowerCase();
-    if (lower.includes("network")) return "Network";
+    if (lower.includes("network")) return "Jaringan";
     if (lower.includes("cloud")) return "Cloud";
-    if (lower.includes("incident") || lower.includes("csirt")) return "Incident";
-    if (lower.includes("policy") || lower.includes("governance")) return "Policy";
-    if (lower.includes("phishing") || lower.includes("awareness")) return "Awareness";
-    if (lower.includes("defense") || lower.includes("secure")) return "Defense";
+    if (lower.includes("incident") || lower.includes("csirt")) return "Insiden";
+    if (lower.includes("policy") || lower.includes("governance")) return "Kebijakan";
+    if (lower.includes("phishing") || lower.includes("awareness")) return "Kesadaran";
+    if (lower.includes("defense") || lower.includes("secure")) return "Pertahanan";
     return CATEGORY_FALLBACKS[index % CATEGORY_FALLBACKS.length];
 }
 
 export function formatMinutes(totalSeconds: number): string {
     const minutes = Math.max(1, Math.ceil(totalSeconds / 60));
-    return `${minutes} min`;
+    return `${minutes} menit`;
 }
 
 export function sortMateri(materi: MateriItem[]): MateriItem[] {
