@@ -78,67 +78,101 @@ jobs:
     needs: [analyze, build]
     environment: production
     steps:
-      - name: Deploy to VPS over SSH
-        uses: appleboy/ssh-action@v1
+      - name: Join tailnet for deploy
+        uses: tailscale/github-action@v4
         with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          port: ${{ secrets.VPS_PORT }}
-          script: |
-            set -e
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci
+          hostname: gha-kssindustri-deploy
+          ping: ${{ secrets.VPS_TAILSCALE_HOST }}
 
-            # ── Variables ───────────────────────────────────
-            APP_DIR="${{ secrets.VPS_APP_DIR }}"
-            IMAGE="ghcr.io/${{ github.repository }}/${{ env.IMAGE_NAME }}:latest"
-            API_BASE_URL="${{ secrets.VITE_API_BASE_URL }}"
-            TURNSTILE_SITE_KEY="${{ secrets.TURNSTILE_SITE_KEY }}"
+      - name: Prepare SSH key
+        run: |
+          set -euo pipefail
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
 
-            # ── Login to GHCR ───────────────────────────────
-            echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u "${{ secrets.GHCR_USER }}" --password-stdin
+      - name: Trust VPS host key on tailnet
+        env:
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_TAILSCALE_HOST: ${{ secrets.VPS_TAILSCALE_HOST }}
+        run: |
+          set -euo pipefail
+          ssh-keyscan -p "$VPS_PORT" "$VPS_TAILSCALE_HOST" >> ~/.ssh/known_hosts
 
-            # ── Pull latest image ───────────────────────────
-            docker pull "$IMAGE"
+      - name: Deploy to VPS over Tailscale SSH path
+        env:
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_TAILSCALE_HOST: ${{ secrets.VPS_TAILSCALE_HOST }}
+          VPS_APP_DIR: ${{ secrets.VPS_APP_DIR }}
+          GHCR_USER: ${{ secrets.GHCR_USER }}
+          GHCR_PAT: ${{ secrets.GHCR_PAT }}
+          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
+          TURNSTILE_SITE_KEY: ${{ secrets.TURNSTILE_SITE_KEY }}
+          IMAGE: ghcr.io/${{ github.repository }}/${{ env.IMAGE_NAME }}:latest
+        run: |
+          set -euo pipefail
 
-            # ── Ensure app directory exists ──────────────────
-            mkdir -p "$APP_DIR" || { echo "❌ Cannot create $APP_DIR — pre-create it on the server with correct ownership"; exit 1; }
-            cd "$APP_DIR"
+          APP_DIR_Q=$(printf '%q' "$VPS_APP_DIR")
+          IMAGE_Q=$(printf '%q' "$IMAGE")
+          API_BASE_URL_Q=$(printf '%q' "$VITE_API_BASE_URL")
+          TURNSTILE_SITE_KEY_Q=$(printf '%q' "$TURNSTILE_SITE_KEY")
+          GHCR_USER_Q=$(printf '%q' "$GHCR_USER")
+          GHCR_PAT_Q=$(printf '%q' "$GHCR_PAT")
 
-            # ── Write docker-compose.yml on the VPS ─────────
-            cat > docker-compose.yml <<'COMPOSE_EOF'
-            services:
-              vuefront:
-                image: IMAGE_PLACEHOLDER
-                container_name: vuefront
-                restart: unless-stopped
-                environment:
-                  VITE_API_BASE_URL: "API_BASE_URL_PLACEHOLDER"
-                  TURNSTILE_SITE_KEY: "TURNSTILE_SITE_KEY_PLACEHOLDER"
-                ports:
-                  - "127.0.0.1:3090:3090"
-                healthcheck:
-                  test: ["CMD", "wget", "-qO-", "http://localhost:3090/"]
-                  interval: 30s
-                  timeout: 3s
-                  start_period: 5s
-                  retries: 3
-                logging:
-                  driver: json-file
-                  options:
-                    max-size: "10m"
-                    max-file: "3"
-            COMPOSE_EOF
+          ssh -i ~/.ssh/id_ed25519 \
+            -p "$VPS_PORT" \
+            -o StrictHostKeyChecking=yes \
+            "$VPS_USER@$VPS_TAILSCALE_HOST" <<REMOTE_EOF
+          set -euo pipefail
 
-            # Replace placeholder with actual image
-            sed -i "s|IMAGE_PLACEHOLDER|${IMAGE}|g" docker-compose.yml
-            sed -i "s|API_BASE_URL_PLACEHOLDER|${API_BASE_URL}|g" docker-compose.yml
-            sed -i "s|TURNSTILE_SITE_KEY_PLACEHOLDER|${TURNSTILE_SITE_KEY}|g" docker-compose.yml
+          APP_DIR=$APP_DIR_Q
+          IMAGE=$IMAGE_Q
+          API_BASE_URL=$API_BASE_URL_Q
+          TURNSTILE_SITE_KEY=$TURNSTILE_SITE_KEY_Q
+          GHCR_USER=$GHCR_USER_Q
+          GHCR_PAT=$GHCR_PAT_Q
 
-            # ── Deploy ──────────────────────────────────────
-            docker compose pull
-            docker compose up -d --force-recreate --remove-orphans
+          echo "\$GHCR_PAT" | docker login ghcr.io -u "\$GHCR_USER" --password-stdin
+          docker pull "\$IMAGE"
 
-            # ── Cleanup old images ──────────────────────────
-            docker image prune -af --filter "until=168h"
+          mkdir -p "\$APP_DIR" || { echo "Cannot create \$APP_DIR; pre-create it on the server with correct ownership"; exit 1; }
+          cd "\$APP_DIR"
 
-            echo "✅ Deployment complete"
+          cat > docker-compose.yml <<'COMPOSE_EOF'
+          services:
+            vuefront:
+              image: IMAGE_PLACEHOLDER
+              container_name: vuefront
+              restart: unless-stopped
+              environment:
+                VITE_API_BASE_URL: "API_BASE_URL_PLACEHOLDER"
+                TURNSTILE_SITE_KEY: "TURNSTILE_SITE_KEY_PLACEHOLDER"
+              ports:
+                - "127.0.0.1:3090:3090"
+              healthcheck:
+                test: ["CMD", "wget", "-qO-", "http://localhost:3090/"]
+                interval: 30s
+                timeout: 3s
+                start_period: 5s
+                retries: 3
+              logging:
+                driver: json-file
+                options:
+                  max-size: "10m"
+                  max-file: "3"
+          COMPOSE_EOF
+
+          sed -i "s|IMAGE_PLACEHOLDER|\${IMAGE}|g" docker-compose.yml
+          sed -i "s|API_BASE_URL_PLACEHOLDER|\${API_BASE_URL}|g" docker-compose.yml
+          sed -i "s|TURNSTILE_SITE_KEY_PLACEHOLDER|\${TURNSTILE_SITE_KEY}|g" docker-compose.yml
+
+          docker compose pull
+          docker compose up -d --force-recreate --remove-orphans
+          docker image prune -af --filter "until=168h"
+
+          echo "Deployment complete"
+          REMOTE_EOF
