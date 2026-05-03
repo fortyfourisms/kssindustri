@@ -24,8 +24,9 @@ const PANEL_CLS = "dashboard-table-surface overflow-hidden rounded-2xl border sh
 const PANEL_HEADER_CLS = "dashboard-table-divider flex flex-col gap-4 border-b px-6 py-5 sm:flex-row sm:items-center sm:justify-between";
 const PANEL_TITLE_CLS = "text-lg font-bold text-[var(--dashboard-text)]";
 const PANEL_DESCRIPTION_CLS = "mt-0.5 text-sm text-[var(--dashboard-text-muted)]";
-const SECONDARY_BUTTON_CLS = "dashboard-secondary-button inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-bold transition-all";
-const PRIMARY_BUTTON_CLS = "dashboard-primary-button inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all hover:-translate-y-0.5 active:translate-y-0";
+const SECONDARY_BUTTON_CLS = "button-force-white dashboard-secondary-button inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-bold transition-all";
+const PRIMARY_BUTTON_CLS = "button-force-white dashboard-primary-button inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all hover:-translate-y-0.5 active:translate-y-0";
+const SUCCESS_BUTTON_CLS = "button-force-white inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-700 via-emerald-600 to-green-500 px-4 py-2.5 text-sm font-bold transition-all hover:-translate-y-0.5 hover:from-emerald-800 hover:via-emerald-700 hover:to-green-600 active:translate-y-0";
 const TABLE_HEAD_CLS = "dashboard-table-head dashboard-table-divider border-b";
 const TABLE_HEAD_CELL_CLS = "px-5 py-3.5 text-left text-xs font-bold uppercase tracking-wider text-[var(--dashboard-text-muted)] whitespace-nowrap";
 const TABLE_HEAD_CELL_CENTER_CLS = `${TABLE_HEAD_CELL_CLS} text-center`;
@@ -155,7 +156,7 @@ export default function KSE() {
                                             });
                                         }
                                     }}
-                                    className={SECONDARY_BUTTON_CLS}
+                                    className={SUCCESS_BUTTON_CLS}
                                 >
                                     <Download className="h-4 w-4" />
                                     Export PDF

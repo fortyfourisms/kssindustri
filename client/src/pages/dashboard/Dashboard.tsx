@@ -221,9 +221,9 @@ export default function Dashboard() {
         staleTime: DASHBOARD_STAGE_STALE_TIME,
     });
     const surveyRespondentQuery = useQuery({
-        queryKey: ["survey-respondent", user?.email || "unknown"],
-        queryFn: () => surveyService.findRespondentByEmail(user?.email),
-        enabled: !!user?.email,
+        queryKey: ["survey-respondent", user?.id || "unknown"],
+        queryFn: () => surveyService.getRespondentByIdOrNull(user?.id),
+        enabled: !!user?.id,
         staleTime: DASHBOARD_STAGE_STALE_TIME,
     });
     const surveyRespondent = surveyRespondentQuery.data;

@@ -46,6 +46,18 @@ export const surveyService = {
         return normalizeOne<SurveyRespondent>(res);
     },
 
+    async getRespondentByIdOrNull(id?: number | string | null): Promise<SurveyRespondent | null> {
+        if (id === null || id === undefined || String(id).trim() === '') return null;
+        try {
+            return await surveyService.getRespondentById(id);
+        } catch (error: unknown) {
+            if (typeof error === 'object' && error !== null && 'status' in error && (error as { status?: number }).status === 404) {
+                return null;
+            }
+            throw error;
+        }
+    },
+
     async createRespondent(payload: UpsertSurveyRespondentPayload): Promise<SurveyRespondent> {
         return apiClient.post<SurveyRespondent>('/api/survey/responden', payload);
     },
@@ -56,12 +68,6 @@ export const surveyService = {
 
     async deleteRespondent(id: number | string): Promise<void> {
         return apiClient.delete(`/api/survey/responden/${id}`);
-    },
-
-    async findRespondentByEmail(email?: string | null): Promise<SurveyRespondent | null> {
-        if (!email?.trim()) return null;
-        const respondents = await surveyService.getRespondents();
-        return respondents.find((item) => item.email?.trim().toLowerCase() === email.trim().toLowerCase()) ?? null;
     },
 
     async getProgress(respondenId: number | string): Promise<SurveyProgress | null> {

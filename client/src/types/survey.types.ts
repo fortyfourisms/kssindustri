@@ -4,26 +4,29 @@ export type SurveyScaleValue = 1 | 2 | 3 | 4;
 
 export interface SurveyRespondent {
     id: number;
+    id_perusahaan?: string;
     nama_lengkap: string;
     jabatan: string;
-    perusahaan: string;
     email: string;
     no_telepon: string;
-    sektor: string;
-    sektor_lainnya?: string | null;
+    nama_perusahaan: string;
+    nama_sektor?: string;
+    nama_sub_sektor?: string;
     sertifikat_training?: string | null;
     created_at?: string;
     updated_at?: string;
+    // Transitional compatibility with older frontend/backend payloads.
+    perusahaan?: string;
+    sektor?: string;
+    sektor_lainnya?: string | null;
 }
 
 export interface UpsertSurveyRespondentPayload {
+    id_perusahaan: string;
     nama_lengkap: string;
     jabatan: string;
-    perusahaan: string;
     email: string;
     no_telepon: string;
-    sektor: string;
-    sektor_lainnya?: string;
     sertifikat_training?: string;
 }
 

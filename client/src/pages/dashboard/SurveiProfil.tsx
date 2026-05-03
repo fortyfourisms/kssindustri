@@ -1,24 +1,24 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { RequireCompanyProfile } from "@/components/RequireCompanyProfile";
 import { Info, UserCircle2, ArrowRight, ArrowLeft, AlertTriangle, Loader2, Building2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useUser } from "@/hooks/useAuth";
-import { useQuery } from "@tanstack/react-query";
-import { apiClient } from "@/services/apiClient";
+import { useCompanyProfile } from "@/hooks/useCompanyProfile";
 import { useSurveyStore } from "@/stores/survey.store";
 import { useToast } from "@/hooks/use-toast";
 import { PageHeader } from "@/components/dashboard/PageHeader";
-import { STATIC_SURVEY_RISKS, STATIC_SURVEY_SECTORS } from "@/data/survey-static";
-import type { SurveyProgress, SurveyRespondent, SurveyRiskResponse, SurveyScaleValue, UpsertSurveyRespondentPayload } from "@/types/survey.types";
+import type { SurveyRiskResponse, SurveyScaleValue, UpsertSurveyRespondentPayload } from "@/types/survey.types";
 
 const INPUT_CLS = "dashboard-input w-full rounded-xl border px-4 py-3 text-sm transition-all duration-300";
 const LABEL_CLS = "dashboard-label mb-2 block text-sm font-semibold tracking-wide";
 const PANEL_CLS = "dashboard-section-card rounded-2xl p-6 sm:p-8";
 const TABLE_PANEL_CLS = "dashboard-table-surface rounded-2xl shadow-sm overflow-hidden";
-const SECONDARY_BUTTON_CLS = "dashboard-table-surface dashboard-text-soft inline-flex items-center justify-center rounded-xl border px-6 py-3 text-sm font-semibold transition-all shadow-sm hover:bg-[var(--dashboard-surface)]";
-const PRIMARY_BUTTON_CLS = "dashboard-primary-button flex items-center justify-center gap-2 rounded-xl px-8 py-3 text-[15px] font-semibold transition-all hover:-translate-y-0.5 disabled:pointer-events-none disabled:opacity-50";
+const SECONDARY_BUTTON_CLS = "button-force-white dashboard-secondary-button inline-flex items-center justify-center rounded-xl border px-6 py-3 text-sm font-semibold transition-all hover:-translate-y-0.5";
+const PRIMARY_BUTTON_CLS = "button-force-white dashboard-primary-button flex items-center justify-center gap-2 rounded-xl px-8 py-3 text-[15px] font-semibold transition-all hover:-translate-y-0.5 disabled:pointer-events-none disabled:opacity-50";
 const SELECTED_CARD_CLS = "dashboard-option-selected";
 const SELECTED_TEXT_CLS = "dashboard-option-selected-text";
+const DETAIL_INFO_ICON_CLS = "h-3.5 w-3.5 shrink-0";
+const DETAIL_INFO_ICON_STYLE = { color: "#2563eb" } as const;
 const DEFAULT_RISK_TITLE = "Pencurian Intellectual Property";
 const DEFAULT_RISK_DESCRIPTION = "Silakan evaluasi dan berikan estimasi dampak yang mungkin terjadi terkait perlindungan Hak Kekayaan Intelektual perusahaan Anda.";
 const IMPACT_TO_API: Record<string, SurveyScaleValue> = {
@@ -63,32 +63,6 @@ const DEFAULT_ANSWERS = {
     q4: 'ya',
     q5: ''
 };
-
-const STATIC_RESPONDENT_KEY = "survey-static-respondent-v1";
-const STATIC_PROGRESS_KEY = "survey-static-progress-v1";
-const STATIC_ANSWERS_KEY = "survey-static-answers-v1";
-
-type SurveyMode = "pending" | "backend" | "static";
-type StoredRiskAnswers = Record<number, Partial<typeof DEFAULT_ANSWERS>>;
-
-function canUseBrowserStorage() {
-    return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
-}
-
-function readStoredJson<T>(key: string, fallback: T): T {
-    if (!canUseBrowserStorage()) return fallback;
-    try {
-        const raw = window.localStorage.getItem(key);
-        return raw ? (JSON.parse(raw) as T) : fallback;
-    } catch {
-        return fallback;
-    }
-}
-
-function writeStoredJson(key: string, value: unknown) {
-    if (!canUseBrowserStorage()) return;
-    window.localStorage.setItem(key, JSON.stringify(value));
-}
 
 function hasNextRisk(risk: SurveyRiskResponse | null, progress: Record<string, any> | null): boolean {
     if (typeof risk?.has_next === "boolean") return risk.has_next;
@@ -139,13 +113,14 @@ export default function SurveiProfil() {
     const [answers, setAnswers] = useState<Record<string, any>>(DEFAULT_ANSWERS);
 
     const { data: user } = useUser();
+    const { perusahaanId, perusahaan } = useCompanyProfile(user ?? null);
     const { toast } = useToast();
-    const { data: subSektors } = useQuery({ queryKey: ["subSektor"], queryFn: () => apiClient.get<any[]>("/api/sub_sektor") });
     const currentRespondent = useSurveyStore((state) => state.currentRespondent);
     const currentRisk = useSurveyStore((state) => state.currentRisk);
     const progressState = useSurveyStore((state) => state.progress);
+    const loading = useSurveyStore((state) => state.loading);
     const saving = useSurveyStore((state) => state.saving);
-    const hydrateByEmail = useSurveyStore((state) => state.hydrateByEmail);
+    const hydrateByUserId = useSurveyStore((state) => state.hydrateByUserId);
     const saveRespondent = useSurveyStore((state) => state.saveRespondent);
     const loadSurveyContext = useSurveyStore((state) => state.loadSurveyContext);
     const saveRiskStep = useSurveyStore((state) => state.saveRiskStep);
@@ -153,36 +128,29 @@ export default function SurveiProfil() {
 
     const [step, setStep] = useState(0);
     const [isFinished, setIsFinished] = useState(false);
-    const [surveyMode, setSurveyMode] = useState<SurveyMode>("pending");
-    const [localRespondent, setLocalRespondent] = useState<SurveyRespondent | null>(null);
-    const [localProgress, setLocalProgress] = useState<SurveyProgress | null>(null);
-    const [localRiskIndex, setLocalRiskIndex] = useState(0);
-    const [localRiskAnswers, setLocalRiskAnswers] = useState<StoredRiskAnswers>({});
+    const [isBootstrapping, setIsBootstrapping] = useState(true);
 
     useEffect(() => {
-        setLocalRespondent(readStoredJson<SurveyRespondent | null>(STATIC_RESPONDENT_KEY, null));
-        setLocalProgress(readStoredJson<SurveyProgress | null>(STATIC_PROGRESS_KEY, null));
-        setLocalRiskAnswers(readStoredJson<StoredRiskAnswers>(STATIC_ANSWERS_KEY, {}));
-    }, []);
-
-    useEffect(() => {
-        if (!user?.email) {
-            setSurveyMode("static");
+        if (!user?.id) {
+            setIsBootstrapping(false);
             return;
         }
 
         let cancelled = false;
 
         const bootstrap = async () => {
-            const result = await hydrateByEmail(user.email);
+            const result = await hydrateByUserId(user.id);
             if (cancelled) return;
 
-            if (result.success) {
-                setSurveyMode("backend");
-                return;
+            if (!result.success && result.reason === "error") {
+                toast({
+                    title: "Gagal memuat survei",
+                    description: result.error || "Data survei responden belum berhasil dimuat dari backend.",
+                    variant: "destructive",
+                });
             }
 
-            setSurveyMode("static");
+            setIsBootstrapping(false);
         };
 
         void bootstrap();
@@ -190,74 +158,22 @@ export default function SurveiProfil() {
         return () => {
             cancelled = true;
         };
-    }, [user?.email, hydrateByEmail]);
+    }, [user?.id, hydrateByUserId, toast]);
+
+    const activeRespondent = currentRespondent;
+    const activeRisk = currentRisk;
+    const activeProgress = progressState;
+    const isLoadingMode = isBootstrapping || loading;
 
     useEffect(() => {
-        const storedIndex = typeof localProgress?.current_risk === "number" ? localProgress.current_risk : 0;
-        const maxIndex = Math.max(STATIC_SURVEY_RISKS.length - 1, 0);
-        setLocalRiskIndex(Math.min(Math.max(storedIndex, 0), maxIndex));
-    }, [localProgress]);
-
-    const fallbackSectors = useMemo(
-        () => (Array.isArray(subSektors) && subSektors.length > 0 ? subSektors : STATIC_SURVEY_SECTORS),
-        [subSektors]
-    );
-
-    const staticCurrentRisk = useMemo<SurveyRiskResponse | null>(() => {
-        const risk = STATIC_SURVEY_RISKS[localRiskIndex];
-        if (!risk) return null;
-
-        const storedAnswers = localRiskAnswers[risk.id] ?? {};
-        return {
-            id: risk.id,
-            risiko_id: risk.id,
-            current_risk: localRiskIndex,
-            total_risks: STATIC_SURVEY_RISKS.length,
-            has_next: localRiskIndex < STATIC_SURVEY_RISKS.length - 1,
-            has_previous: localRiskIndex > 0,
-            next_risk: localRiskIndex < STATIC_SURVEY_RISKS.length - 1 ? localRiskIndex + 1 : null,
-            previous_risk: localRiskIndex > 0 ? localRiskIndex - 1 : null,
-            nama_risiko: risk.nama_risiko,
-            deskripsi: risk.deskripsi,
-            pernah_terjadi: typeof storedAnswers.q1 === "string" ? storedAnswers.q1 === "ya" : undefined,
-            alasan: typeof storedAnswers.q1_alasan === "string" ? storedAnswers.q1_alasan : undefined,
-            dampak_reputasi: typeof storedAnswers.dampak_reputasi === "string" ? IMPACT_TO_API[storedAnswers.dampak_reputasi] : undefined,
-            dampak_operasional: typeof storedAnswers.dampak_operasional === "string" ? IMPACT_TO_API[storedAnswers.dampak_operasional] : undefined,
-            dampak_finansial: typeof storedAnswers.dampak_finansial === "string" ? IMPACT_TO_API[storedAnswers.dampak_finansial] : undefined,
-            dampak_hukum: typeof storedAnswers.dampak_hukum === "string" ? IMPACT_TO_API[storedAnswers.dampak_hukum] : undefined,
-            frekuensi: typeof storedAnswers.frekuensi === "string" ? FREQUENCY_TO_API[storedAnswers.frekuensi] : undefined,
-            ada_pengendalian: typeof storedAnswers.q4 === "string" ? storedAnswers.q4 === "ya" : undefined,
-            deskripsi_pengendalian: typeof storedAnswers.q5 === "string" ? storedAnswers.q5 : undefined,
-        };
-    }, [localRiskAnswers, localRiskIndex]);
-
-    const activeRespondent = surveyMode === "backend" ? currentRespondent : localRespondent;
-    const activeRisk = surveyMode === "backend" ? currentRisk : staticCurrentRisk;
-    const activeProgress = surveyMode === "backend"
-        ? progressState
-        : (
-            localProgress ?? {
-                current_risk: localRiskIndex,
-                total_risks: STATIC_SURVEY_RISKS.length,
-                has_next: localRiskIndex < STATIC_SURVEY_RISKS.length - 1,
-                has_previous: localRiskIndex > 0,
-                completed: false,
-            }
-        );
-    const isStaticMode = surveyMode === "static";
-    const isLoadingMode = surveyMode === "pending";
-
-    useEffect(() => {
-        if (!activeRespondent && !activeRisk) return;
-
         setAnswers({
             ...DEFAULT_ANSWERS,
             responden_nama: activeRespondent?.nama_lengkap || DEFAULT_ANSWERS.responden_nama,
             responden_jabatan: activeRespondent?.jabatan || DEFAULT_ANSWERS.responden_jabatan,
-            responden_perusahaan: activeRespondent?.perusahaan || DEFAULT_ANSWERS.responden_perusahaan,
-            responden_email: activeRespondent?.email || user?.email || DEFAULT_ANSWERS.responden_email,
+            responden_perusahaan: activeRespondent?.nama_perusahaan || activeRespondent?.perusahaan || perusahaan?.nama_perusahaan || DEFAULT_ANSWERS.responden_perusahaan,
+            responden_email: activeRespondent?.email || DEFAULT_ANSWERS.responden_email,
             responden_telepon: activeRespondent?.no_telepon || DEFAULT_ANSWERS.responden_telepon,
-            responden_sektor: activeRespondent?.sektor || DEFAULT_ANSWERS.responden_sektor,
+            responden_sektor: activeRespondent?.nama_sub_sektor || activeRespondent?.sektor || perusahaan?.sub_sektor?.nama_sub_sektor || perusahaan?.sektor || DEFAULT_ANSWERS.responden_sektor,
             responden_sertifikat: activeRespondent?.sertifikat_training || DEFAULT_ANSWERS.responden_sertifikat,
             q1: typeof activeRisk?.pernah_terjadi === "boolean" ? (activeRisk.pernah_terjadi ? "ya" : "tidak") : DEFAULT_ANSWERS.q1,
             q1_alasan: typeof activeRisk?.alasan === "string" ? activeRisk.alasan : DEFAULT_ANSWERS.q1_alasan,
@@ -272,10 +188,11 @@ export default function SurveiProfil() {
 
         if (activeRespondent) {
             setStep(1);
-        } else {
-            setStep(0);
+            return;
         }
-    }, [activeRespondent, activeRisk, user?.email]);
+
+        setStep(0);
+    }, [activeRespondent, activeRisk, perusahaan, user?.email]);
 
     useEffect(() => {
         setIsFinished(Boolean(activeProgress?.completed || activeProgress?.finished_at));
@@ -299,68 +216,6 @@ export default function SurveiProfil() {
         );
 
     const submitRisk = async (direction: "next" | "previous") => {
-        if (isStaticMode) {
-            const activeRiskId = STATIC_SURVEY_RISKS[localRiskIndex]?.id;
-            if (!activeRiskId) return false;
-
-            const nextAnswers = {
-                ...localRiskAnswers,
-                [activeRiskId]: {
-                    q1: answers.q1,
-                    q1_alasan: answers.q1_alasan,
-                    dampak_reputasi: answers.dampak_reputasi,
-                    dampak_operasional: answers.dampak_operasional,
-                    dampak_finansial: answers.dampak_finansial,
-                    dampak_hukum: answers.dampak_hukum,
-                    frekuensi: answers.frekuensi,
-                    q4: answers.q4,
-                    q5: answers.q5,
-                },
-            };
-            setLocalRiskAnswers(nextAnswers);
-            writeStoredJson(STATIC_ANSWERS_KEY, nextAnswers);
-
-            const shouldFinish = direction === "next" && localRiskIndex >= STATIC_SURVEY_RISKS.length - 1;
-            if (shouldFinish) {
-                const finishedProgress: SurveyProgress = {
-                    current_risk: localRiskIndex,
-                    total_risks: STATIC_SURVEY_RISKS.length,
-                    completed: true,
-                    finished_at: new Date().toISOString(),
-                    has_next: false,
-                    has_previous: localRiskIndex > 0,
-                };
-                setLocalProgress(finishedProgress);
-                writeStoredJson(STATIC_PROGRESS_KEY, finishedProgress);
-                setIsFinished(true);
-                toast({
-                    title: "Survei selesai",
-                    description: "Jawaban survei risiko statis berhasil disimpan di browser.",
-                });
-                return true;
-            }
-
-            const nextIndex = direction === "next"
-                ? Math.min(localRiskIndex + 1, STATIC_SURVEY_RISKS.length - 1)
-                : Math.max(localRiskIndex - 1, 0);
-            const nextProgress: SurveyProgress = {
-                current_risk: nextIndex,
-                total_risks: STATIC_SURVEY_RISKS.length,
-                completed: false,
-                has_next: nextIndex < STATIC_SURVEY_RISKS.length - 1,
-                has_previous: nextIndex > 0,
-            };
-            setLocalRiskIndex(nextIndex);
-            setLocalProgress(nextProgress);
-            writeStoredJson(STATIC_PROGRESS_KEY, nextProgress);
-
-            toast({
-                title: direction === "next" ? "Jawaban tersimpan" : "Kembali ke risiko sebelumnya",
-                description: "Data survei statis berhasil diperbarui di browser.",
-            });
-            return true;
-        }
-
         if (!currentRespondent?.id) {
             toast({
                 title: "Responden belum tersedia",
@@ -429,45 +284,36 @@ export default function SurveiProfil() {
 
     const handleNext = async () => {
         if (step === 0 && isStep0Valid) {
-            const respondentPayload: UpsertSurveyRespondentPayload = {
-                nama_lengkap: answers.responden_nama,
-                jabatan: answers.responden_jabatan,
-                perusahaan: answers.responden_perusahaan,
-                email: answers.responden_email,
-                no_telepon: answers.responden_telepon,
-                sektor: String(answers.responden_sektor),
-                sertifikat_training: answers.responden_sertifikat || '',
-                sektor_lainnya: '',
-            };
-
-            if (isStaticMode) {
-                const staticRespondent: SurveyRespondent = {
-                    id: localRespondent?.id ?? Date.now(),
-                    ...respondentPayload,
-                    created_at: localRespondent?.created_at ?? new Date().toISOString(),
-                    updated_at: new Date().toISOString(),
-                };
-                const initialProgress: SurveyProgress = localProgress ?? {
-                    current_risk: 0,
-                    total_risks: STATIC_SURVEY_RISKS.length,
-                    completed: false,
-                    has_next: true,
-                    has_previous: false,
-                };
-                setLocalRespondent(staticRespondent);
-                setLocalProgress(initialProgress);
-                writeStoredJson(STATIC_RESPONDENT_KEY, staticRespondent);
-                writeStoredJson(STATIC_PROGRESS_KEY, initialProgress);
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-                setStep(1);
+            const respondentOwnerId = String(user?.id ?? "").trim();
+            if (!respondentOwnerId) {
                 toast({
-                    title: "Data responden tersimpan",
-                    description: "Mode statis aktif. Lanjutkan pengisian survei risiko.",
+                    title: "User belum tersedia",
+                    description: "Identitas pengguna belum tersedia sehingga data responden belum bisa dikirim ke backend.",
+                    variant: "destructive",
                 });
                 return;
             }
 
-            const respondentResult = await saveRespondent(respondentPayload, currentRespondent?.id);
+            const resolvedPerusahaanId = String(perusahaanId ?? "").trim();
+            if (!resolvedPerusahaanId) {
+                toast({
+                    title: "Perusahaan belum tersedia",
+                    description: "Profil perusahaan belum lengkap sehingga data responden belum bisa dikirim ke backend.",
+                    variant: "destructive",
+                });
+                return;
+            }
+
+            const respondentPayload: UpsertSurveyRespondentPayload = {
+                id_perusahaan: resolvedPerusahaanId,
+                nama_lengkap: answers.responden_nama,
+                jabatan: answers.responden_jabatan,
+                email: answers.responden_email,
+                no_telepon: answers.responden_telepon,
+                sertifikat_training: answers.responden_sertifikat || '',
+            };
+
+            const respondentResult = await saveRespondent(respondentPayload, respondentOwnerId);
             if (!respondentResult.success || !respondentResult.data) {
                 toast({
                     title: "Gagal menyimpan responden",
@@ -503,34 +349,6 @@ export default function SurveiProfil() {
 
     const handlePrev = async () => {
         if (step === 1) {
-            if (isStaticMode) {
-                if (localRiskIndex > 0) {
-                    if (isStep1Valid) {
-                        window.scrollTo({ top: 0, behavior: 'smooth' });
-                        await submitRisk("previous");
-                        return;
-                    }
-
-                    const nextIndex = Math.max(localRiskIndex - 1, 0);
-                    const nextProgress: SurveyProgress = {
-                        current_risk: nextIndex,
-                        total_risks: STATIC_SURVEY_RISKS.length,
-                        completed: false,
-                        has_next: true,
-                        has_previous: nextIndex > 0,
-                    };
-                    setLocalRiskIndex(nextIndex);
-                    setLocalProgress(nextProgress);
-                    writeStoredJson(STATIC_PROGRESS_KEY, nextProgress);
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                    return;
-                }
-
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-                setStep(0);
-                return;
-            }
-
             if (hasPreviousRisk(currentRisk, progressState as Record<string, any> | null) && currentRespondent?.id) {
                 if (isStep1Valid) {
                     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -582,6 +400,7 @@ export default function SurveiProfil() {
     const riskDescription = typeof activeRisk?.deskripsi === "string" && activeRisk.deskripsi.trim()
         ? activeRisk.deskripsi
         : DEFAULT_RISK_DESCRIPTION;
+    const isRiskUnavailable = step === 1 && !isLoadingMode && !isFinished && !activeRisk;
     const currentRiskNumber = getCurrentRiskIndex(activeRisk, activeProgress as Record<string, any> | null) + 1;
     const totalRiskCount = typeof activeRisk?.total_risks === "number"
         ? activeRisk.total_risks
@@ -638,7 +457,7 @@ export default function SurveiProfil() {
 
                                     <div className="dashboard-divider col-span-1 mb-2 border-b pb-4 md:col-span-2">
                                         <div className="flex items-center gap-4">
-                                            <div className="dashboard-primary-button flex h-12 w-12 items-center justify-center rounded-full text-white">
+                                            <div className="button-force-white dashboard-primary-button flex h-12 w-12 items-center justify-center rounded-full text-white">
                                                 <UserCircle2 className="w-6 h-6" />
                                             </div>
                                             <div>
@@ -672,11 +491,14 @@ export default function SurveiProfil() {
 
                                     <div>
                                         <label className={LABEL_CLS}>Perusahaan <span className="text-red-500">*</span></label>
+                                        <p className="mb-2 flex items-center gap-1.5 text-[13px]" style={{ color: "var(--dashboard-text-muted)" }}>
+                                            <Info className={DETAIL_INFO_ICON_CLS} style={DETAIL_INFO_ICON_STYLE} /> Diambil otomatis dari data responden/perusahaan
+                                        </p>
                                         <input
                                             type="text"
                                             value={answers.responden_perusahaan}
-                                            onChange={(e) => setAnswer('responden_perusahaan', e.target.value)}
-                                            className={INPUT_CLS}
+                                            readOnly
+                                            className={`${INPUT_CLS} cursor-not-allowed bg-[var(--dashboard-section-muted)] text-[var(--dashboard-text-muted)]`}
                                             placeholder="Nama instansi/perusahaan"
                                         />
                                     </div>
@@ -684,24 +506,21 @@ export default function SurveiProfil() {
                                     <div>
                                         <label className={LABEL_CLS}>Sektor <span className="text-red-500">*</span></label>
                                         <p className="mb-2 flex items-center gap-1.5 text-[13px]" style={{ color: "var(--dashboard-text-muted)" }}>
-                                            <Info className="h-3.5 w-3.5" style={{ color: "var(--dashboard-selection-text)" }} /> Pilih salah satu opsi yang sesuai
+                                            <Info className={DETAIL_INFO_ICON_CLS} style={DETAIL_INFO_ICON_STYLE} /> Diambil otomatis dari data responden/perusahaan
                                         </p>
-                                        <select
+                                        <input
+                                            type="text"
                                             value={answers.responden_sektor}
-                                            onChange={(e) => setAnswer('responden_sektor', e.target.value)}
-                                            className={`${INPUT_CLS} appearance-none cursor-pointer pr-10`}
-                                        >
-                                            <option value="">Harap pilih...</option>
-                                            {fallbackSectors?.map((s: any) => (
-                                                <option key={s.id} value={s.id}>{s.nama_sub_sektor}</option>
-                                            ))}
-                                        </select>
+                                            readOnly
+                                            className={`${INPUT_CLS} cursor-not-allowed bg-[var(--dashboard-section-muted)] text-[var(--dashboard-text-muted)]`}
+                                            placeholder="Sub sektor perusahaan"
+                                        />
                                     </div>
 
                                     <div>
                                         <label className={LABEL_CLS}>Email Pekerjaan <span className="text-red-500">*</span></label>
                                         <p className="mb-2 flex items-center gap-1.5 text-[13px]" style={{ color: "var(--dashboard-text-muted)" }}>
-                                            <Info className="h-3.5 w-3.5" style={{ color: "var(--dashboard-selection-text)" }} /> Pastikan format email sudah benar
+                                            <Info className={DETAIL_INFO_ICON_CLS} style={DETAIL_INFO_ICON_STYLE} /> Pastikan format email sudah benar
                                         </p>
                                         <input
                                             type="email"
@@ -715,7 +534,7 @@ export default function SurveiProfil() {
                                     <div>
                                         <label className={LABEL_CLS}>Nomor Telepon/Whatsapp <span className="text-red-500">*</span></label>
                                         <p className="mb-2 flex items-center gap-1.5 text-[13px]" style={{ color: "var(--dashboard-text-muted)" }}>
-                                            <Info className="h-3.5 w-3.5" style={{ color: "var(--dashboard-selection-text)" }} /> Berupa angka tanpa spasi
+                                            <Info className={DETAIL_INFO_ICON_CLS} style={DETAIL_INFO_ICON_STYLE} /> Berupa angka tanpa spasi
                                         </p>
                                         <input
                                             type="tel"
@@ -771,6 +590,11 @@ export default function SurveiProfil() {
                                     {isFinished && (
                                         <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm font-medium text-emerald-800 shadow-sm">
                                             Survei profil risiko sudah ditandai selesai. Anda masih dapat meninjau jawaban terakhir yang tersimpan.
+                                        </div>
+                                    )}
+                                    {isRiskUnavailable && (
+                                        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm font-medium text-amber-800 shadow-sm">
+                                            Risiko aktif belum tersedia dari backend. Muat ulang halaman beberapa saat lagi atau hubungi admin bila masalah berlanjut.
                                         </div>
                                     )}
                                     {/* Question 1 */}
@@ -1032,7 +856,7 @@ export default function SurveiProfil() {
                         
                         <button
                             onClick={() => { void handleNext(); }}
-                            disabled={saving || isLoadingMode || isFinished || (step === 0 ? !isStep0Valid : !isStep1Valid)}
+                            disabled={saving || isLoadingMode || isFinished || (step === 0 ? !isStep0Valid : !isStep1Valid || isRiskUnavailable)}
                             className={`${PRIMARY_BUTTON_CLS} group w-full cursor-pointer sm:w-auto`}
                         >
                             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}

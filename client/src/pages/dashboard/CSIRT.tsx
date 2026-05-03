@@ -21,9 +21,10 @@ const FILE_WRAPPER_CLS = "dashboard-table-surface dashboard-table-divider flex w
 const MODAL_BACKDROP_CLS = "dashboard-modal-backdrop fixed inset-0 z-50 flex items-stretch justify-center p-0 backdrop-blur-sm sm:items-center sm:p-4";
 const MODAL_PANEL_CLS = "dashboard-modal-panel h-full w-full rounded-none border p-4 shadow-2xl sm:h-auto sm:max-h-[calc(100dvh-2rem)] sm:rounded-3xl sm:p-6";
 const CLOSE_BUTTON_CLS = "dashboard-modal-close rounded-xl p-1 transition hover:bg-[var(--dashboard-surface-muted)] hover:text-[var(--dashboard-text)]";
-const SECONDARY_BUTTON_CLS = "dashboard-secondary-button rounded-xl border py-2.5 text-sm font-bold transition";
-const PRIMARY_BUTTON_CLS = "dashboard-primary-button rounded-xl py-2.5 text-sm font-bold transition flex items-center justify-center gap-2 disabled:opacity-50";
-const WARNING_BUTTON_CLS = "dashboard-warning-button rounded-xl py-2.5 text-sm font-bold transition flex items-center justify-center gap-2 disabled:opacity-50";
+const SECONDARY_BUTTON_CLS = "button-force-white dashboard-secondary-button inline-flex items-center justify-center gap-2 rounded-xl border py-2.5 text-sm font-bold transition disabled:opacity-50";
+const PRIMARY_BUTTON_CLS = "button-force-white dashboard-primary-button inline-flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-bold transition disabled:opacity-50";
+const WARNING_BUTTON_CLS = "button-force-white dashboard-warning-button inline-flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-bold transition disabled:opacity-50";
+const SUCCESS_BUTTON_CLS = "button-force-white inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-700 via-emerald-600 to-green-500 py-2.5 text-sm font-bold transition hover:from-emerald-800 hover:via-emerald-700 hover:to-green-600 disabled:opacity-50";
 const SELECTED_BUTTON_CLS = "dashboard-option-selected";
 const TAG_INPUT_BUTTON_CLS = "dashboard-table-surface dashboard-text-soft rounded-xl border p-2.5 transition hover:border-[var(--dashboard-selection-border)] hover:bg-[var(--dashboard-surface)] disabled:cursor-not-allowed disabled:opacity-50";
 const TAG_CHIP_CLS = "dashboard-chip-info flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-bold";
@@ -859,13 +860,13 @@ export default function CSIRT() {
                                                 });
                                             }
                                         }}
-                                        className={`${SECONDARY_BUTTON_CLS} whitespace-nowrap px-5`}
+                                        className={`${SUCCESS_BUTTON_CLS} whitespace-nowrap px-5 sm:px-6`}
                                     >
                                         <Download className="w-4 h-4" /> Export PDF
                                     </button>
                                     <button
                                         onClick={() => { setEditing(csirt); setShowForm(true); }}
-                                        className={`${WARNING_BUTTON_CLS} whitespace-nowrap px-5`}
+                                        className={`${WARNING_BUTTON_CLS} whitespace-nowrap px-5 sm:px-6`}
                                     >
                                         <Pencil className="w-4 h-4" /> Edit CSIRT
                                     </button>

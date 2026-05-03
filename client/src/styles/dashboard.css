@@ -233,4 +233,10 @@
   .dashboard-shell .dashboard-progress-track {
     background: var(--dashboard-progress-track) !important;
   }
+
+  .dashboard-shell .button-force-white,
+  .dashboard-shell .button-force-white * {
+    color: #fff !important;
+    -webkit-text-fill-color: #fff !important;
+  }
 }

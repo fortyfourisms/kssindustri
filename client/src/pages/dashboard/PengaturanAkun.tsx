@@ -147,7 +147,6 @@ export default function PengaturanAkun() {
                         />
                         <AppButton
                             type="submit"
-                            variant="secondary"
                             fullWidth
                             loading={passwordMutation.isPending}
                             leftIcon={!passwordMutation.isPending ? <Lock className="w-4 h-4" /> : undefined}
