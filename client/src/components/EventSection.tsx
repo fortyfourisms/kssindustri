@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { ArrowRight, CalendarDays, Clock3, MapPin } from "lucide-react";
+import { ArrowRight, CalendarDays, MapPin } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useEventsPreview } from "@/hooks/useEvents";
 import type { EventItem } from "@/types/event.types";
@@ -32,8 +32,7 @@ function EventPreviewCard({
             {event.coverLabel}
           </span>
           <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">
-            <Clock3 className="h-3.5 w-3.5 text-cyan-600" />
-            {event.format}
+            {event.statusLabel}
           </span>
         </div>
 

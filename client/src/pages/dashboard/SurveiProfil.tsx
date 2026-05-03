@@ -118,9 +118,7 @@ export default function SurveiProfil() {
     const currentRespondent = useSurveyStore((state) => state.currentRespondent);
     const currentRisk = useSurveyStore((state) => state.currentRisk);
     const progressState = useSurveyStore((state) => state.progress);
-    const loading = useSurveyStore((state) => state.loading);
     const saving = useSurveyStore((state) => state.saving);
-    const hydrateByUserId = useSurveyStore((state) => state.hydrateByUserId);
     const saveRespondent = useSurveyStore((state) => state.saveRespondent);
     const loadSurveyContext = useSurveyStore((state) => state.loadSurveyContext);
     const saveRiskStep = useSurveyStore((state) => state.saveRiskStep);
@@ -128,42 +126,11 @@ export default function SurveiProfil() {
 
     const [step, setStep] = useState(0);
     const [isFinished, setIsFinished] = useState(false);
-    const [isBootstrapping, setIsBootstrapping] = useState(true);
-
-    useEffect(() => {
-        if (!user?.id) {
-            setIsBootstrapping(false);
-            return;
-        }
-
-        let cancelled = false;
-
-        const bootstrap = async () => {
-            const result = await hydrateByUserId(user.id);
-            if (cancelled) return;
-
-            if (!result.success && result.reason === "error") {
-                toast({
-                    title: "Gagal memuat survei",
-                    description: result.error || "Data survei responden belum berhasil dimuat dari backend.",
-                    variant: "destructive",
-                });
-            }
-
-            setIsBootstrapping(false);
-        };
-
-        void bootstrap();
-
-        return () => {
-            cancelled = true;
-        };
-    }, [user?.id, hydrateByUserId, toast]);
 
     const activeRespondent = currentRespondent;
     const activeRisk = currentRisk;
     const activeProgress = progressState;
-    const isLoadingMode = isBootstrapping || loading;
+    const isLoadingMode = false;
 
     useEffect(() => {
         setAnswers({
@@ -284,16 +251,6 @@ export default function SurveiProfil() {
 
     const handleNext = async () => {
         if (step === 0 && isStep0Valid) {
-            const respondentOwnerId = String(user?.id ?? "").trim();
-            if (!respondentOwnerId) {
-                toast({
-                    title: "User belum tersedia",
-                    description: "Identitas pengguna belum tersedia sehingga data responden belum bisa dikirim ke backend.",
-                    variant: "destructive",
-                });
-                return;
-            }
-
             const resolvedPerusahaanId = String(perusahaanId ?? "").trim();
             if (!resolvedPerusahaanId) {
                 toast({
@@ -313,7 +270,7 @@ export default function SurveiProfil() {
                 sertifikat_training: answers.responden_sertifikat || '',
             };
 
-            const respondentResult = await saveRespondent(respondentPayload, respondentOwnerId);
+            const respondentResult = await saveRespondent(respondentPayload, currentRespondent?.id);
             if (!respondentResult.success || !respondentResult.data) {
                 toast({
                     title: "Gagal menyimpan responden",

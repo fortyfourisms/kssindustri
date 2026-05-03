@@ -66,7 +66,7 @@ export default function Events() {
                           {event.coverLabel}
                         </span>
                         <span className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">
-                          {event.format}
+                          {event.statusLabel}
                         </span>
                       </div>
 

@@ -1,15 +1,31 @@
 export type EventStatus = "upcoming" | "past";
 
+export type EventApiItem = {
+  created_at?: string;
+  deskripsi?: string;
+  id: number | string;
+  judul?: string;
+  lokasi?: string;
+  status?: string;
+  tanggal?: string;
+  updated_at?: string;
+};
+
 export type EventItem = {
   id: string;
+  numericId?: number;
   title: string;
   shortDescription: string;
   fullDescription: string;
   eventDate: string;
   location: string;
-  format: "offline" | "online" | "hybrid";
   coverLabel: string;
   status: EventStatus;
+  statusLabel?: string;
+  format?: "offline" | "online" | "hybrid";
+  backendStatus?: string;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 export type EventRegistrationPayload = {
@@ -21,11 +37,18 @@ export type EventRegistrationPayload = {
   industrySector: string;
 };
 
+export type EventRegistrationRequest = {
+  email: string;
+  jabatan: string;
+  nama: string;
+  no_hp: string;
+  perusahaan: string;
+  sektor: string;
+};
+
 export type EventRegistrationResult = {
-  registrationId: string;
-  ticketNumber: string;
+  message: string;
   registeredAt: string;
   attendee: EventRegistrationPayload;
-  event: Pick<EventItem, "id" | "title" | "eventDate" | "location" | "format">;
-  qrValue: string;
+  event: Pick<EventItem, "id" | "title" | "eventDate" | "location" | "statusLabel">;
 };

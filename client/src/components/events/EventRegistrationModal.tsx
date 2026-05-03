@@ -1,16 +1,13 @@
 import { useMemo, useState } from "react";
-import QRCode from "qrcode";
-import { Loader2, X } from "lucide-react";
+import { CalendarDays, CheckCircle2, Loader2, MapPin, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useEventRegistration } from "@/hooks/useEvents";
-import { downloadEventTicketPdf } from "@/lib/event-pdf";
 import { industrySectorOptions } from "@/data/events";
 import type {
   EventItem,
   EventRegistrationPayload,
   EventRegistrationResult,
 } from "@/types/event.types";
-import { EventTicketCard } from "@/components/events/EventTicketCard";
 
 const inputClassName =
   "w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30";
@@ -43,7 +40,7 @@ export function EventRegistrationModal({
   const [uiState, setUiState] = useState<RegistrationUiState>({ status: "form" });
 
   const title = useMemo(() => {
-    if (uiState.status === "success") return "E-ticket Event";
+    if (uiState.status === "success") return "Registrasi Berhasil";
     return "Workshop Registration";
   }, [uiState.status]);
 
@@ -63,31 +60,15 @@ export function EventRegistrationModal({
     setUiState({ status: "submitting" });
 
     try {
-      const ticket = await registrationMutation.mutateAsync(form);
-      setUiState({ status: "success", ticket });
+      const result = await registrationMutation.mutateAsync(form);
+      setUiState({ status: "success", ticket: result });
       toast({
         title: "Registrasi berhasil",
-        description: "QR e-ticket sudah siap untuk digunakan saat check-in.",
+        description: result.message,
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Gagal mengirim registrasi.";
       setUiState({ status: "error", message });
-    }
-  };
-
-  const handleDownloadPdf = async (ticket: EventRegistrationResult) => {
-    try {
-      const qrCodeDataUrl = await QRCode.toDataURL(ticket.qrValue, {
-        width: 256,
-        margin: 1,
-      });
-      downloadEventTicketPdf(ticket, qrCodeDataUrl);
-    } catch (error) {
-      toast({
-        title: "Gagal menyiapkan PDF",
-        description: error instanceof Error ? error.message : "Coba lagi beberapa saat.",
-        variant: "destructive",
-      });
     }
   };
 
@@ -112,10 +93,7 @@ export function EventRegistrationModal({
 
         <div className="flex-1 overflow-y-auto p-4 sm:p-6">
           {uiState.status === "success" ? (
-            <EventTicketCard
-              ticket={uiState.ticket}
-              onDownloadPdf={() => handleDownloadPdf(uiState.ticket)}
-            />
+            <RegistrationSuccessState ticket={uiState.ticket} />
           ) : (
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="grid gap-5 md:grid-cols-2">
@@ -218,6 +196,68 @@ export function EventRegistrationModal({
               </div>
             </form>
           )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat("id-ID", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
+}
+
+function RegistrationSuccessState({ ticket }: { ticket: EventRegistrationResult }) {
+  return (
+    <div className="space-y-5">
+      <div className="rounded-3xl border border-emerald-100 bg-emerald-50 p-5">
+        <div className="flex items-start gap-3">
+          <CheckCircle2 className="mt-0.5 h-6 w-6 text-emerald-600" />
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-[0.22em] text-emerald-600">Registrasi Berhasil</p>
+            <h4 className="mt-2 text-2xl font-bold text-slate-900">{ticket.event.title}</h4>
+            <p className="mt-2 text-sm leading-relaxed text-slate-600">{ticket.message}</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid gap-5 md:grid-cols-2">
+        <div className="rounded-3xl border border-slate-200 bg-slate-50/80 p-5">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Peserta</p>
+          <p className="mt-1 text-lg font-bold text-slate-900">{ticket.attendee.fullName}</p>
+          <p className="text-sm text-slate-600">{ticket.attendee.company} - {ticket.attendee.position}</p>
+          <p className="mt-2 text-sm text-slate-600">{ticket.attendee.email}</p>
+          <p className="text-sm text-slate-600">{ticket.attendee.phoneNumber}</p>
+          <p className="mt-2 text-sm text-slate-600">Sektor: {ticket.attendee.industrySector}</p>
+        </div>
+
+        <div className="space-y-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+            <div className="flex items-center gap-2 text-sm font-semibold text-slate-500">
+              <CalendarDays className="h-4 w-4 text-[#0061ff]" />
+              Tanggal event
+            </div>
+            <p className="mt-2 text-sm font-bold text-slate-900">{formatDate(ticket.event.eventDate)}</p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+            <div className="flex items-center gap-2 text-sm font-semibold text-slate-500">
+              <MapPin className="h-4 w-4 text-[#0061ff]" />
+              Lokasi
+            </div>
+            <p className="mt-2 text-sm font-bold text-slate-900">{ticket.event.location}</p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+            <p className="text-sm font-semibold text-slate-500">Status kegiatan</p>
+            <p className="mt-2 text-sm font-bold text-slate-900">{ticket.event.statusLabel}</p>
+          </div>
+          <p className="text-xs leading-relaxed text-slate-500">
+            Registrasi tercatat pada {formatDate(ticket.registeredAt)}. Tim penyelenggara dapat menghubungi Anda lewat email atau nomor HP yang didaftarkan.
+          </p>
         </div>
       </div>
     </div>

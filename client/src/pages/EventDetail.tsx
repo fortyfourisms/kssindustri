@@ -89,9 +89,9 @@ export default function EventDetail() {
                     <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
                       <div className="flex items-center gap-2 text-sm font-semibold text-slate-500">
                         <Users className="h-4 w-4 text-[#0061ff]" />
-                        Format
+                        Status
                       </div>
-                      <p className="mt-2 text-sm font-bold capitalize text-slate-900">{event.format}</p>
+                      <p className="mt-2 text-sm font-bold text-slate-900">{event.statusLabel}</p>
                     </div>
                   </div>
 
