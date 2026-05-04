@@ -1,16 +1,28 @@
 import type { Kelas, MateriItem, SertifikatItem } from "@/features/lms/types/lms.types";
 
-const CATEGORY_FALLBACKS = ["Jaringan", "Kesadaran", "Kebijakan", "Insiden", "Cloud", "Pertahanan"];
+export const LMS_CATEGORY_OPTIONS = [
+    "Cybersecurity",
+    "CSIRT",
+    "Networking",
+    "Compliance",
+    "Risk Management",
+    "Incident Response",
+    "Lainnya",
+] as const;
+
+const CATEGORY_FALLBACK = "Lainnya";
 
 export function inferLmsCategory(title: string, index: number): string {
     const lower = title.toLowerCase();
-    if (lower.includes("network")) return "Jaringan";
-    if (lower.includes("cloud")) return "Cloud";
-    if (lower.includes("incident") || lower.includes("csirt")) return "Insiden";
-    if (lower.includes("policy") || lower.includes("governance")) return "Kebijakan";
-    if (lower.includes("phishing") || lower.includes("awareness")) return "Kesadaran";
-    if (lower.includes("defense") || lower.includes("secure")) return "Pertahanan";
-    return CATEGORY_FALLBACKS[index % CATEGORY_FALLBACKS.length];
+    void index;
+
+    if (lower.includes("csirt")) return "CSIRT";
+    if (lower.includes("network")) return "Networking";
+    if (lower.includes("compliance") || lower.includes("policy") || lower.includes("governance") || lower.includes("audit") || lower.includes("regulation")) return "Compliance";
+    if (lower.includes("risk")) return "Risk Management";
+    if (lower.includes("incident") || lower.includes("response") || lower.includes("forensic") || lower.includes("soc")) return "Incident Response";
+    if (lower.includes("cyber") || lower.includes("security") || lower.includes("secure") || lower.includes("awareness") || lower.includes("phishing") || lower.includes("defense") || lower.includes("cloud")) return "Cybersecurity";
+    return CATEGORY_FALLBACK;
 }
 
 export function formatMinutes(totalSeconds: number): string {
@@ -63,7 +75,7 @@ export function buildLmsCourseInsight(params: {
     if (hasCertificate) statusLabel = "Lulus";
     else if (started) statusLabel = "Sedang dipelajari";
 
-    let lastItemLabel = "Belum ada materi";
+    let lastItemLabel = "Belum ada materi pada kelas ini";
     if (hasCertificate && latestMateri) lastItemLabel = `Selesai di ${latestMateri.judul}`;
     else if (nextMateri) lastItemLabel = `Lanjut ke ${nextMateri.judul}`;
     else if (latestMateri) lastItemLabel = `Materi terakhir ${latestMateri.judul}`;

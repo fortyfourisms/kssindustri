@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { CalendarDays, CheckCircle2, Loader2, MapPin, X } from "lucide-react";
+import { CalendarDays, CheckCircle2, Download, Loader2, MapPin, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useEventRegistration } from "@/hooks/useEvents";
 import { industrySectorOptions } from "@/data/events";
@@ -8,6 +8,8 @@ import type {
   EventRegistrationPayload,
   EventRegistrationResult,
 } from "@/types/event.types";
+
+const PHONE_NUMBER_MAX_LENGTH = 15;
 
 const inputClassName =
   "w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30";
@@ -55,8 +57,22 @@ export function EventRegistrationModal({
     }
   };
 
+  const handlePhoneNumberChange = (value: string) => {
+    const digitsOnly = value.replace(/\D/g, "").slice(0, PHONE_NUMBER_MAX_LENGTH);
+    handleChange("phoneNumber", digitsOnly);
+  };
+
   const handleSubmit = async (eventForm: React.FormEvent) => {
     eventForm.preventDefault();
+
+    if (!/^\d{1,15}$/.test(form.phoneNumber)) {
+      setUiState({
+        status: "error",
+        message: "Nomor HP harus berupa angka dan maksimal 15 karakter.",
+      });
+      return;
+    }
+
     setUiState({ status: "submitting" });
 
     try {
@@ -77,7 +93,6 @@ export function EventRegistrationModal({
       <div className="flex h-full w-full flex-col overflow-hidden bg-white shadow-[0_30px_120px_rgba(15,23,42,0.24)] sm:h-auto sm:max-h-[calc(100dvh-2rem)] sm:max-w-3xl sm:rounded-[2rem]">
         <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-6 py-5">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.22em] text-slate-400">RSVP Flow</p>
             <h3 className="mt-2 text-2xl font-bold text-slate-900">{title}</h3>
             <p className="mt-2 text-sm text-slate-600">{event.title}</p>
           </div>
@@ -142,8 +157,12 @@ export function EventRegistrationModal({
                   <label className="mb-2 block text-sm font-semibold text-slate-700">Nomor HP</label>
                   <input
                     required
+                    type="tel"
+                    inputMode="numeric"
+                    pattern="[0-9]{1,15}"
+                    maxLength={PHONE_NUMBER_MAX_LENGTH}
                     value={form.phoneNumber}
-                    onChange={(e) => handleChange("phoneNumber", e.target.value)}
+                    onChange={(e) => handlePhoneNumberChange(e.target.value)}
                     className={inputClassName}
                     placeholder="08xxxxxxxxxx"
                   />
@@ -213,6 +232,8 @@ function formatDate(value: string) {
 }
 
 function RegistrationSuccessState({ ticket }: { ticket: EventRegistrationResult }) {
+  const [isQrBroken, setIsQrBroken] = useState(false);
+
   return (
     <div className="space-y-5">
       <div className="rounded-3xl border border-emerald-100 bg-emerald-50 p-5">
@@ -255,6 +276,33 @@ function RegistrationSuccessState({ ticket }: { ticket: EventRegistrationResult 
             <p className="text-sm font-semibold text-slate-500">Status kegiatan</p>
             <p className="mt-2 text-sm font-bold text-slate-900">{ticket.event.statusLabel}</p>
           </div>
+          {ticket.qrCodeBase64 && !isQrBroken ? (
+            <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+              <p className="text-sm font-semibold text-slate-500">QR Registrasi</p>
+              <img
+                src={ticket.qrCodeBase64}
+                alt={`QR registrasi ${ticket.event.title}`}
+                onError={() => setIsQrBroken(true)}
+                className="mt-3 w-full rounded-2xl border border-slate-200 bg-white p-3"
+              />
+            </div>
+          ) : null}
+          {ticket.qrCodeBase64 && isQrBroken ? (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50/80 p-4 text-sm font-medium text-amber-700">
+              QR tersedia di backend, tetapi format gambar tidak bisa ditampilkan langsung di modal. Silakan gunakan tombol download e-ticket.
+            </div>
+          ) : null}
+          {ticket.downloadUrl ? (
+            <a
+              href={ticket.downloadUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#0061ff] px-5 py-3 text-sm font-bold text-white shadow-lg shadow-blue-500/20 transition hover:bg-blue-700"
+            >
+              <Download className="h-4 w-4" />
+              Download E-Ticket
+            </a>
+          ) : null}
           <p className="text-xs leading-relaxed text-slate-500">
             Registrasi tercatat pada {formatDate(ticket.registeredAt)}. Tim penyelenggara dapat menghubungi Anda lewat email atau nomor HP yang didaftarkan.
           </p>

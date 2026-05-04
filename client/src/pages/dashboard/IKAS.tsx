@@ -45,6 +45,12 @@ function getRecordTimeValue(record: Record<string, any> | null | undefined) {
     return Number.isFinite(time) ? time : 0;
 }
 
+function normalizeScopedIkasId(value: string | number | null | undefined): string | null {
+    if (value === null || value === undefined) return null;
+    const normalized = String(value).trim();
+    return normalized || null;
+}
+
 function getVerificationStatus(raw: Record<string, any> | null | undefined) {
     if (typeof raw?.is_validated === "boolean") {
         return raw.is_validated ? "Terverifikasi" : "Menunggu verifikasi";
@@ -161,16 +167,23 @@ export default function IKAS() {
         [selectedIkasRecord]
     );
 
-    const allJawabanIkas = useMemo(() => ([
-        ...((jawabanIdentifikasiQuery.data ?? []) as Array<Record<string, any>>),
-        ...((jawabanProteksiQuery.data ?? []) as Array<Record<string, any>>),
-        ...((jawabanDeteksiQuery.data ?? []) as Array<Record<string, any>>),
-        ...((jawabanGulihQuery.data ?? []) as Array<Record<string, any>>),
-    ]), [
+    const allJawabanIkas = useMemo(() => {
+        const selectedIkasId = normalizeScopedIkasId(selectedIkasRecord?.id);
+        return [
+            ...((jawabanIdentifikasiQuery.data ?? []) as Array<Record<string, any>>),
+            ...((jawabanProteksiQuery.data ?? []) as Array<Record<string, any>>),
+            ...((jawabanDeteksiQuery.data ?? []) as Array<Record<string, any>>),
+            ...((jawabanGulihQuery.data ?? []) as Array<Record<string, any>>),
+        ].filter((item) => {
+            if (!selectedIkasId) return true;
+            return normalizeScopedIkasId(item?.ikas_id) === selectedIkasId;
+        });
+    }, [
         jawabanIdentifikasiQuery.data,
         jawabanProteksiQuery.data,
         jawabanDeteksiQuery.data,
         jawabanGulihQuery.data,
+        selectedIkasRecord?.id,
     ]);
 
     const statusVerifikasiIkas = useMemo(() => {

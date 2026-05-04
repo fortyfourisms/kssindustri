@@ -34,6 +34,18 @@ function ErrorCard({ message, onRetry }: { message: string; onRetry: () => void 
   );
 }
 
+function EmptyMateriCard() {
+  return (
+    <div className="flex flex-col items-center justify-center py-24 text-center">
+      <div className="w-16 h-16 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-center mb-4">
+        <AlertCircle className="w-7 h-7 text-slate-400" />
+      </div>
+      <h3 className="text-base font-black text-slate-700 mb-1">Belum Ada Materi</h3>
+      <p className="text-sm text-slate-400">Belum ada materi pada kelas ini.</p>
+    </div>
+  );
+}
+
 export default function LMSCourse() {
   const navigate = useNavigate();
   const { courseId } = useParams<{ courseId: string }>();
@@ -88,6 +100,9 @@ export default function LMSCourse() {
         }}
       />
     );
+  }
+  if (sortedMateri.length === 0) {
+    return <EmptyMateriCard />;
   }
 
   return (

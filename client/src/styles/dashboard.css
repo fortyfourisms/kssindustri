@@ -234,6 +234,8 @@
     background: var(--dashboard-progress-track) !important;
   }
 
+  .button-force-white,
+  .button-force-white *,
   .dashboard-shell .button-force-white,
   .dashboard-shell .button-force-white * {
     color: #fff !important;

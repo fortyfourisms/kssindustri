@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { API_BASE_URL } from "@/services/apiClient";
 import { authService } from "@/services/auth.service";
 import { notificationsService } from "@/services/notifications.service";
+import { useAuthStore } from "@/stores/auth.store";
 import { useNotificationsStore } from "@/stores/notifications.store";
 
 const SSE_DELAY_MIN_MS = 5000;
@@ -34,6 +35,7 @@ export function useNotifications() {
     const unreadCount = useNotificationsStore((state) => state.unreadCount);
     const isConnected = useNotificationsStore((state) => state.isConnected);
     const isLoading = useNotificationsStore((state) => state.isLoading);
+    const isAvailable = useNotificationsStore((state) => state.isAvailable);
     const fetchNotifications = useNotificationsStore((state) => state.fetchNotifications);
     const markAsRead = useNotificationsStore((state) => state.markAsRead);
     const markAllAsRead = useNotificationsStore((state) => state.markAllAsRead);
@@ -43,6 +45,7 @@ export function useNotifications() {
         unreadCount,
         isConnected,
         isLoading,
+        isAvailable,
         fetchNotifications,
         markAsRead,
         markAllAsRead,
@@ -50,8 +53,11 @@ export function useNotifications() {
 }
 
 export function useNotificationStream(enabled = true) {
+    const authenticated = useAuthStore((state) => state.authenticated);
+    const currentUser = useAuthStore((state) => state.currentUser);
+
     useEffect(() => {
-        if (!enabled) return;
+        if (!enabled || !authenticated || !currentUser) return;
 
         let eventSource: EventSource | null = null;
         let reconnectTimer: number | null = null;
@@ -116,7 +122,7 @@ export function useNotificationStream(enabled = true) {
                 useNotificationsStore.getState().setConnected(false);
                 eventSource?.close();
 
-                if (closed || reconnectTimer !== null) return;
+                if (closed || reconnectTimer !== null || !useNotificationsStore.getState().isAvailable) return;
 
                 const delay = getSseDelayMs();
                 reconnectAttempt += 1;
@@ -131,12 +137,15 @@ export function useNotificationStream(enabled = true) {
 
         initialFetchTimer = window.setTimeout(() => {
             initialFetchTimer = null;
-            void useNotificationsStore.getState().fetchNotifications();
-        }, getSseDelayMs());
+            void (async () => {
+                const canConnect = await useNotificationsStore.getState().fetchNotifications();
+                if (!canConnect || closed) return;
 
-        initialConnectTimer = window.setTimeout(() => {
-            initialConnectTimer = null;
-            connect();
+                initialConnectTimer = window.setTimeout(() => {
+                    initialConnectTimer = null;
+                    connect();
+                }, getSseDelayMs());
+            })();
         }, getSseDelayMs());
 
         return () => {
@@ -145,5 +154,5 @@ export function useNotificationStream(enabled = true) {
             useNotificationsStore.getState().setConnected(false);
             eventSource?.close();
         };
-    }, [enabled]);
+    }, [authenticated, currentUser, enabled]);
 }

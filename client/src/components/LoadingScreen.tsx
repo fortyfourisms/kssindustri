@@ -56,7 +56,7 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({ onLoadingComplete 
                             <img
                                 src={kssiLogo}
                                 alt="KSSI Logo"
-                                className="w-full h-auto"
+                                className="kssi-logo w-full h-auto"
                             />
                             {/* Shimmer Overlay dengan Mask SVG yang sama */}
                             <div

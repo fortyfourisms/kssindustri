@@ -153,18 +153,20 @@ function computeLearningProgress(materi: Array<Record<string, any>>, completedId
     return Math.round((completedIds.length / materi.length) * 100);
 }
 
-const LMS_CATEGORY_FALLBACKS = ["Network", "Awareness", "Policy", "Incident", "Cloud", "Defense"];
+const LMS_CATEGORY_FALLBACK = "Lainnya";
 const DASHBOARD_STAGE_STALE_TIME = 1000 * 60 * 5;
 
 function inferLmsCategory(title: string, index: number) {
     const lower = title.toLowerCase();
-    if (lower.includes("network")) return "Network";
-    if (lower.includes("cloud")) return "Cloud";
-    if (lower.includes("incident") || lower.includes("csirt")) return "Incident";
-    if (lower.includes("policy") || lower.includes("governance")) return "Policy";
-    if (lower.includes("phishing") || lower.includes("awareness")) return "Awareness";
-    if (lower.includes("defense") || lower.includes("secure")) return "Defense";
-    return LMS_CATEGORY_FALLBACKS[index % LMS_CATEGORY_FALLBACKS.length];
+    void index;
+
+    if (lower.includes("csirt")) return "CSIRT";
+    if (lower.includes("network")) return "Networking";
+    if (lower.includes("compliance") || lower.includes("policy") || lower.includes("governance") || lower.includes("audit") || lower.includes("regulation")) return "Compliance";
+    if (lower.includes("risk")) return "Risk Management";
+    if (lower.includes("incident") || lower.includes("response") || lower.includes("forensic") || lower.includes("soc")) return "Incident Response";
+    if (lower.includes("cyber") || lower.includes("security") || lower.includes("secure") || lower.includes("awareness") || lower.includes("phishing") || lower.includes("defense") || lower.includes("cloud")) return "Cybersecurity";
+    return LMS_CATEGORY_FALLBACK;
 }
 
 function getSurveyStatus(progress: SurveyProgress | null, respondent: SurveyRespondent | null) {

@@ -38,6 +38,19 @@
       fill var(--theme-transition-duration) var(--theme-transition-timing),
       stroke var(--theme-transition-duration) var(--theme-transition-timing);
   }
+
+  .kssi-logo {
+    filter: none;
+  }
+
+  :root[data-theme="dark"] .kssi-logo,
+  :root[data-dashboard-theme="dark"] .kssi-logo,
+  body[data-theme="dark"] .kssi-logo,
+  body[data-dashboard-theme="dark"] .kssi-logo,
+  .dashboard-shell[data-theme="dark"] .kssi-logo,
+  .dashboard-shell[data-dashboard-theme="dark"] .kssi-logo {
+    filter: brightness(0) invert(1);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

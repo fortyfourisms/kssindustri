@@ -118,31 +118,9 @@ export default function FormIkas() {
     const perusahaanData = perusahaan ?? null;
 
     // ── Assessment setup from API (questions + existing answers) ───────────────
-    const {
-        assessmentData,
-        answerMap,
-        jawabanIdMap,
-        hasExistingAnswers,
-        isLoading: setupLoading,
-    } = useIkasAssessmentSetup();
-
     // Sync questions structure into store
     const setAssessmentStructure = useAssessmentStore(state => state.setAssessmentStructure);
     const hydrateAnswers         = useAssessmentStore(state => state.hydrateAnswers);
-
-    useEffect(() => {
-        if (assessmentData) {
-            setAssessmentStructure(assessmentData);
-        }
-    }, [assessmentData, setAssessmentStructure]);
-
-    // Hydrate existing answers from DB into store once
-    useEffect(() => {
-        if (hasExistingAnswers && Object.keys(answerMap).length > 0) {
-            hydrateAnswers(answerMap);
-        }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [hasExistingAnswers]);
 
     // ── Initialize store & stakeholder ─────────────────────────────────────────
     useEffect(() => {
@@ -220,12 +198,33 @@ export default function FormIkas() {
         () => matchingYearIkasRecord ?? (selectedYear === null ? latestIkasRecord : null),
         [matchingYearIkasRecord, selectedYear, latestIkasRecord]
     );
+    const activeIkasId = activeIkasRecord?.id ? String(activeIkasRecord.id) : null;
     const activeVerificationStatus = useMemo(() => getVerificationStatus(activeIkasRecord), [activeIkasRecord]);
     const activeEditRequestStatus = useMemo(() => getIkasEditRequestStatus(activeIkasRecord), [activeIkasRecord]);
     const activeEditRequestMeta = useMemo(() => getIkasEditStatusMeta(activeEditRequestStatus), [activeEditRequestStatus]);
     const isEditBlockedByApproval = !!activeIkasRecord
         && activeVerificationStatus === "Terverifikasi"
         && activeEditRequestStatus !== "approved";
+
+    const {
+        assessmentData,
+        answerMap,
+        jawabanIdMap,
+        hasExistingAnswers,
+        isLoading: setupLoading,
+    } = useIkasAssessmentSetup(activeIkasId);
+
+    useEffect(() => {
+        if (assessmentData) {
+            setAssessmentStructure(assessmentData);
+        }
+    }, [assessmentData, setAssessmentStructure]);
+
+    useEffect(() => {
+        if (!setupLoading) {
+            hydrateAnswers(answerMap);
+        }
+    }, [answerMap, hydrateAnswers, setupLoading]);
 
     // ── Detect existing record → set existingIkasId ────────────────────────────
     useEffect(() => {
@@ -364,8 +363,8 @@ export default function FormIkas() {
 
                 {/* Header Info */}
                 <div className={`${PANEL_SOFT_CLS} flex flex-col items-start gap-3 md:p-5 sm:flex-row sm:items-center`}>
-                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/25">
-                        <FileText className="w-6 h-6 text-white" />
+                    <div className="button-force-white flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 ring-1 ring-white/20">
+                        <FileText className="w-6 h-6" />
                     </div>
                     <div>
                         <h1 className="font-black text-slate-900 font-display text-xl">
@@ -389,7 +388,7 @@ export default function FormIkas() {
 
                         {/* Step 1 */}
                         <div className="flex flex-col items-center gap-2 bg-white px-4">
-                            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm border-2 transition-all ${step >= 1 ? 'bg-blue-500 text-white border-blue-500 shadow-md shadow-blue-500/30' : 'bg-slate-50 text-slate-400 border-slate-200'}`}>
+                            <div className={`flex h-10 w-10 items-center justify-center rounded-full border-2 text-sm font-bold transition-all ${step >= 1 ? 'button-force-white border-blue-500 bg-gradient-to-r from-blue-700 via-blue-600 to-cyan-500' : 'bg-slate-50 text-slate-400 border-slate-200'}`}>
                                 {step > 1 ? <CheckCircle2 className="w-5 h-5" /> : '1'}
                             </div>
                             <span className={`text-xs font-bold leading-none ${step >= 1 ? 'text-blue-600' : 'text-slate-400'}`}>Responden</span>
@@ -399,7 +398,7 @@ export default function FormIkas() {
 
                         {/* Step 2 */}
                         <div className="flex flex-col items-center gap-2 bg-white px-4">
-                            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm border-2 transition-all ${step >= 2 ? 'bg-blue-500 text-white border-blue-500 shadow-md shadow-blue-500/30' : 'bg-slate-50 text-slate-400 border-slate-200'}`}>
+                            <div className={`flex h-10 w-10 items-center justify-center rounded-full border-2 text-sm font-bold transition-all ${step >= 2 ? 'button-force-white border-blue-500 bg-gradient-to-r from-blue-700 via-blue-600 to-cyan-500' : 'bg-slate-50 text-slate-400 border-slate-200'}`}>
                                 2
                             </div>
                             <span className={`text-xs font-bold leading-none ${step >= 2 ? 'text-blue-600' : 'text-slate-400'}`}>Penilaian</span>
@@ -587,6 +586,8 @@ export default function FormIkas() {
                             onEdit={() => setStep(1)}
                             embedded={true}
                             jawabanIdMap={jawabanIdMap}
+                            canEditAnswers={!isEditBlockedByApproval}
+                            editLockMessage={activeEditRequestMeta.description}
                         />
                     </motion.div>
                 )}

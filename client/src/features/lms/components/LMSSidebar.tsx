@@ -45,7 +45,7 @@ export function LMSSidebar({ mobileOpen = false, onClose }: LMSSidebarProps) {
     const { courseMateri, courseQuizzes, completedMateriIds, quizProgressById } = useLmsStore();
     const role = getUserRole(currentUser);
     const navItems = [
-        { label: role === ROLE_USER_PIC ? "LMS" : "LMS / Pembelajaran Saya", href: "/lms", icon: LayoutDashboard },
+        { label: "Pembelajaran Saya", href: "/lms", icon: LayoutDashboard },
         { label: "Daftar Kelas", href: getCoursesRoute(), icon: BookOpen, description: "Materi Pembelajaran" },
         { label: "Progress Belajar", href: "/lms/progress", icon: TrendingUp },
     ];
@@ -64,7 +64,7 @@ export function LMSSidebar({ mobileOpen = false, onClose }: LMSSidebarProps) {
                     </div>
                     {(forMobile || !collapsed) && (
                         <div className="overflow-hidden">
-                            <img src={kssiLogo} alt="KSSI" className="h-6 w-auto object-contain" />
+                            <img src={kssiLogo} alt="KSSI" className="kssi-logo h-6 w-auto object-contain" />
                         </div>
                     )}
                 </div>
@@ -80,7 +80,7 @@ export function LMSSidebar({ mobileOpen = false, onClose }: LMSSidebarProps) {
             </div>
 
             {/* Nav */}
-            <nav className="flex-1 px-3 py-5 overflow-y-auto overflow-x-hidden">
+            <nav data-tour-id="lms-sidebar-menu" className="flex-1 px-3 py-5 overflow-y-auto overflow-x-hidden">
                 <div className="space-y-2">
                 {navItems.map((item) => {
                     // Exact match for /lms to prevent it from matching nested LMS routes
@@ -94,6 +94,7 @@ export function LMSSidebar({ mobileOpen = false, onClose }: LMSSidebarProps) {
                     return (
                         <div key={item.href}>
                             <NavLink
+                                data-tour-id={item.href === "/lms" ? "lms-sidebar-home" : undefined}
                                 to={item.href}
                                 onClick={forMobile ? onClose : undefined}
                                 title={!forMobile && collapsed ? item.label : ""}

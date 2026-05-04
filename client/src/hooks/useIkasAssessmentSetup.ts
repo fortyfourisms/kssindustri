@@ -175,6 +175,22 @@ export interface JawabanIdMap {
     [key: string]: number;
 }
 
+function normalizeScopedIkasId(value: string | number | null | undefined): string | null {
+    if (value === null || value === undefined) return null;
+    const normalized = String(value).trim();
+    return normalized || null;
+}
+
+function filterJawabanByIkasId<T extends { ikas_id?: string | number }>(
+    items: T[],
+    scopedIkasId?: string | number | null,
+): T[] {
+    const normalizedScopedIkasId = normalizeScopedIkasId(scopedIkasId);
+    if (!normalizedScopedIkasId) return items;
+
+    return items.filter((item) => normalizeScopedIkasId(item?.ikas_id) === normalizedScopedIkasId);
+}
+
 function buildJawabanIdMap(
     jawabanI: JawabanIdentifikasi[],
     jawabanP: JawabanProteksi[],
@@ -191,7 +207,7 @@ function buildJawabanIdMap(
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
-export function useIkasAssessmentSetup() {
+export function useIkasAssessmentSetup(scopedIkasId?: string | number | null) {
     const results = useQueries({
         queries: [
             // Questions
@@ -244,21 +260,21 @@ export function useIkasAssessmentSetup() {
 
     /** AnswerMap from existing jawaban — empty object while loading */
     const answerMap: AnswerMap = useMemo(() => {
-        const jawabanI = (jI.data ?? []) as JawabanIdentifikasi[];
-        const jawabanP = (jP.data ?? []) as JawabanProteksi[];
-        const jawabanD = (jD.data ?? []) as JawabanDeteksi[];
-        const jawabanG = (jG.data ?? []) as JawabanGulih[];
+        const jawabanI = filterJawabanByIkasId((jI.data ?? []) as JawabanIdentifikasi[], scopedIkasId);
+        const jawabanP = filterJawabanByIkasId((jP.data ?? []) as JawabanProteksi[], scopedIkasId);
+        const jawabanD = filterJawabanByIkasId((jD.data ?? []) as JawabanDeteksi[], scopedIkasId);
+        const jawabanG = filterJawabanByIkasId((jG.data ?? []) as JawabanGulih[], scopedIkasId);
         return buildAnswerMap(jawabanI, jawabanP, jawabanD, jawabanG);
-    }, [jI.data, jP.data, jD.data, jG.data]);
+    }, [jI.data, jP.data, jD.data, jG.data, scopedIkasId]);
 
     /** Map of questionId → existing jawabanId (for PUT vs POST logic) */
     const jawabanIdMap: JawabanIdMap = useMemo(() => {
-        const jawabanI = (jI.data ?? []) as JawabanIdentifikasi[];
-        const jawabanP = (jP.data ?? []) as JawabanProteksi[];
-        const jawabanD = (jD.data ?? []) as JawabanDeteksi[];
-        const jawabanG = (jG.data ?? []) as JawabanGulih[];
+        const jawabanI = filterJawabanByIkasId((jI.data ?? []) as JawabanIdentifikasi[], scopedIkasId);
+        const jawabanP = filterJawabanByIkasId((jP.data ?? []) as JawabanProteksi[], scopedIkasId);
+        const jawabanD = filterJawabanByIkasId((jD.data ?? []) as JawabanDeteksi[], scopedIkasId);
+        const jawabanG = filterJawabanByIkasId((jG.data ?? []) as JawabanGulih[], scopedIkasId);
         return buildJawabanIdMap(jawabanI, jawabanP, jawabanD, jawabanG);
-    }, [jI.data, jP.data, jD.data, jG.data]);
+    }, [jI.data, jP.data, jD.data, jG.data, scopedIkasId]);
 
     const hasExistingAnswers = Object.keys(answerMap).length > 0;
 

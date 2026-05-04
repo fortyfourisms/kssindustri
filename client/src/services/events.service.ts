@@ -1,4 +1,4 @@
-import { apiClient } from "@/services/apiClient";
+import { API_BASE_URL, apiClient } from "@/services/apiClient";
 import type {
   EventApiItem,
   EventItem,
@@ -24,6 +24,42 @@ function sortByNearestEvent(a: EventItem, b: EventItem) {
 
 function sortByLatestPastEvent(a: EventItem, b: EventItem) {
   return new Date(b.eventDate).getTime() - new Date(a.eventDate).getTime();
+}
+
+function decodeHtmlEntities(value: string) {
+  if (typeof document === "undefined") {
+    return value
+      .replaceAll("&lt;", "<")
+      .replaceAll("&gt;", ">")
+      .replaceAll("&quot;", '"')
+      .replaceAll("&#34;", '"')
+      .replaceAll("&#39;", "'")
+      .replaceAll("&amp;", "&");
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.innerHTML = value;
+  return textarea.value;
+}
+
+function stripHtml(value: string) {
+  return value
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function normalizeDescriptionHtml(value: string | undefined) {
+  const decoded = decodeHtmlEntities(value?.trim() || "");
+  return decoded || "<p>Deskripsi kegiatan akan segera tersedia.</p>";
+}
+
+function getPreviewText(value: string) {
+  const decoded = decodeHtmlEntities(value);
+  const withoutHtml = stripHtml(decoded);
+  return withoutHtml || "Deskripsi kegiatan akan segera tersedia.";
 }
 
 function shortenDescription(value: string) {
@@ -65,7 +101,7 @@ function resolveEventStatus(status: string | undefined, eventDate: string) {
 
 function mapEventItem(item: EventApiItem): EventItem {
   const title = item.judul?.trim() || "Kegiatan";
-  const fullDescription = item.deskripsi?.trim() || "Deskripsi kegiatan akan segera tersedia.";
+  const fullDescription = normalizeDescriptionHtml(item.deskripsi);
   const eventDate = item.tanggal || item.created_at || new Date().toISOString();
   const status = resolveEventStatus(item.status, eventDate);
   const numericId = typeof item.id === "number" ? item.id : Number(item.id);
@@ -74,7 +110,7 @@ function mapEventItem(item: EventApiItem): EventItem {
     id: String(item.id),
     numericId: Number.isFinite(numericId) ? numericId : undefined,
     title,
-    shortDescription: shortenDescription(fullDescription),
+    shortDescription: shortenDescription(getPreviewText(fullDescription)),
     fullDescription,
     eventDate,
     location: item.lokasi?.trim() || "Lokasi akan diumumkan",
@@ -96,6 +132,54 @@ function getResponseMessage(res: unknown) {
   if (!res || typeof res !== "object") return "";
   const record = res as Record<string, unknown>;
   return typeof record.message === "string" ? record.message : "";
+}
+
+function getNestedRecord(value: unknown, key: string) {
+  if (!value || typeof value !== "object") return null;
+  const nested = (value as Record<string, unknown>)[key];
+  return nested && typeof nested === "object" ? (nested as Record<string, unknown>) : null;
+}
+
+function getStringValue(record: Record<string, unknown> | null, key: string) {
+  if (!record) return undefined;
+  const value = record[key];
+  return typeof value === "string" && value.trim() ? value : undefined;
+}
+
+function resolveDownloadUrl(downloadUrl?: string) {
+  if (!downloadUrl) return undefined;
+  if (/^https?:\/\//i.test(downloadUrl)) return downloadUrl;
+  if (API_BASE_URL) {
+    return `${API_BASE_URL}${downloadUrl.startsWith("/") ? downloadUrl : `/${downloadUrl}`}`;
+  }
+  return downloadUrl;
+}
+
+function resolveQrImageSource(qrValue?: string) {
+  if (!qrValue) return undefined;
+
+  const normalized = qrValue.trim().replace(/\s+/g, "");
+  if (!normalized) return undefined;
+
+  if (normalized.startsWith("data:image/")) {
+    return normalized;
+  }
+
+  if (/^https?:\/\//i.test(normalized)) {
+    return normalized;
+  }
+
+  if (normalized.startsWith("/")) {
+    return API_BASE_URL
+      ? `${API_BASE_URL}${normalized}`
+      : normalized;
+  }
+
+  if (/^[A-Za-z0-9+/=]+$/.test(normalized)) {
+    return `data:image/png;base64,${normalized}`;
+  }
+
+  return normalized;
 }
 
 export const eventsService = {
@@ -141,6 +225,24 @@ export const eventsService = {
       sektor: payload.industrySector,
     };
     const res = await apiClient.post<unknown>(`/api/kegiatan/${eventId}/registrasi`, requestPayload);
+    const rootRecord = res && typeof res === "object" ? (res as Record<string, unknown>) : null;
+    const dataRecord = getNestedRecord(rootRecord, "data");
+    const qrPayloadRecord = getNestedRecord(dataRecord, "qr_payload") ?? getNestedRecord(rootRecord, "qr_payload");
+    const qrToken =
+      getStringValue(dataRecord, "qr_token") ??
+      getStringValue(rootRecord, "qr_token");
+    const qrCodeBase64 =
+      resolveQrImageSource(
+        getStringValue(qrPayloadRecord, "qr_code_base64") ??
+        getStringValue(dataRecord, "qr_code_base64") ??
+        getStringValue(rootRecord, "qr_code_base64"),
+      );
+    const downloadUrl = resolveDownloadUrl(
+      getStringValue(qrPayloadRecord, "download_url") ??
+      getStringValue(dataRecord, "download_url") ??
+      getStringValue(rootRecord, "download_url"),
+    );
+
     return {
       message: getResponseMessage(res) || "Registrasi berhasil dikirim.",
       registeredAt: new Date().toISOString(),
@@ -152,6 +254,9 @@ export const eventsService = {
         location: event.location,
         statusLabel: event.statusLabel,
       },
+      downloadUrl,
+      qrCodeBase64,
+      qrToken,
     };
   },
 };

@@ -146,10 +146,16 @@ export default function QuestionCard({
         {selectedDescription ? (
           <div className="mt-8 animate-in fade-in slide-in-from-bottom-4 duration-300">
             <div className="bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800 p-6 rounded-2xl shadow-sm">
-              <span className="inline-flex items-center justify-center px-3 py-1 rounded-full bg-emerald-500 dark:bg-emerald-600 text-white text-xs font-bold mb-3 uppercase tracking-wider shadow-sm">
+              <span
+                className="inline-flex items-center justify-center px-3 py-1 rounded-full bg-emerald-500 text-xs font-bold mb-3 uppercase tracking-wider shadow-sm dark:bg-emerald-600"
+                style={{ color: '#fff', WebkitTextFillColor: '#fff' }}
+              >
                 Indeks {getLabelForIndex(selectedAnswer!)}
               </span>
-              <p className="m-0 text-emerald-900 dark:text-emerald-100 text-base leading-relaxed">
+              <p
+                className="m-0 text-base leading-relaxed"
+                style={{ color: 'var(--dashboard-text)' }}
+              >
                 {selectedDescription}
               </p>
             </div>

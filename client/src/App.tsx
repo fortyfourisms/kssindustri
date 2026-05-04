@@ -171,7 +171,7 @@ const router = createBrowserRouter([
   {
     element: <LMSLayout />,
     children: [
-      { path: "/lms", element: <LMSDashboard />, handle: { title: "LMS / Pembelajaran Saya" } },
+      { path: "/lms", element: <LMSDashboard />, handle: { title: "Pembelajaran Saya" } },
       { path: "/lms/courses", element: <LMSMateri />, handle: { title: "Daftar Kelas" } },
       { path: "/lms/materi", element: <Navigate to="/lms/courses" replace /> },
       { path: "/lms/progress", element: <LMSProgress />, handle: { title: "Progress Belajar" } },

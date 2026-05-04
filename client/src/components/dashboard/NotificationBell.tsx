@@ -26,6 +26,7 @@ export function NotificationBell() {
         notifications,
         unreadCount,
         isConnected,
+        isAvailable,
         markAsRead,
         markAllAsRead,
     } = useNotifications();
@@ -95,7 +96,7 @@ export function NotificationBell() {
                         className="h-auto rounded-xl px-2 py-1 text-xs hover:bg-[var(--dashboard-action-soft-hover)] hover:text-[var(--dashboard-action-soft-fg-strong)]"
                         style={{ color: "var(--dashboard-action-soft-fg)" }}
                         onClick={() => void markAllAsRead()}
-                        disabled={unreadCount === 0}
+                        disabled={unreadCount === 0 || !isAvailable}
                     >
                         <CheckCheck className="h-3.5 w-3.5" />
                         Tandai semua
@@ -104,7 +105,20 @@ export function NotificationBell() {
 
                 <ScrollArea className="max-h-[420px]">
                     <div className="p-2">
-                        {notifications.length === 0 ? (
+                        {!isAvailable ? (
+                            <div
+                                className="rounded-2xl border border-dashed px-4 py-8 text-center"
+                                style={{
+                                    background: "var(--dashboard-notification-empty-bg)",
+                                    borderColor: "var(--dashboard-notification-empty-border)",
+                                }}
+                            >
+                                <p className="text-sm font-semibold" style={{ color: "var(--dashboard-text-soft)" }}>Notifikasi belum tersedia</p>
+                                <p className="mt-1 text-xs" style={{ color: "var(--dashboard-text-muted)" }}>
+                                    Akun ini belum memiliki akses ke endpoint notifikasi.
+                                </p>
+                            </div>
+                        ) : notifications.length === 0 ? (
                             <div
                                 className="rounded-2xl border border-dashed px-4 py-8 text-center"
                                 style={{

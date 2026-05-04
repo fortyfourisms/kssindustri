@@ -7,7 +7,6 @@ import { useCompanyProfile } from "@/hooks/useCompanyProfile";
 import { useToast } from "@/hooks/use-toast";
 import { RequireCompanyProfile } from "@/components/RequireCompanyProfile";
 import KseQuestionCard from "@/components/assessment/KseQuestionCard";
-import ProgressBar from "@/components/assessment/ProgressBar";
 import PaginationControl from "@/components/assessment/PaginationControl";
 import { kseCategories, getKategoriSE } from "@/data/kse-data";
 import { getKseEditRequestStatus, getKseEditStatusMeta, getLatestKseEditRequest, type KseEditRequestRecord } from "@/lib/kse-edit-request";
@@ -46,9 +45,10 @@ interface KseRespondentProfile {
 // ── Constants ────────────────────────────────────────────────────────────────
 const QUESTIONS_PER_PAGE = 10;
 const MAX_SCORE = 50;
-const SECONDARY_BUTTON_CLS = "dashboard-secondary-button inline-flex items-center justify-center gap-2 rounded-xl border px-5 py-2.5 text-sm font-bold transition";
-const PRIMARY_BUTTON_CLS = "dashboard-primary-button inline-flex items-center justify-center gap-2 rounded-xl px-6 py-2.5 text-sm font-bold text-white transition-all hover:-translate-y-0.5 active:translate-y-0";
-const WARNING_BUTTON_CLS = "dashboard-warning-button inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-[13px] font-bold text-white transition-all hover:-translate-y-0.5";
+const SECONDARY_BUTTON_CLS = "button-force-white dashboard-secondary-button inline-flex items-center justify-center gap-2 rounded-xl border px-5 py-2.5 text-sm font-bold transition";
+const PRIMARY_BUTTON_CLS = "button-force-white dashboard-primary-button inline-flex items-center justify-center gap-2 rounded-xl px-6 py-2.5 text-sm font-bold transition-all hover:-translate-y-0.5 active:translate-y-0";
+const SUCCESS_BUTTON_CLS = "button-force-white inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-700 via-emerald-600 to-green-500 px-6 py-2.5 text-sm font-bold transition-all hover:-translate-y-0.5 hover:from-emerald-800 hover:via-emerald-700 hover:to-green-600 active:translate-y-0";
+const WARNING_BUTTON_CLS = "button-force-white dashboard-warning-button inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-[13px] font-bold transition-all hover:-translate-y-0.5";
 
 const QUESTION_TO_FIELD: Record<string, string> = {
     '1.1': 'nilai_investasi',
@@ -618,7 +618,7 @@ export default function FormKse() {
 
                 {/* Header Info */}
                 <div className="bg-white/70 backdrop-blur-sm border border-white/60 rounded-2xl p-4 md:p-5 flex flex-col sm:flex-row items-start sm:items-center gap-3 shadow-sm">
-                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/25">
+                    <div className="button-force-white flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 ring-1 ring-white/20">
                         <FileText className="w-6 h-6 text-white" />
                     </div>
                     <div className="flex-1">
@@ -631,7 +631,7 @@ export default function FormKse() {
                     </div>
                     <button
                         onClick={() => navigate('/dashboard/kse')}
-                        className="flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 text-slate-600 font-semibold text-sm hover:bg-slate-50 transition-colors"
+                        className={`${SECONDARY_BUTTON_CLS} px-4`}
                     >
                         <ArrowLeft className="w-4 h-4" /> Kembali
                     </button>
@@ -645,7 +645,7 @@ export default function FormKse() {
                         </div>
 
                         <div className="flex flex-col items-center gap-2 bg-white px-4">
-                            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm border-2 transition-all ${currentStep >= 1 ? 'bg-blue-500 text-white border-blue-500 shadow-md shadow-blue-500/30' : 'bg-slate-50 text-slate-400 border-slate-200'}`}>
+                            <div className={`flex h-10 w-10 items-center justify-center rounded-full border-2 text-sm font-bold transition-all ${currentStep >= 1 ? 'button-force-white border-blue-500 bg-gradient-to-r from-blue-700 via-blue-600 to-cyan-500' : 'bg-slate-50 text-slate-400 border-slate-200'}`}>
                                 {currentStep > 1 ? <CheckCircle2 className="w-5 h-5" /> : '1'}
                             </div>
                             <span className={`text-xs font-bold leading-none ${currentStep >= 1 ? 'text-blue-600' : 'text-slate-400'}`}>Responden</span>
@@ -654,7 +654,7 @@ export default function FormKse() {
                         <div className="w-16"></div>
 
                         <div className="flex flex-col items-center gap-2 bg-white px-4">
-                            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm border-2 transition-all ${currentStep >= 2 ? 'bg-blue-500 text-white border-blue-500 shadow-md shadow-blue-500/30' : 'bg-slate-50 text-slate-400 border-slate-200'}`}>
+                            <div className={`flex h-10 w-10 items-center justify-center rounded-full border-2 text-sm font-bold transition-all ${currentStep >= 2 ? 'button-force-white border-blue-500 bg-gradient-to-r from-blue-700 via-blue-600 to-cyan-500' : 'bg-slate-50 text-slate-400 border-slate-200'}`}>
                                 2
                             </div>
                             <span className={`text-xs font-bold leading-none ${currentStep >= 2 ? 'text-blue-600' : 'text-slate-400'}`}>Penilaian</span>
@@ -789,7 +789,7 @@ export default function FormKse() {
                                                 <button
                                                     type="submit"
                                                     disabled={isEditLocked}
-                                                    className={`${PRIMARY_BUTTON_CLS} w-full sm:w-auto disabled:opacity-60 disabled:hover:translate-y-0`}
+                                                    className={`${editId ? PRIMARY_BUTTON_CLS : SUCCESS_BUTTON_CLS} w-full sm:w-auto disabled:opacity-60 disabled:hover:translate-y-0`}
                                                 >
                                                     {editId ? 'Lanjut ke Perubahan KSE' : 'Mulai Kategorisasi'}
                                                     <ChevronRight className="w-4 h-4" />
@@ -811,19 +811,6 @@ export default function FormKse() {
                             exit={{ opacity: 0 }}
                             transition={{ duration: 0.3 }}
                         >
-                            {/* Progress Bar */}
-                            <div className="sticky top-0 z-[99] -mt-2 mb-6 bg-[var(--dashboard-bg)] pt-2 pb-2">
-                                <div className="dashboard-surface rounded-2xl border p-4 shadow-sm backdrop-blur-md">
-                                    <ProgressBar
-                                        answered={answeredCount}
-                                        total={totalQuestions}
-                                        currentPage={currentPage}
-                                        totalPages={totalPagesInCategory}
-                                title="Kategorisasi Sistem Elektronik"
-                                    />
-                                </div>
-                            </div>
-
                             {editId && (
                                 <div className={`mb-5 flex items-start gap-3 rounded-2xl px-4 py-3 ${editRequestMeta.badgeClassName}`}>
                                     <Lock className="w-4 h-4 mt-0.5 shrink-0" />
@@ -842,8 +829,8 @@ export default function FormKse() {
 
                             <div className="grid grid-cols-1 lg:grid-cols-4 gap-5">
                                 {/* ── Sidebar ── */}
-                                <div className="lg:col-span-1">
-                                    <div className="lg:sticky lg:top-[90px] space-y-4">
+                                <div className="lg:col-span-1 lg:self-start">
+                                    <div className="sticky top-2 z-20 h-fit space-y-4">
 
                                         {/* Score / Gauge Card */}
                                         <div className="bg-white rounded-2xl border border-slate-100/50 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 overflow-hidden">
@@ -892,10 +879,10 @@ export default function FormKse() {
                                                     <button
                                                         onClick={handleSaveAndExit}
                                                         disabled={isSaving || isEditLocked}
-                                                        className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-[14px] font-bold text-[13px] text-white transition-all duration-300 relative overflow-hidden
+                                                        className={`button-force-white relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-[14px] px-4 py-3 text-[13px] font-bold transition-all duration-300
                                                                 ${isAllAnswered
-                                                                ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 shadow-md shadow-emerald-500/30 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-emerald-500/40'
-                                                                : 'bg-gradient-to-r from-amber-400 to-amber-500 shadow-md shadow-amber-400/30 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-amber-400/40'
+                                                                ? 'bg-gradient-to-r from-emerald-700 via-emerald-600 to-green-500 hover:-translate-y-0.5 hover:from-emerald-800 hover:via-emerald-700 hover:to-green-600'
+                                                                : 'bg-gradient-to-r from-yellow-400 via-amber-500 to-orange-500 hover:-translate-y-0.5 hover:from-yellow-500 hover:via-amber-500 hover:to-orange-600'
                                                             }
                                                                 disabled:opacity-50`}
                                                     >
@@ -964,7 +951,7 @@ export default function FormKse() {
                                         {/* Header */}
                                         <div className="p-4 md:p-6 pb-4">
                                             <div className="flex flex-col sm:flex-row sm:items-start gap-4">
-                                                <div className="w-11 h-11 min-w-[44px] rounded-[14px] bg-gradient-to-br from-indigo-500 to-indigo-400 text-white flex items-center justify-center shadow-md shadow-indigo-500/35">
+                                                <div className="button-force-white flex h-11 w-11 min-w-[44px] items-center justify-center rounded-[14px] bg-gradient-to-br from-indigo-500 to-indigo-400 ring-1 ring-white/20">
                                                     <FileText className="w-5 h-5" />
                                                 </div>
                                                 <div>

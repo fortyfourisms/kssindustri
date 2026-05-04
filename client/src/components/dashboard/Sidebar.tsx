@@ -89,7 +89,7 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
                     </div>
                     {(forMobile || !collapsed) && (
                         <div className="overflow-hidden">
-                            <img src={kssiLogo} alt="KSSI" className="h-6 w-auto object-contain brightness-200 saturate-0 invert" />
+                            <img src={kssiLogo} alt="KSSI" className="kssi-logo h-6 w-auto object-contain" />
                         </div>
                     )}
                 </div>

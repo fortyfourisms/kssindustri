@@ -9,6 +9,7 @@ interface PaginationControlProps {
   onNext: () => void;
   isSubmitStep?: boolean;
   onSubmitStep?: () => void;
+  isSubmitDisabled?: boolean;
 }
 
 export default function PaginationControl({
@@ -20,6 +21,7 @@ export default function PaginationControl({
   onNext,
   isSubmitStep,
   onSubmitStep,
+  isSubmitDisabled = false,
 }: PaginationControlProps) {
   return (
     <div className="flex flex-col-reverse sm:flex-row justify-between items-stretch sm:items-center gap-3 pt-5 border-t border-slate-100 mt-8">
@@ -45,18 +47,19 @@ export default function PaginationControl({
 
       <button
         type="button"
-        disabled={isSubmitStep ? false : !canGoNext}
+        disabled={isSubmitStep ? isSubmitDisabled : !canGoNext}
         onClick={isSubmitStep ? onSubmitStep : onNext}
-        className={`px-6 py-2.5 rounded-xl text-white font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2
+        className={`button-force-white px-6 py-2.5 rounded-xl font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2
           ${
-            (isSubmitStep || canGoNext)
+            (isSubmitStep ? !isSubmitDisabled : canGoNext)
               ? 'bg-gradient-to-r from-blue-600 to-blue-500 shadow-blue-500/25 hover:shadow-blue-500/40 hover:-translate-y-[1px]'
               : 'opacity-50 cursor-not-allowed bg-slate-400'
           }
         `}
+        style={{ color: '#fff' }}
       >
         {isSubmitStep ? 'Kirim' : 'Lanjut Berikutnya'}
-        {!isSubmitStep && <ArrowRight className="w-4 h-4" />}
+        {!isSubmitStep && <ArrowRight className="w-4 h-4" style={{ color: '#fff' }} />}
       </button>
     </div>
   );

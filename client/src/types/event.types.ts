@@ -51,4 +51,7 @@ export type EventRegistrationResult = {
   registeredAt: string;
   attendee: EventRegistrationPayload;
   event: Pick<EventItem, "id" | "title" | "eventDate" | "location" | "statusLabel">;
+  downloadUrl?: string;
+  qrCodeBase64?: string;
+  qrToken?: string;
 };
