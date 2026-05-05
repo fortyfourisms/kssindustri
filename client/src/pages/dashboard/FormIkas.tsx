@@ -20,6 +20,7 @@ import { useCompanyProfile } from "@/hooks/useCompanyProfile";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getKategoriKematangan } from "@/types/ikas.types";
 import { getIkasEditRequestStatus, getIkasEditStatusMeta } from "@/lib/ikas-edit-request";
+import { AppButton, AppInput, AppTextarea, FormActions, FormGroup, StatusBanner } from "@/ui";
 
 const respondentSchema = z.object({
     responden: z.string().min(1, "Nama responden wajib diisi"),
@@ -32,8 +33,9 @@ const respondentSchema = z.object({
 
 type RespondentFormValues = z.infer<typeof respondentSchema>;
 
-const INPUT_CLS = "w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white/80 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400 transition";
-const LABEL_CLS = "block text-sm font-semibold text-slate-700 mb-1.5";
+const PANEL_CLS = "dashboard-section-card rounded-2xl border p-6 shadow-[0_24px_54px_rgba(148,163,184,0.18)]";
+const PANEL_SOFT_CLS = "dashboard-surface rounded-2xl border p-4 shadow-sm";
+const PANEL_HEADER_CLS = "dashboard-divider col-span-1 border-b pb-2 md:col-span-2";
 
 function resolveCompanyId(...candidates: Array<unknown>) {
     for (const candidate of candidates) {
@@ -116,31 +118,9 @@ export default function FormIkas() {
     const perusahaanData = perusahaan ?? null;
 
     // ── Assessment setup from API (questions + existing answers) ───────────────
-    const {
-        assessmentData,
-        answerMap,
-        jawabanIdMap,
-        hasExistingAnswers,
-        isLoading: setupLoading,
-    } = useIkasAssessmentSetup();
-
     // Sync questions structure into store
     const setAssessmentStructure = useAssessmentStore(state => state.setAssessmentStructure);
     const hydrateAnswers         = useAssessmentStore(state => state.hydrateAnswers);
-
-    useEffect(() => {
-        if (assessmentData) {
-            setAssessmentStructure(assessmentData);
-        }
-    }, [assessmentData, setAssessmentStructure]);
-
-    // Hydrate existing answers from DB into store once
-    useEffect(() => {
-        if (hasExistingAnswers && Object.keys(answerMap).length > 0) {
-            hydrateAnswers(answerMap);
-        }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [hasExistingAnswers]);
 
     // ── Initialize store & stakeholder ─────────────────────────────────────────
     useEffect(() => {
@@ -218,12 +198,33 @@ export default function FormIkas() {
         () => matchingYearIkasRecord ?? (selectedYear === null ? latestIkasRecord : null),
         [matchingYearIkasRecord, selectedYear, latestIkasRecord]
     );
+    const activeIkasId = activeIkasRecord?.id ? String(activeIkasRecord.id) : null;
     const activeVerificationStatus = useMemo(() => getVerificationStatus(activeIkasRecord), [activeIkasRecord]);
     const activeEditRequestStatus = useMemo(() => getIkasEditRequestStatus(activeIkasRecord), [activeIkasRecord]);
     const activeEditRequestMeta = useMemo(() => getIkasEditStatusMeta(activeEditRequestStatus), [activeEditRequestStatus]);
     const isEditBlockedByApproval = !!activeIkasRecord
         && activeVerificationStatus === "Terverifikasi"
         && activeEditRequestStatus !== "approved";
+
+    const {
+        assessmentData,
+        answerMap,
+        jawabanIdMap,
+        hasExistingAnswers,
+        isLoading: setupLoading,
+    } = useIkasAssessmentSetup(activeIkasId);
+
+    useEffect(() => {
+        if (assessmentData) {
+            setAssessmentStructure(assessmentData);
+        }
+    }, [assessmentData, setAssessmentStructure]);
+
+    useEffect(() => {
+        if (!setupLoading) {
+            hydrateAnswers(answerMap);
+        }
+    }, [answerMap, hydrateAnswers, setupLoading]);
 
     // ── Detect existing record → set existingIkasId ────────────────────────────
     useEffect(() => {
@@ -361,9 +362,9 @@ export default function FormIkas() {
             <div className="max-w-7xl mx-auto space-y-6 pb-12">
 
                 {/* Header Info */}
-                <div className="bg-white/70 backdrop-blur-sm border border-white/60 rounded-2xl p-4 md:p-5 flex flex-col sm:flex-row items-start sm:items-center gap-3 shadow-sm">
-                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/25">
-                        <FileText className="w-6 h-6 text-white" />
+                <div className={`${PANEL_SOFT_CLS} flex flex-col items-start gap-3 md:p-5 sm:flex-row sm:items-center`}>
+                    <div className="button-force-white flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 ring-1 ring-white/20">
+                        <FileText className="w-6 h-6" />
                     </div>
                     <div>
                         <h1 className="font-black text-slate-900 font-display text-xl">
@@ -378,7 +379,7 @@ export default function FormIkas() {
                 </div>
 
                 {/* Step Indicator */}
-                <div className="bg-white/70 backdrop-blur-md border border-slate-200/60 rounded-2xl p-3 md:p-4 shadow-sm">
+                <div className={`${PANEL_SOFT_CLS} backdrop-blur-md p-3 md:p-4`}>
                     <div className="flex items-center justify-center gap-4 relative">
                         {/* Connecting line */}
                         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-1 bg-slate-200 rounded -z-10">
@@ -387,7 +388,7 @@ export default function FormIkas() {
 
                         {/* Step 1 */}
                         <div className="flex flex-col items-center gap-2 bg-white px-4">
-                            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm border-2 transition-all ${step >= 1 ? 'bg-blue-500 text-white border-blue-500 shadow-md shadow-blue-500/30' : 'bg-slate-50 text-slate-400 border-slate-200'}`}>
+                            <div className={`flex h-10 w-10 items-center justify-center rounded-full border-2 text-sm font-bold transition-all ${step >= 1 ? 'button-force-white border-blue-500 bg-gradient-to-r from-blue-700 via-blue-600 to-cyan-500' : 'bg-slate-50 text-slate-400 border-slate-200'}`}>
                                 {step > 1 ? <CheckCircle2 className="w-5 h-5" /> : '1'}
                             </div>
                             <span className={`text-xs font-bold leading-none ${step >= 1 ? 'text-blue-600' : 'text-slate-400'}`}>Responden</span>
@@ -397,7 +398,7 @@ export default function FormIkas() {
 
                         {/* Step 2 */}
                         <div className="flex flex-col items-center gap-2 bg-white px-4">
-                            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm border-2 transition-all ${step >= 2 ? 'bg-blue-500 text-white border-blue-500 shadow-md shadow-blue-500/30' : 'bg-slate-50 text-slate-400 border-slate-200'}`}>
+                            <div className={`flex h-10 w-10 items-center justify-center rounded-full border-2 text-sm font-bold transition-all ${step >= 2 ? 'button-force-white border-blue-500 bg-gradient-to-r from-blue-700 via-blue-600 to-cyan-500' : 'bg-slate-50 text-slate-400 border-slate-200'}`}>
                                 2
                             </div>
                             <span className={`text-xs font-bold leading-none ${step >= 2 ? 'text-blue-600' : 'text-slate-400'}`}>Penilaian</span>
@@ -410,82 +411,94 @@ export default function FormIkas() {
                     <motion.form
                         onSubmit={handleSubmit(onSubmit)}
                         initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
-                        className="bg-white/70 backdrop-blur-sm border border-slate-200/60 rounded-2xl shadow-sm p-6"
+                        className={PANEL_CLS}
                     >
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <FormGroup className="gap-6">
 
-                            <div className="col-span-1 md:col-span-2 border-b border-slate-100 pb-2">
-                                <h2 className="font-bold text-slate-800 flex items-center gap-2">
+                            <div className={PANEL_HEADER_CLS}>
+                                <h2 className="flex items-center gap-2 font-bold text-[var(--dashboard-text)]">
                                     <UserCircle2 className="w-5 h-5 text-indigo-500" /> Data Responden
                                 </h2>
                             </div>
 
-                            {/* Read-only company fields */}
-                            <div>
-                                <label className={LABEL_CLS}>Nama Perusahaan</label>
-                                <input type="text" value={perusahaanData?.nama_perusahaan || ''} readOnly className={`${INPUT_CLS} bg-slate-50 text-slate-500`} />
-                                <p className="text-xs text-slate-400 mt-1">Data dari profil perusahaan</p>
-                            </div>
+                            <AppInput
+                                label="Nama Perusahaan"
+                                value={perusahaanData?.nama_perusahaan || ""}
+                                readOnly
+                                helperText="Data dari profil perusahaan"
+                            />
 
-                            <div>
-                                <label className={LABEL_CLS}>Email</label>
-                                <input type="email" value={perusahaanData?.email || ''} readOnly className={`${INPUT_CLS} bg-slate-50 text-slate-500`} />
-                                <p className="text-xs text-slate-400 mt-1">Data dari profil perusahaan</p>
-                            </div>
+                            <AppInput
+                                label="Email"
+                                type="email"
+                                value={perusahaanData?.email || ""}
+                                readOnly
+                                helperText="Data dari profil perusahaan"
+                            />
 
-                            <div className="col-span-1 md:col-span-2">
-                                <label className={LABEL_CLS}>Alamat Lengkap</label>
-                                <textarea rows={2} value={perusahaanData?.alamat || ''} readOnly className={`${INPUT_CLS} bg-slate-50 text-slate-500`} />
-                                <p className="text-xs text-slate-400 mt-1">Data dari profil perusahaan</p>
-                            </div>
+                            <AppTextarea
+                                label="Alamat Lengkap"
+                                value={perusahaanData?.alamat || ""}
+                                readOnly
+                                rows={2}
+                                helperText="Data dari profil perusahaan"
+                                containerClassName="col-span-1 md:col-span-2"
+                                className="min-h-[88px]"
+                            />
 
-                            {/* Editable respondent fields */}
-                            <div>
-                                <label className={LABEL_CLS}>Nama Responden <span className="text-red-500">*</span></label>
-                                <input {...register("responden")} className={INPUT_CLS} placeholder="Nama lengkap" />
-                                {errors.responden && <p className="text-red-500 text-xs mt-1">{errors.responden.message}</p>}
-                            </div>
+                            <AppInput
+                                label={<>Nama Responden <span className="text-red-500">*</span></>}
+                                placeholder="Nama lengkap"
+                                error={errors.responden?.message}
+                                {...register("responden")}
+                            />
 
-                            <div>
-                                <label className={LABEL_CLS}>Jabatan <span className="text-red-500">*</span></label>
-                                <input {...register("jabatan")} className={INPUT_CLS} placeholder="Jabatan" />
-                                {errors.jabatan && <p className="text-red-500 text-xs mt-1">{errors.jabatan.message}</p>}
-                            </div>
+                            <AppInput
+                                label={<>Jabatan <span className="text-red-500">*</span></>}
+                                placeholder="Jabatan"
+                                error={errors.jabatan?.message}
+                                {...register("jabatan")}
+                            />
 
-                            <div>
-                                <label className={LABEL_CLS}>Nomor Telepon <span className="text-red-500">*</span></label>
-                                <input type="tel" {...register("telepon")} className={INPUT_CLS} placeholder="0812345678" />
-                                {errors.telepon && <p className="text-red-500 text-xs mt-1">{errors.telepon.message}</p>}
-                            </div>
+                            <AppInput
+                                label={<>Nomor Telepon <span className="text-red-500">*</span></>}
+                                type="tel"
+                                placeholder="0812345678"
+                                error={errors.telepon?.message}
+                                {...register("telepon")}
+                            />
 
-                            <div>
-                                <label className={LABEL_CLS}>Tanggal Penilaian <span className="text-red-500">*</span></label>
-                                <input type="date" {...register("tanggal")} className={INPUT_CLS} />
-                                {errors.tanggal && <p className="text-red-500 text-xs mt-1">{errors.tanggal.message}</p>}
-                            </div>
+                            <AppInput
+                                label={<>Tanggal Penilaian <span className="text-red-500">*</span></>}
+                                type="date"
+                                error={errors.tanggal?.message}
+                                {...register("tanggal")}
+                            />
 
-                            <div>
-                                <label className={LABEL_CLS}>Target Nilai <span className="text-red-500">*</span></label>
-                                <input type="number" step="0.01" {...register("target_nilai")} className={INPUT_CLS} placeholder="0" />
-                                {errors.target_nilai && <p className="text-red-500 text-xs mt-1">{errors.target_nilai.message}</p>}
-                            </div>
+                            <AppInput
+                                label={<>Target Nilai <span className="text-red-500">*</span></>}
+                                type="number"
+                                step="0.01"
+                                placeholder="0"
+                                error={errors.target_nilai?.message}
+                                {...register("target_nilai")}
+                            />
 
-                            <div>
-                                <label className={LABEL_CLS}>Target Level Kematangan <span className="text-red-500">*</span></label>
-                                <input readOnly type="text" {...register("kategori_kematangan_keamanan_siber")} className={`${INPUT_CLS} bg-slate-50 text-slate-500 cursor-not-allowed select-none`} placeholder="Kategori Kematangan Keamanan Siber" />
-                                {errors.kategori_kematangan_keamanan_siber && <p className="text-red-500 text-xs mt-1">{errors.kategori_kematangan_keamanan_siber.message}</p>}
-                            </div>
-                        </div>
+                            <AppInput
+                                label={<>Target Level Kematangan <span className="text-red-500">*</span></>}
+                                readOnly
+                                placeholder="Kategori Kematangan Keamanan Siber"
+                                error={errors.kategori_kematangan_keamanan_siber?.message}
+                                className="select-none"
+                                {...register("kategori_kematangan_keamanan_siber")}
+                            />
+                        </FormGroup>
 
                         {/* Error Banner */}
                         <AnimatePresence>
                             {storeError && (
-                                <motion.div
-                                    initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-                                    className="mt-5 flex items-start gap-3 p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm"
-                                >
-                                    <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
-                                    <span>{storeError}</span>
+                                <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} className="mt-5">
+                                    <StatusBanner variant="danger" description={storeError} />
                                 </motion.div>
                             )}
                         </AnimatePresence>
@@ -493,27 +506,20 @@ export default function FormIkas() {
                         {/* Success notice */}
                         <AnimatePresence>
                             {isEditBlockedByApproval && (
-                                <motion.div
-                                    initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-                                    className="mt-5 flex items-start gap-3 p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-sm"
-                                >
-                                    <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
-                                    <div className="space-y-1">
-                                        <p className="font-semibold">Perubahan data IKAS memerlukan persetujuan admin.</p>
-                                        <p>{activeEditRequestMeta.description}</p>
-                                    </div>
+                                <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} className="mt-5">
+                                    <StatusBanner
+                                        variant="warning"
+                                        title="Perubahan data IKAS memerlukan persetujuan admin."
+                                        description={activeEditRequestMeta.description}
+                                    />
                                 </motion.div>
                             )}
                         </AnimatePresence>
 
                         <AnimatePresence>
                             {respondentSaved && !isDirty && (
-                                <motion.div
-                                    initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-                                    className="mt-5 flex items-center gap-2.5 p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm font-medium"
-                                >
-                                    <CheckCircle2 className="w-4 h-4 shrink-0" />
-                                    Data responden telah disimpan. Anda dapat lanjut ke penilaian.
+                                <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} className="mt-5">
+                                    <StatusBanner variant="success" description="Data responden telah disimpan. Anda dapat lanjut ke penilaian." />
                                 </motion.div>
                             )}
                         </AnimatePresence>
@@ -521,53 +527,51 @@ export default function FormIkas() {
                         {/* Unsaved changes notice */}
                         <AnimatePresence>
                             {isDirty && respondentSaved === false && (
-                                <motion.div
-                                    initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-                                    className="mt-5 flex items-center gap-2.5 p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-sm"
-                                >
-                                    <AlertCircle className="w-4 h-4 shrink-0" />
-                                    Ada perubahan yang belum disimpan. Klik <strong className="mx-1">Simpan Data Responden</strong> sebelum melanjutkan.
+                                <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} className="mt-5">
+                                    <StatusBanner
+                                        variant="warning"
+                                        description={<>Ada perubahan yang belum disimpan. Klik <strong className="mx-1">Simpan Data Responden</strong> sebelum melanjutkan.</>}
+                                    />
                                 </motion.div>
                             )}
                         </AnimatePresence>
 
                         {/* Footer Actions */}
-                        <div className="flex flex-col-reverse sm:flex-row justify-between items-stretch sm:items-center gap-3 mt-8 pt-5 border-t border-slate-100">
-                            <button
+                        <FormActions>
+                            <AppButton
                                 type="button"
+                                variant="secondary"
                                 onClick={() => navigate('/dashboard/ikas')}
-                                className="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm shadow-sm hover:bg-slate-50 transition-colors flex items-center gap-2"
+                                leftIcon={<ArrowLeft className="w-4 h-4" />}
                             >
-                                <ArrowLeft className="w-4 h-4" /> Kembali
-                            </button>
+                                Kembali
+                            </AppButton>
 
                             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                                 {/* Save Button */}
-                                <button
+                                <AppButton
                                     type="submit"
                                     disabled={isLoading || !isCompanyReady || isEditBlockedByApproval}
-                                    className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-500 text-white font-bold text-sm shadow-md shadow-indigo-500/25 hover:shadow-indigo-500/40 transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                                    loading={isLoading}
+                                    leftIcon={!isLoading ? <Save className="w-4 h-4" /> : undefined}
                                 >
-                                    {isLoading ? (
-                                        <><Loader2 className="w-4 h-4 animate-spin" /> Menyimpan...</>
-                                    ) : (
-                                        <><Save className="w-4 h-4" /> {canProceed ? 'Perbarui Data Responden' : 'Simpan & Lanjut ke Penilaian'}</>
-                                    )}
-                                </button>
+                                    {canProceed ? 'Perbarui Data Responden' : 'Simpan & Lanjut ke Penilaian'}
+                                </AppButton>
 
                                 {/* Continue Button — gated by respondentSaved */}
                                 {canProceed && (
-                                    <button
+                                    <AppButton
                                         type="button"
                                         onClick={() => setStep(2)}
                                         disabled={isEditBlockedByApproval}
-                                        className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 text-white font-bold text-sm shadow-md shadow-blue-500/25 hover:shadow-blue-500/40 transition-all flex items-center justify-center gap-2"
+                                        variant="outline"
+                                        rightIcon={<ArrowRight className="w-4 h-4" />}
                                     >
-                                        Lanjut ke Penilaian <ArrowRight className="w-4 h-4" />
-                                    </button>
+                                        Lanjut ke Penilaian
+                                    </AppButton>
                                 )}
                             </div>
-                        </div>
+                        </FormActions>
                     </motion.form>
                 )}
 
@@ -575,13 +579,15 @@ export default function FormIkas() {
                 {step === 2 && (
                     <motion.div
                         initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
-                        className="bg-white/70 backdrop-blur-sm border border-slate-200/60 rounded-2xl shadow-sm p-4 md:p-6"
+                        className={`${PANEL_CLS} p-4 md:p-6`}
                     >
                         <AssessmentView
                             onBack={() => navigate('/dashboard/ikas')}
                             onEdit={() => setStep(1)}
                             embedded={true}
                             jawabanIdMap={jawabanIdMap}
+                            canEditAnswers={!isEditBlockedByApproval}
+                            editLockMessage={activeEditRequestMeta.description}
                         />
                     </motion.div>
                 )}

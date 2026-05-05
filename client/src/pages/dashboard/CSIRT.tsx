@@ -14,10 +14,24 @@ import { useCsirtProfile } from "@/hooks/useCsirtProfile";
 import { useUser } from "@/hooks/useAuth";
 import type { SdmCsirt, SeCsirt } from "@/types/csirt.types";
 
-const INPUT_CLS = "w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white/80 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400 transition";
-const LABEL_CLS = "block text-sm font-semibold text-slate-700 mb-1.5";
-const FILE_TRIGGER_CLS = "inline-flex shrink-0 cursor-pointer items-center justify-center rounded-xl bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 transition hover:bg-blue-100";
-const FILE_WRAPPER_CLS = "flex w-full items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm";
+const INPUT_CLS = "dashboard-input w-full rounded-xl border px-4 py-2.5 text-sm transition";
+const LABEL_CLS = "dashboard-label mb-1.5 block text-sm font-semibold";
+const FILE_TRIGGER_CLS = "inline-flex shrink-0 cursor-pointer items-center justify-center rounded-xl bg-[var(--dashboard-action-soft-bg)] px-4 py-2 text-sm font-semibold text-[var(--dashboard-action-soft-fg-strong)] transition hover:bg-[var(--dashboard-action-soft-hover)]";
+const FILE_WRAPPER_CLS = "dashboard-table-surface dashboard-table-divider flex w-full items-center gap-3 rounded-xl border px-3 py-2 text-sm";
+const MODAL_BACKDROP_CLS = "dashboard-modal-backdrop fixed inset-0 z-50 flex items-stretch justify-center p-0 backdrop-blur-sm sm:items-center sm:p-4";
+const MODAL_PANEL_CLS = "dashboard-modal-panel h-full w-full rounded-none border p-4 shadow-2xl sm:h-auto sm:max-h-[calc(100dvh-2rem)] sm:rounded-3xl sm:p-6";
+const CLOSE_BUTTON_CLS = "dashboard-modal-close rounded-xl p-1 transition hover:bg-[var(--dashboard-surface-muted)] hover:text-[var(--dashboard-text)]";
+const SECONDARY_BUTTON_CLS = "button-force-white dashboard-secondary-button inline-flex items-center justify-center gap-2 rounded-xl border py-2.5 text-sm font-bold transition disabled:opacity-50";
+const PRIMARY_BUTTON_CLS = "button-force-white dashboard-primary-button inline-flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-bold transition disabled:opacity-50";
+const WARNING_BUTTON_CLS = "button-force-white dashboard-warning-button inline-flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-bold transition disabled:opacity-50";
+const SUCCESS_BUTTON_CLS = "button-force-white inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-700 via-emerald-600 to-green-500 py-2.5 text-sm font-bold transition hover:from-emerald-800 hover:via-emerald-700 hover:to-green-600 disabled:opacity-50";
+const SELECTED_BUTTON_CLS = "dashboard-option-selected";
+const TAG_INPUT_BUTTON_CLS = "dashboard-table-surface dashboard-text-soft rounded-xl border p-2.5 transition hover:border-[var(--dashboard-selection-border)] hover:bg-[var(--dashboard-surface)] disabled:cursor-not-allowed disabled:opacity-50";
+const TAG_CHIP_CLS = "dashboard-chip-info flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-bold";
+const ACTION_EDIT_BUTTON_CLS = "dashboard-chip-warning rounded-xl p-2 transition-colors";
+const ACTION_DELETE_BUTTON_CLS = "dashboard-chip-danger rounded-xl p-2 transition-colors disabled:opacity-50";
+const ACTION_VIEW_BUTTON_CLS = "dashboard-chip-info rounded-xl p-2 transition-colors";
+const DOC_BUTTON_CLS = "dashboard-chip-success flex-1 rounded-xl border p-3 flex items-center gap-3 text-left transition-colors";
 
 function extractFileName(path?: string | null) {
     if (!path) return "";
@@ -96,7 +110,7 @@ function FileUploadField({
                     Pilih File
                     <input type="file" accept={accept} onChange={handleChange} className="sr-only" />
                 </label>
-                <span className={`min-w-0 truncate ${previewName ? "text-slate-700" : "text-slate-400"}`}>
+                <span className="min-w-0 truncate" style={{ color: previewName ? "var(--dashboard-text-soft)" : "var(--dashboard-text-muted)" }}>
                     {previewName || placeholder}
                 </span>
             </div>
@@ -122,9 +136,9 @@ function CsirtReadinessModal({
         question: string,
         description: string,
     ) => (
-        <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
-            <p className="text-sm font-bold text-slate-800">{question}</p>
-            <p className="mt-1 text-sm text-slate-500">{description}</p>
+        <div className="dashboard-section-muted rounded-2xl border p-4">
+            <p className="text-sm font-bold" style={{ color: "var(--dashboard-text)" }}>{question}</p>
+            <p className="mt-1 text-sm" style={{ color: "var(--dashboard-text-muted)" }}>{description}</p>
             <div className="mt-4 grid grid-cols-2 gap-3">
                 {(["ya", "tidak"] as const).map((option) => {
                     const selected = value[key] === option;
@@ -134,8 +148,8 @@ function CsirtReadinessModal({
                             type="button"
                             onClick={() => onChange({ ...value, [key]: option })}
                             className={`rounded-xl border px-4 py-3 text-sm font-bold transition ${selected
-                                ? "border-blue-500 bg-blue-50 text-blue-700 shadow-sm"
-                                : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                                ? SELECTED_BUTTON_CLS
+                                : "dashboard-table-surface dashboard-text-soft hover:border-[var(--dashboard-input-border-hover)] hover:bg-[var(--dashboard-surface)]"
                                 }`}
                         >
                             {option === "ya" ? "Ya" : "Tidak"}
@@ -147,19 +161,19 @@ function CsirtReadinessModal({
     );
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
+        <div className={MODAL_BACKDROP_CLS}>
             <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
-                className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl p-6"
+                className={`${MODAL_PANEL_CLS} max-w-2xl`}
             >
                 <div className="flex items-center justify-between mb-6">
                     <div>
-                        <h3 className="font-black text-slate-900 font-display text-xl">Informasi Awal CSIRT</h3>
-                        <p className="text-sm text-slate-500 mt-1">Jawaban ini hanya dipakai untuk alur tampilan form dan tidak disimpan ke database.</p>
+                        <h3 className="font-display text-xl font-black" style={{ color: "var(--dashboard-text)" }}>Informasi Awal CSIRT</h3>
+                        <p className="mt-1 text-sm" style={{ color: "var(--dashboard-text-muted)" }}>Jawaban ini hanya dipakai untuk alur tampilan form dan tidak disimpan ke database.</p>
                     </div>
-                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition p-1 bg-slate-100 rounded-xl hover:bg-slate-200">
+                    <button onClick={onClose} className={CLOSE_BUTTON_CLS}>
                         <X className="w-5 h-5" />
                     </button>
                 </div>
@@ -177,11 +191,11 @@ function CsirtReadinessModal({
                     )}
                 </div>
 
-                <div className="flex gap-3 pt-6">
+                <div className="flex flex-col-reverse gap-3 pt-6 sm:flex-row">
                     <button
                         type="button"
                         onClick={onClose}
-                        className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 transition"
+                        className={`${SECONDARY_BUTTON_CLS} flex-1`}
                     >
                         Batal
                     </button>
@@ -189,7 +203,7 @@ function CsirtReadinessModal({
                         type="button"
                         onClick={onContinue}
                         disabled={!canContinue}
-                        className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-lg shadow-blue-500/25 disabled:opacity-50 disabled:hover:bg-blue-600 transition"
+                        className={`${PRIMARY_BUTTON_CLS} flex-1`}
                     >
                         Lanjut Isi Profil
                     </button>
@@ -223,11 +237,11 @@ function CreateCsirtModal({ onSubmit, onClose, loading, idPerusahaan }: any) {
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white rounded-3xl shadow-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto p-6">
+        <div className={MODAL_BACKDROP_CLS}>
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className={`${MODAL_PANEL_CLS} overflow-y-auto sm:max-w-xl`}>
                 <div className="flex items-center justify-between mb-6">
-                    <h3 className="font-black text-slate-900 font-display text-xl">Tambah CSIRT</h3>
-                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition p-1 bg-slate-100 rounded-xl hover:bg-slate-200"><X className="w-5 h-5" /></button>
+                    <h3 className="font-display text-xl font-black" style={{ color: "var(--dashboard-text)" }}>Tambah CSIRT</h3>
+                    <button onClick={onClose} className={CLOSE_BUTTON_CLS}><X className="w-5 h-5" /></button>
                 </div>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
@@ -250,7 +264,7 @@ function CreateCsirtModal({ onSubmit, onClose, loading, idPerusahaan }: any) {
                     </div>
                     <div className="pt-2">
                         <FileUploadField
-                            label={<>Foto CSIRT <span className="text-xs font-normal text-slate-400">(Opsional)</span></>}
+                            label={<>Foto CSIRT <span className="text-xs font-normal" style={{ color: "var(--dashboard-text-muted)" }}>(Opsional)</span></>}
                             accept=".jpg,.jpeg,.png"
                             allowedExtensions={[".jpg", ".jpeg", ".png"]}
                             file={photoCsirt}
@@ -260,7 +274,7 @@ function CreateCsirtModal({ onSubmit, onClose, loading, idPerusahaan }: any) {
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <FileUploadField
-                            label={<>Dokumen RFC2350 <span className="text-xs font-normal text-slate-400">(Opsional)</span></>}
+                            label={<>Dokumen RFC2350 <span className="text-xs font-normal" style={{ color: "var(--dashboard-text-muted)" }}>(Opsional)</span></>}
                             accept=".pdf"
                             allowedExtensions={[".pdf"]}
                             file={fileRfc}
@@ -268,7 +282,7 @@ function CreateCsirtModal({ onSubmit, onClose, loading, idPerusahaan }: any) {
                             onFileChange={setFileRfc}
                         />
                         <FileUploadField
-                            label={<>PGP Public Key <span className="text-xs font-normal text-slate-400">(Opsional)</span></>}
+                            label={<>PGP Public Key <span className="text-xs font-normal" style={{ color: "var(--dashboard-text-muted)" }}>(Opsional)</span></>}
                             accept=".asc"
                             allowedExtensions={[".asc"]}
                             file={filePgp}
@@ -276,7 +290,7 @@ function CreateCsirtModal({ onSubmit, onClose, loading, idPerusahaan }: any) {
                             onFileChange={setFilePgp}
                         />
                         <FileUploadField
-                            label={<>STR <span className="text-xs font-normal text-slate-400">(Opsional)</span></>}
+                            label={<>STR <span className="text-xs font-normal" style={{ color: "var(--dashboard-text-muted)" }}>(Opsional)</span></>}
                             accept=".pdf"
                             allowedExtensions={[".pdf"]}
                             file={fileStr}
@@ -284,9 +298,9 @@ function CreateCsirtModal({ onSubmit, onClose, loading, idPerusahaan }: any) {
                             onFileChange={setFileStr}
                         />
                     </div>
-                    <div className="flex gap-3 pt-6">
-                        <button type="button" onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 transition">Batal</button>
-                        <button type="submit" disabled={loading} className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-lg shadow-blue-500/25 disabled:opacity-50 flex items-center justify-center gap-2 transition">
+                    <div className="flex flex-col-reverse gap-3 pt-6 sm:flex-row">
+                        <button type="button" onClick={onClose} className={`${SECONDARY_BUTTON_CLS} flex-1`}>Batal</button>
+                        <button type="submit" disabled={loading} className={`${PRIMARY_BUTTON_CLS} flex-1`}>
                             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                             Buat Profil CSIRT
                         </button>
@@ -326,11 +340,11 @@ function EditCsirtModal({ initial, onSubmit, onClose, loading, idPerusahaan }: a
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white rounded-3xl shadow-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto p-6">
+        <div className={MODAL_BACKDROP_CLS}>
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className={`${MODAL_PANEL_CLS} overflow-y-auto sm:max-w-xl`}>
                 <div className="flex items-center justify-between mb-6">
-                    <h3 className="font-black text-slate-900 font-display text-xl">Edit Profil CSIRT</h3>
-                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition p-1 bg-slate-100 rounded-xl hover:bg-slate-200"><X className="w-5 h-5" /></button>
+                    <h3 className="font-display text-xl font-black" style={{ color: "var(--dashboard-text)" }}>Edit Profil CSIRT</h3>
+                    <button onClick={onClose} className={CLOSE_BUTTON_CLS}><X className="w-5 h-5" /></button>
                 </div>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
@@ -353,7 +367,7 @@ function EditCsirtModal({ initial, onSubmit, onClose, loading, idPerusahaan }: a
                     </div>
                     <div className="pt-2">
                         <FileUploadField
-                            label={<>Foto CSIRT <span className="text-xs font-normal text-slate-400">(JPG, JPEG, PNG, Opsional)</span></>}
+                            label={<>Foto CSIRT <span className="text-xs font-normal" style={{ color: "var(--dashboard-text-muted)" }}>(JPG, JPEG, PNG, Opsional)</span></>}
                             accept=".jpg,.jpeg,.png"
                             allowedExtensions={[".jpg", ".jpeg", ".png"]}
                             file={photoCsirt}
@@ -364,7 +378,7 @@ function EditCsirtModal({ initial, onSubmit, onClose, loading, idPerusahaan }: a
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <FileUploadField
-                            label={<>Dokumen RFC2350 <span className="text-xs font-normal text-slate-400">(PDF, Opsional)</span></>}
+                            label={<>Dokumen RFC2350 <span className="text-xs font-normal" style={{ color: "var(--dashboard-text-muted)" }}>(PDF, Opsional)</span></>}
                             accept=".pdf"
                             allowedExtensions={[".pdf"]}
                             file={fileRfc}
@@ -373,7 +387,7 @@ function EditCsirtModal({ initial, onSubmit, onClose, loading, idPerusahaan }: a
                             onFileChange={setFileRfc}
                         />
                         <FileUploadField
-                            label={<>PGP Public Key <span className="text-xs font-normal text-slate-400">(.asc, Opsional)</span></>}
+                            label={<>PGP Public Key <span className="text-xs font-normal" style={{ color: "var(--dashboard-text-muted)" }}>(.asc, Opsional)</span></>}
                             accept=".asc"
                             allowedExtensions={[".asc"]}
                             file={filePgp}
@@ -382,7 +396,7 @@ function EditCsirtModal({ initial, onSubmit, onClose, loading, idPerusahaan }: a
                             onFileChange={setFilePgp}
                         />
                         <FileUploadField
-                            label={<>STR <span className="text-xs font-normal text-slate-400">(.pdf, Opsional)</span></>}
+                            label={<>STR <span className="text-xs font-normal" style={{ color: "var(--dashboard-text-muted)" }}>(.pdf, Opsional)</span></>}
                             accept=".pdf"
                             allowedExtensions={[".pdf"]}
                             file={fileStr}
@@ -391,9 +405,9 @@ function EditCsirtModal({ initial, onSubmit, onClose, loading, idPerusahaan }: a
                             onFileChange={setFileStr}
                         />
                     </div>
-                    <div className="flex gap-3 pt-6">
-                        <button type="button" onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 transition">Batal</button>
-                        <button type="submit" disabled={loading} className="flex-1 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm shadow-lg shadow-amber-500/25 disabled:opacity-50 flex items-center justify-center gap-2 transition">
+                    <div className="flex flex-col-reverse gap-3 pt-6 sm:flex-row">
+                        <button type="button" onClick={onClose} className={`${SECONDARY_BUTTON_CLS} flex-1`}>Batal</button>
+                        <button type="submit" disabled={loading} className={`${PRIMARY_BUTTON_CLS} flex-1`}>
                             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                             Simpan Perubahan
                         </button>
@@ -431,11 +445,11 @@ function CreateSdmModal({ csirtId, onSave, onClose, loading }: {
     const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); onSave({ id_csirt: csirtId, ...form, sertifikasi: sertifikasiList.join(", ") }); };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6">
+        <div className={MODAL_BACKDROP_CLS}>
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className={`${MODAL_PANEL_CLS} overflow-y-auto sm:max-w-lg`}>
                 <div className="flex items-center justify-between mb-6">
-                    <h3 className="font-black text-slate-900 font-display text-xl">Tambah SDM</h3>
-                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition p-1 bg-slate-100 rounded-xl hover:bg-slate-200"><X className="w-5 h-5" /></button>
+                    <h3 className="font-display text-xl font-black" style={{ color: "var(--dashboard-text)" }}>Tambah SDM</h3>
+                    <button onClick={onClose} className={CLOSE_BUTTON_CLS}><X className="w-5 h-5" /></button>
                 </div>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
@@ -458,25 +472,25 @@ function CreateSdmModal({ csirtId, onSave, onClose, loading }: {
                                     className={INPUT_CLS}
                                     placeholder={sertifikasiList.length > 0 ? "Tambah sertifikasi" : "Contoh: CISSP"}
                                 />
-                                <button type="button" onClick={handleAddSert} disabled={!sertInput.trim()} className="p-2.5 bg-slate-100 hover:bg-slate-200 disabled:hover:bg-slate-100 text-slate-700 rounded-xl transition flex items-center justify-center shrink-0 disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Tambah Sertifikasi">
+                                <button type="button" onClick={handleAddSert} disabled={!sertInput.trim()} className={`${TAG_INPUT_BUTTON_CLS} flex shrink-0 items-center justify-center`} aria-label="Tambah Sertifikasi">
                                     <Plus className="w-5 h-5" />
                                 </button>
                             </div>
                             {sertifikasiList.length > 0 && (
                                 <div className="flex flex-wrap gap-2 mt-3">
                                     {sertifikasiList.map((s, idx) => (
-                                        <div key={idx} className="flex items-center gap-1.5 bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg border border-blue-100 text-xs font-bold">
+                                        <div key={idx} className={TAG_CHIP_CLS}>
                                             <span>{s}</span>
-                                            <button type="button" onClick={() => removeSert(idx)} className="text-blue-400 hover:text-blue-600"><X className="w-3.5 h-3.5" /></button>
+                                            <button type="button" onClick={() => removeSert(idx)} className="transition hover:opacity-75"><X className="w-3.5 h-3.5" /></button>
                                         </div>
                                     ))}
                                 </div>
                             )}
                         </div>
                     </div>
-                    <div className="flex gap-3 pt-4">
-                        <button type="button" onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 transition">Batal</button>
-                        <button type="submit" disabled={loading} className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-lg shadow-blue-500/25 disabled:opacity-50 flex items-center justify-center gap-2 transition">
+                    <div className="flex flex-col-reverse gap-3 pt-4 sm:flex-row">
+                        <button type="button" onClick={onClose} className={`${SECONDARY_BUTTON_CLS} flex-1`}>Batal</button>
+                        <button type="submit" disabled={loading} className={`${PRIMARY_BUTTON_CLS} flex-1`}>
                             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                             Tambah SDM
                         </button>
@@ -522,11 +536,11 @@ function EditSdmModal({ initial, csirtId, onSave, onClose, loading }: {
     const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); onSave({ id_csirt: csirtId, ...form, sertifikasi: sertifikasiList.join(", ") }); };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6">
+        <div className={MODAL_BACKDROP_CLS}>
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className={`${MODAL_PANEL_CLS} overflow-y-auto sm:max-w-lg`}>
                 <div className="flex items-center justify-between mb-6">
-                    <h3 className="font-black text-slate-900 font-display text-xl">Edit SDM</h3>
-                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition p-1 bg-slate-100 rounded-xl hover:bg-slate-200"><X className="w-5 h-5" /></button>
+                    <h3 className="font-display text-xl font-black" style={{ color: "var(--dashboard-text)" }}>Edit SDM</h3>
+                    <button onClick={onClose} className={CLOSE_BUTTON_CLS}><X className="w-5 h-5" /></button>
                 </div>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
@@ -549,25 +563,25 @@ function EditSdmModal({ initial, csirtId, onSave, onClose, loading }: {
                                     className={INPUT_CLS}
                                     placeholder={sertifikasiList.length > 0 ? "Tambah sertifikasi" : "Contoh: CISSP"}
                                 />
-                                <button type="button" onClick={handleAddSert} disabled={!sertInput.trim()} className="p-2.5 bg-slate-100 hover:bg-slate-200 disabled:hover:bg-slate-100 text-slate-700 rounded-xl transition flex items-center justify-center shrink-0 disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Tambah Sertifikasi">
+                                <button type="button" onClick={handleAddSert} disabled={!sertInput.trim()} className={`${TAG_INPUT_BUTTON_CLS} flex shrink-0 items-center justify-center`} aria-label="Tambah Sertifikasi">
                                     <Plus className="w-5 h-5" />
                                 </button>
                             </div>
                             {sertifikasiList.length > 0 && (
                                 <div className="flex flex-wrap gap-2 mt-3">
                                     {sertifikasiList.map((s, idx) => (
-                                        <div key={idx} className="flex items-center gap-1.5 bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg border border-blue-100 text-xs font-bold">
+                                        <div key={idx} className={TAG_CHIP_CLS}>
                                             <span>{s}</span>
-                                            <button type="button" onClick={() => removeSert(idx)} className="text-blue-400 hover:text-blue-600"><X className="w-3.5 h-3.5" /></button>
+                                            <button type="button" onClick={() => removeSert(idx)} className="transition hover:opacity-75"><X className="w-3.5 h-3.5" /></button>
                                         </div>
                                     ))}
                                 </div>
                             )}
                         </div>
                     </div>
-                    <div className="flex gap-3 pt-4">
-                        <button type="button" onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 transition">Batal</button>
-                        <button type="submit" disabled={loading} className="flex-1 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm shadow-lg shadow-amber-500/25 disabled:opacity-50 flex items-center justify-center gap-2 transition">
+                    <div className="flex flex-col-reverse gap-3 pt-4 sm:flex-row">
+                        <button type="button" onClick={onClose} className={`${SECONDARY_BUTTON_CLS} flex-1`}>Batal</button>
+                        <button type="submit" disabled={loading} className={`${PRIMARY_BUTTON_CLS} flex-1`}>
                             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                             Simpan Perubahan
                         </button>
@@ -590,21 +604,21 @@ function SeDetailModal({ se, onClose }: { se: SeCsirt; onClose: () => void }) {
     ];
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white rounded-3xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto p-6">
+        <div className={MODAL_BACKDROP_CLS}>
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className={`${MODAL_PANEL_CLS} overflow-y-auto sm:max-w-md`}>
                 <div className="flex items-center justify-between mb-6">
-                    <h3 className="font-black text-slate-900 font-display text-xl">Detail SE</h3>
-                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition p-1 bg-slate-100 rounded-xl hover:bg-slate-200"><X className="w-5 h-5" /></button>
+                    <h3 className="font-display text-xl font-black" style={{ color: "var(--dashboard-text)" }}>Detail SE</h3>
+                    <button onClick={onClose} className={CLOSE_BUTTON_CLS}><X className="w-5 h-5" /></button>
                 </div>
                 <div className="space-y-3">
                     {rows.map(({ label, value }) => (
-                        <div key={label} className="flex flex-col gap-0.5 bg-slate-50 rounded-xl px-4 py-3 border border-slate-100">
-                            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{label}</span>
-                            <span className="text-sm font-semibold text-slate-800">{value}</span>
+                        <div key={label} className="dashboard-section-muted flex flex-col gap-0.5 rounded-xl border px-4 py-3">
+                            <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--dashboard-text-muted)" }}>{label}</span>
+                            <span className="text-sm font-semibold" style={{ color: "var(--dashboard-text)" }}>{value}</span>
                         </div>
                     ))}
                 </div>
-                <button onClick={onClose} className="mt-6 w-full py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 transition">Tutup</button>
+                <button onClick={onClose} className={`${SECONDARY_BUTTON_CLS} mt-6 w-full`}>Tutup</button>
             </motion.div>
         </div>
     );
@@ -658,19 +672,19 @@ function DownloadDocModal({ fileUrl, fileName, csirtName, onClose }: { fileUrl: 
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white rounded-3xl shadow-2xl w-full max-w-sm max-h-[90vh] overflow-y-auto p-6 text-center">
+        <div className={MODAL_BACKDROP_CLS}>
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className={`${MODAL_PANEL_CLS} overflow-y-auto text-center sm:max-w-sm`}>
                 <div className="flex justify-end mb-2">
-                    <button onClick={onClose} disabled={isDownloading} className="text-slate-400 hover:text-slate-600 transition p-1 bg-slate-100 rounded-xl hover:bg-slate-200"><X className="w-5 h-5" /></button>
+                    <button onClick={onClose} disabled={isDownloading} className={CLOSE_BUTTON_CLS}><X className="w-5 h-5" /></button>
                 </div>
-                <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <div className="dashboard-icon-info mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full">
                     <Download className="w-8 h-8" />
                 </div>
-                <h3 className="font-black text-slate-900 font-display text-lg mb-2">Unduh Dokumen</h3>
-                <p className="text-sm text-slate-500 mb-6">Anda akan mengunduh dokumen <strong>{fileName}</strong>. Lanjutkan?</p>
-                <div className="flex gap-3">
-                    <button type="button" onClick={onClose} disabled={isDownloading} className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 transition disabled:opacity-50">Batal</button>
-                    <button onClick={handleDownload} disabled={isDownloading} className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2 transition disabled:opacity-50">
+                <h3 className="mb-2 font-display text-lg font-black" style={{ color: "var(--dashboard-text)" }}>Unduh Dokumen</h3>
+                <p className="mb-6 text-sm" style={{ color: "var(--dashboard-text-muted)" }}>Anda akan mengunduh dokumen <strong>{fileName}</strong>. Lanjutkan?</p>
+                <div className="flex flex-col-reverse gap-3 sm:flex-row">
+                    <button type="button" onClick={onClose} disabled={isDownloading} className={`${SECONDARY_BUTTON_CLS} flex-1 disabled:opacity-50`}>Batal</button>
+                    <button onClick={handleDownload} disabled={isDownloading} className={`${PRIMARY_BUTTON_CLS} flex-1`}>
                         {isDownloading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Unduh"}
                     </button>
                 </div>
@@ -808,15 +822,15 @@ export default function CSIRT() {
                 />
 
                 {isLoading ? (
-                    <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-blue-600" /></div>
+                    <div className="flex justify-center py-16"><Loader2 className="h-8 w-8 animate-spin" style={{ color: "var(--dashboard-selection-text)" }} /></div>
                 ) : !csirt ? (
-                    <div className="text-center py-16 text-slate-400 bg-white rounded-3xl border border-slate-200">
+                    <div className="dashboard-table-surface rounded-3xl border py-16 text-center" style={{ color: "var(--dashboard-text-muted)" }}>
                         <Building2 className="w-12 h-12 mx-auto mb-3 opacity-40" />
-                        <p className="font-semibold text-slate-600 mb-2">Belum ada data CSIRT</p>
-                        <p className="text-sm mt-1 text-slate-500 mb-6">Silakan daftarkan tim CSIRT perusahaan Anda terlebih dahulu.</p>
+                        <p className="mb-2 font-semibold" style={{ color: "var(--dashboard-text-soft)" }}>Belum ada data CSIRT</p>
+                        <p className="mt-1 mb-6 text-sm" style={{ color: "var(--dashboard-text-muted)" }}>Silakan daftarkan tim CSIRT perusahaan Anda terlebih dahulu.</p>
                         <button
                             onClick={handleStartCreateCsirt}
-                            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-l from-yellow-400 to-amber-500 text-white font-bold shadow-md shadow-yellow-500/30 hover:shadow-yellow-500/45 hover:scale-[1.01] active:scale-[0.99] transition-all whitespace-nowrap"
+                            className={`${PRIMARY_BUTTON_CLS} inline-flex whitespace-nowrap px-6 py-3`}
                         >
                             <Plus className="w-5 h-5" /> Buat Profil CSIRT
                         </button>
@@ -824,12 +838,12 @@ export default function CSIRT() {
                 ) : (
                     <>
                         {/* Main Card */}
-                        <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden mb-6">
-                            <div className="px-6 py-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div className="dashboard-table-surface mb-6 overflow-hidden rounded-3xl border shadow-sm">
+                            <div className="dashboard-divider flex flex-col gap-4 border-b px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
                                 <div className="flex items-center gap-3">
                                     <div>
-                                        <h3 className="font-bold text-slate-800 text-lg">Profil CSIRT</h3>
-                                        <p className="text-sm text-slate-500">Detail informasi dan manajemen CSIRT</p>
+                                        <h3 className="text-lg font-bold" style={{ color: "var(--dashboard-text)" }}>Profil CSIRT</h3>
+                                        <p className="text-sm" style={{ color: "var(--dashboard-text-muted)" }}>Detail informasi dan manajemen CSIRT</p>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-2 self-end sm:self-auto">
@@ -846,66 +860,66 @@ export default function CSIRT() {
                                                 });
                                             }
                                         }}
-                                        className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-l from-blue-500 to-blue-600 text-white font-bold text-sm shadow-md shadow-blue-500/25 hover:shadow-blue-500/40 hover:scale-[1.01] active:scale-[0.99] transition-all whitespace-nowrap"
+                                        className={`${SUCCESS_BUTTON_CLS} whitespace-nowrap px-5 sm:px-6`}
                                     >
                                         <Download className="w-4 h-4" /> Export PDF
                                     </button>
                                     <button
                                         onClick={() => { setEditing(csirt); setShowForm(true); }}
-                                        className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-l from-yellow-400 to-amber-500 text-white font-bold text-sm shadow-md shadow-yellow-500/30 hover:shadow-yellow-500/45 hover:scale-[1.01] active:scale-[0.99] transition-all whitespace-nowrap"
+                                        className={`${WARNING_BUTTON_CLS} whitespace-nowrap px-5 sm:px-6`}
                                     >
                                         <Pencil className="w-4 h-4" /> Edit CSIRT
                                     </button>
                                 </div>
                             </div>
 
-                            <div className="p-6 md:p-8 flex flex-col md:flex-row gap-8 relative z-10 bg-slate-50/50">
+                            <div className="dashboard-section-muted relative z-10 flex flex-col gap-8 p-6 md:flex-row md:p-8">
                                 <div className="flex-1 flex flex-col md:flex-row gap-6">
-                                    <div className="w-40 h-40 rounded-3xl shadow-md p-2 flex-shrink-0 bg-white border border-slate-100 flex items-center justify-center overflow-hidden">
+                                    <div className="dashboard-table-surface dashboard-table-divider flex h-40 w-40 flex-shrink-0 items-center justify-center overflow-hidden rounded-3xl border p-2 shadow-md">
                                         {getMediaUrl(csirt.photo_csirt) ? (
                                             <img src={getMediaUrl(csirt.photo_csirt)} alt="CSIRT Photo" className="w-full h-full object-cover rounded-2xl" onError={(e) => { e.currentTarget.style.display = "none"; }} />
                                         ) : (
-                                            <div className="w-full h-full rounded-2xl bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center">
-                                                <Building2 className="w-16 h-16 text-blue-400 opacity-60" />
+                                            <div className="dashboard-chip-info flex h-full w-full items-center justify-center rounded-2xl border">
+                                                <Building2 className="h-16 w-16 opacity-60" />
                                             </div>
                                         )}
                                     </div>
                                     <div className="pt-2">
-                                        <h3 className="text-3xl font-bold text-slate-800 mb-6 font-display">{csirt.nama_csirt}</h3>
+                                        <h3 className="mb-6 font-display text-3xl font-bold" style={{ color: "var(--dashboard-text)" }}>{csirt.nama_csirt}</h3>
                                         <div className="flex flex-col gap-4">
-                                            <div className="flex items-center gap-3 text-slate-600">
-                                                <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0">
-                                                    <Phone className="w-4 h-4 text-blue-500" />
+                                            <div className="flex items-center gap-3" style={{ color: "var(--dashboard-text-soft)" }}>
+                                                <div className="dashboard-icon-info flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full">
+                                                    <Phone className="w-4 h-4" />
                                                 </div>
                                                 <div>
-                                                    <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-0.5">Telepon</p>
-                                                    <p className="font-bold text-slate-800">{csirt.telepon_csirt || "-"}</p>
+                                                    <p className="mb-0.5 text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--dashboard-text-muted)" }}>Telepon</p>
+                                                    <p className="font-bold" style={{ color: "var(--dashboard-text)" }}>{csirt.telepon_csirt || "-"}</p>
                                                 </div>
                                             </div>
-                                            <div className="flex items-center gap-3 text-slate-600">
-                                                <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center flex-shrink-0">
-                                                    <Globe className="w-4 h-4 text-green-500" />
+                                            <div className="flex items-center gap-3" style={{ color: "var(--dashboard-text-soft)" }}>
+                                                <div className="dashboard-icon-success flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full">
+                                                    <Globe className="w-4 h-4" />
                                                 </div>
                                                 <div>
-                                                    <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-0.5">Website</p>
+                                                    <p className="mb-0.5 text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--dashboard-text-muted)" }}>Website</p>
                                                     {csirt.web_csirt ? (
-                                                        <a href={csirt.web_csirt.startsWith("http") ? csirt.web_csirt : `https://${csirt.web_csirt}`} target="_blank" rel="noreferrer" className="font-bold text-slate-800 hover:text-blue-600 transition-colors">
+                                                        <a href={csirt.web_csirt.startsWith("http") ? csirt.web_csirt : `https://${csirt.web_csirt}`} target="_blank" rel="noreferrer" className="font-bold transition-opacity hover:opacity-80" style={{ color: "var(--dashboard-text)" }}>
                                                             {csirt.web_csirt}
                                                         </a>
-                                                    ) : <p className="font-bold text-slate-800">-</p>}
+                                                    ) : <p className="font-bold" style={{ color: "var(--dashboard-text)" }}>-</p>}
                                                 </div>
                                             </div>
-                                            <div className="flex items-center gap-3 text-slate-600">
-                                                <div className="w-10 h-10 rounded-full bg-orange-50 flex items-center justify-center flex-shrink-0">
-                                                    <Mail className="w-4 h-4 text-orange-500" />
+                                            <div className="flex items-center gap-3" style={{ color: "var(--dashboard-text-soft)" }}>
+                                                <div className="dashboard-icon-warning flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full">
+                                                    <Mail className="w-4 h-4" />
                                                 </div>
                                                 <div>
-                                                    <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-0.5">Email</p>
+                                                    <p className="mb-0.5 text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--dashboard-text-muted)" }}>Email</p>
                                                     {csirt.email_csirt ? (
-                                                        <a href={`mailto:${csirt.email_csirt}`} className="font-bold text-slate-800 hover:text-blue-600 transition-colors">
+                                                        <a href={`mailto:${csirt.email_csirt}`} className="font-bold transition-opacity hover:opacity-80" style={{ color: "var(--dashboard-text)" }}>
                                                             {csirt.email_csirt}
                                                         </a>
-                                                    ) : <p className="font-bold text-slate-800">-</p>}
+                                                    ) : <p className="font-bold" style={{ color: "var(--dashboard-text)" }}>-</p>}
                                                 </div>
                                             </div>
                                         </div>
@@ -913,43 +927,43 @@ export default function CSIRT() {
                                 </div>
 
                                 <div className="flex-1 flex flex-col gap-4">
-                                    <div className="flex gap-4">
-                                        <div className="flex-1 bg-slate-100/90 rounded-2xl p-5 flex items-center gap-4 border border-slate-200/50">
-                                            <div className="text-blue-500"><UserCheck className="w-6 h-6" /></div>
+                                    <div className="flex flex-col gap-4 sm:flex-row">
+                                        <div className="dashboard-section-muted flex flex-1 items-center gap-4 rounded-2xl border p-5">
+                                            <div style={{ color: "var(--dashboard-selection-text)" }}><UserCheck className="w-6 h-6" /></div>
                                             <div>
-                                                <h4 className="text-xl font-bold text-blue-600">{sdmList.length}</h4>
-                                                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mt-0.5">SDM Terdaftar</p>
+                                                <h4 className="text-xl font-bold" style={{ color: "var(--dashboard-selection-text)" }}>{sdmList.length}</h4>
+                                                <p className="mt-0.5 text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--dashboard-text-muted)" }}>SDM Terdaftar</p>
                                             </div>
                                         </div>
-                                        <div className="flex-1 bg-slate-100/90 rounded-2xl p-5 flex items-center gap-4 border border-slate-200/50">
-                                            <div className="text-emerald-500"><Server className="w-6 h-6" /></div>
+                                        <div className="dashboard-section-muted flex flex-1 items-center gap-4 rounded-2xl border p-5">
+                                            <div style={{ color: "var(--dashboard-success-soft-fg)" }}><Server className="w-6 h-6" /></div>
                                             <div>
-                                                <h4 className="text-xl font-bold text-emerald-600">{seList.length}</h4>
-                                                <p className="text-xs font-semibold text-slate-600/70 uppercase tracking-wider mt-0.5">SE Terdaftar</p>
+                                                <h4 className="text-xl font-bold" style={{ color: "var(--dashboard-success-soft-fg)" }}>{seList.length}</h4>
+                                                <p className="mt-0.5 text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--dashboard-text-soft)" }}>SE Terdaftar</p>
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="bg-white rounded-2xl p-4 flex flex-col gap-3 border border-slate-200 shadow-sm mt-2">
-                                        <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Dokumen Pendukung</h4>
-                                        <div className="flex gap-3 ">
+                                    <div className="dashboard-table-surface mt-2 flex flex-col gap-3 rounded-2xl border p-4 shadow-sm">
+                                        <h4 className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--dashboard-text-muted)" }}>Dokumen Pendukung</h4>
+                                        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
                                             {csirt.file_rfc2350 ? (
-                                                <button onClick={() => setDownloadDoc({ url: getMediaUrl(csirt.file_rfc2350), name: "RFC 2350", csirtName: csirt.nama_csirt })} className="flex-1 bg-green-50 hover:bg-green-50 border border-slate-200 hover:border-green-200 rounded-xl p-3 flex items-center gap-3 transition-colors group text-left">
-                                                    <Download className="w-5 h-5 text-slate-400 group-hover:text-green-500 transition-colors" />
-                                                    <span className="font-semibold text-slate-700 text-xs group-hover:text-green-600 transition-colors">RFC 2350</span>
+                                                <button onClick={() => setDownloadDoc({ url: getMediaUrl(csirt.file_rfc2350), name: "RFC 2350", csirtName: csirt.nama_csirt })} className={DOC_BUTTON_CLS}>
+                                                    <Download className="w-5 h-5" />
+                                                    <span className="text-xs font-semibold">RFC 2350</span>
                                                 </button>
-                                            ) : <span className="flex-1 text-xs text-slate-400 p-3 italic">RFC 2350 belum diunggah</span>}
+                                            ) : <span className="flex-1 p-3 text-xs italic" style={{ color: "var(--dashboard-text-muted)" }}>RFC 2350 belum diunggah</span>}
                                             {csirt.file_public_key_pgp ? (
-                                                <button onClick={() => setDownloadDoc({ url: getMediaUrl(csirt.file_public_key_pgp), name: "PGP Public Key", csirtName: csirt.nama_csirt })} className="flex-1 bg-green-50 hover:bg-green-50 border border-slate-200 hover:border-green-200 rounded-xl p-3 flex items-center gap-3 transition-colors group text-left">
-                                                    <Download className="w-5 h-5 text-slate-400 group-hover:text-green-500 transition-colors" />
-                                                    <span className="font-semibold text-slate-700 text-xs group-hover:text-green-600 transition-colors">PGP Public Key</span>
+                                                <button onClick={() => setDownloadDoc({ url: getMediaUrl(csirt.file_public_key_pgp), name: "PGP Public Key", csirtName: csirt.nama_csirt })} className={DOC_BUTTON_CLS}>
+                                                    <Download className="w-5 h-5" />
+                                                    <span className="text-xs font-semibold">PGP Public Key</span>
                                                 </button>
-                                            ) : <span className="flex-1 text-xs text-slate-400 p-3 italic">PGP Key belum diunggah</span>}
+                                            ) : <span className="flex-1 p-3 text-xs italic" style={{ color: "var(--dashboard-text-muted)" }}>PGP Key belum diunggah</span>}
                                             {csirt.file_str ? (
-                                                <button onClick={() => setDownloadDoc({ url: getMediaUrl(csirt.file_str), name: "Surat Tanda Registrasi", csirtName: csirt.nama_csirt })} className="flex-1 bg-green-50 hover:bg-green-50 border border-slate-200 hover:border-green-200 rounded-xl p-3 flex items-center gap-3 transition-colors group text-left">
-                                                    <Download className="w-5 h-5 text-slate-400 group-hover:text-green-500 transition-colors" />
-                                                    <span className="font-semibold text-slate-700 text-xs group-hover:text-green-600 transition-colors">Surat Tanda Registrasi</span>
+                                                <button onClick={() => setDownloadDoc({ url: getMediaUrl(csirt.file_str), name: "Surat Tanda Registrasi", csirtName: csirt.nama_csirt })} className={DOC_BUTTON_CLS}>
+                                                    <Download className="w-5 h-5" />
+                                                    <span className="text-xs font-semibold">Surat Tanda Registrasi</span>
                                                 </button>
-                                            ) : <span className="flex-1 text-xs text-slate-400 p-3 italic">Surat Tanda Registrasi belum diunggah</span>}
+                                            ) : <span className="flex-1 p-3 text-xs italic" style={{ color: "var(--dashboard-text-muted)" }}>Surat Tanda Registrasi belum diunggah</span>}
                                         </div>
                                     </div>
                                 </div>
@@ -957,16 +971,68 @@ export default function CSIRT() {
                         </div>
 
                         {/* SDM Table */}
-                        <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden mb-6">
-                            <div className="px-6 py-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                <h3 className="font-bold text-slate-800 text-lg">Tabel Daftar SDM CSIRT</h3>
-                                <button onClick={() => { setEditingSdm(null); setShowSdmModal(true); }} className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-l from-yellow-400 to-amber-500 text-white font-bold text-sm shadow-md shadow-yellow-500/30 hover:shadow-yellow-500/45 hover:scale-[1.01] active:scale-[0.99] transition-all whitespace-nowrap">
+                        <div className="dashboard-table-surface mb-6 overflow-hidden rounded-3xl border shadow-sm">
+                            <div className="dashboard-divider flex flex-col gap-4 border-b px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+                                <h3 className="text-lg font-bold" style={{ color: "var(--dashboard-text)" }}>Tabel Daftar SDM CSIRT</h3>
+                                <button onClick={() => { setEditingSdm(null); setShowSdmModal(true); }} className={`${PRIMARY_BUTTON_CLS} whitespace-nowrap px-5`}>
                                     <Plus className="w-4 h-4" /> Tambah SDM
                                 </button>
                             </div>
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-left text-sm text-slate-600 whitespace-nowrap">
-                                    <thead className="bg-slate-50 text-xs uppercase font-extrabold text-slate-500 tracking-wider">
+                            <div className="space-y-4 p-4 md:hidden">
+                                {sdmList.length === 0 ? (
+                                    <div className="rounded-2xl border border-dashed p-5 text-center text-sm" style={{ color: "var(--dashboard-text-muted)" }}>
+                                        Belum ada data SDM
+                                    </div>
+                                ) : (
+                                    sdmList.map((sdm: any, i: number) => (
+                                        <div key={sdm.id} className="rounded-2xl border p-4 shadow-sm" style={{ borderColor: "var(--dashboard-border)", background: "var(--dashboard-surface)" }}>
+                                            <div className="flex items-start justify-between gap-3">
+                                                <div className="min-w-0">
+                                                    <p className="text-[11px] font-bold uppercase tracking-wider" style={{ color: "var(--dashboard-text-muted)" }}>SDM #{i + 1}</p>
+                                                    <h4 className="mt-1 text-base font-bold" style={{ color: "var(--dashboard-text)" }}>{sdm.nama_personel}</h4>
+                                                    <p className="mt-1 text-sm font-medium" style={{ color: "var(--dashboard-selection-text)" }}>{sdm.csirt?.nama_csirt || csirt.nama_csirt}</p>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <button onClick={() => { setEditingSdm(sdm); setShowSdmModal(true); }} className={ACTION_EDIT_BUTTON_CLS}><Pencil className="w-4 h-4" /></button>
+                                                    <button onClick={() => handleDeleteSdm(sdm)} disabled={deleteSdmMutation.isPending} className={ACTION_DELETE_BUTTON_CLS}><Trash2 className="w-4 h-4" /></button>
+                                                </div>
+                                            </div>
+
+                                            <div className="mt-4 grid grid-cols-1 gap-3 text-sm">
+                                                <div>
+                                                    <p className="text-[11px] font-bold uppercase tracking-wider" style={{ color: "var(--dashboard-text-muted)" }}>Jabatan CSIRT</p>
+                                                    <p className="mt-1" style={{ color: "var(--dashboard-text-soft)" }}>{sdm.jabatan_csirt || "-"}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-[11px] font-bold uppercase tracking-wider" style={{ color: "var(--dashboard-text-muted)" }}>Jabatan Perusahaan</p>
+                                                    <p className="mt-1" style={{ color: "var(--dashboard-text-soft)" }}>{sdm.jabatan_perusahaan || "-"}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-[11px] font-bold uppercase tracking-wider" style={{ color: "var(--dashboard-text-muted)" }}>Keahlian</p>
+                                                    <p className="mt-1" style={{ color: "var(--dashboard-text-soft)" }}>{sdm.skill || "-"}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-[11px] font-bold uppercase tracking-wider" style={{ color: "var(--dashboard-text-muted)" }}>Sertifikasi</p>
+                                                    <div className="mt-2 flex flex-wrap gap-1.5">
+                                                        {sdm.sertifikasi ? sdm.sertifikasi.split(',').map((s: string, idx: number) => {
+                                                            const trimmed = s.trim();
+                                                            if (!trimmed) return null;
+                                                            return (
+                                                                <span key={idx} className="dashboard-chip-info rounded-md border px-2.5 py-1 text-xs font-bold tracking-wide">
+                                                                    {trimmed}
+                                                                </span>
+                                                            );
+                                                        }) : <span style={{ color: "var(--dashboard-text-muted)" }}>-</span>}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                            <div className="hidden overflow-x-auto md:block">
+                                <table className="w-full whitespace-nowrap text-left text-sm" style={{ color: "var(--dashboard-text-soft)" }}>
+                                    <thead className="dashboard-table-head text-xs uppercase font-extrabold tracking-wider">
                                         <tr>
                                             <th className="px-6 py-4">NO</th>
                                             <th className="px-6 py-4"><div className="flex items-center gap-2"><User className="w-3.5 h-3.5" /> NAMA PERSONEL</div></th>
@@ -978,38 +1044,38 @@ export default function CSIRT() {
                                             <th className="px-6 py-4 text-center">AKSI</th>
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-slate-100">
+                                    <tbody className="dashboard-table-divider divide-y">
                                         {sdmList.map((sdm: any, i: number) => (
-                                            <tr key={sdm.id} className="hover:bg-slate-50/50 transition-colors">
+                                            <tr key={sdm.id} className="dashboard-table-row-hover transition-colors">
                                                 <td className="px-6 py-4 font-medium">{i + 1}</td>
-                                                <td className="px-6 py-4 font-bold text-slate-800">{sdm.nama_personel}</td>
-                                                <td className="px-6 py-4 font-semibold text-blue-400">{sdm.csirt?.nama_csirt || csirt.nama_csirt}</td>
-                                                <td className="px-6 py-4 font-medium text-slate-700">{sdm.jabatan_csirt}</td>
-                                                <td className="px-6 py-4 text-slate-500">{sdm.jabatan_perusahaan}</td>
-                                                <td className="px-6 py-4 text-slate-500">{sdm.skill}</td>
+                                                <td className="px-6 py-4 font-bold" style={{ color: "var(--dashboard-text)" }}>{sdm.nama_personel}</td>
+                                                <td className="px-6 py-4 font-semibold" style={{ color: "var(--dashboard-selection-text)" }}>{sdm.csirt?.nama_csirt || csirt.nama_csirt}</td>
+                                                <td className="px-6 py-4 font-medium" style={{ color: "var(--dashboard-text-soft)" }}>{sdm.jabatan_csirt}</td>
+                                                <td className="px-6 py-4" style={{ color: "var(--dashboard-text-muted)" }}>{sdm.jabatan_perusahaan}</td>
+                                                <td className="px-6 py-4" style={{ color: "var(--dashboard-text-muted)" }}>{sdm.skill}</td>
                                                 <td className="px-6 py-4 whitespace-normal min-w-[200px]">
                                                     <div className="flex flex-wrap gap-1.5 mt-1">
                                                         {sdm.sertifikasi ? sdm.sertifikasi.split(',').map((s: string, idx: number) => {
                                                             const trimmed = s.trim();
                                                             if (!trimmed) return null;
                                                             return (
-                                                                <span key={idx} className="bg-blue-50 border border-blue-100 text-blue-600 px-2.5 py-1 rounded-md text-xs font-bold tracking-wide">
+                                                                <span key={idx} className="dashboard-chip-info rounded-md border px-2.5 py-1 text-xs font-bold tracking-wide">
                                                                     {trimmed}
                                                                 </span>
                                                             );
-                                                        }) : <span className="text-slate-400">-</span>}
+                                                        }) : <span style={{ color: "var(--dashboard-text-muted)" }}>-</span>}
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4">
                                                     <div className="flex items-center justify-center gap-2">
-                                                        <button onClick={() => { setEditingSdm(sdm); setShowSdmModal(true); }} className="p-2 text-emerald-500 bg-emerald-50 rounded-xl hover:bg-emerald-100 transition-colors"><Pencil className="w-4 h-4" /></button>
-                                                        <button onClick={() => handleDeleteSdm(sdm)} disabled={deleteSdmMutation.isPending} className="p-2 text-red-500 bg-red-50 rounded-xl hover:bg-red-100 transition-colors disabled:opacity-50"><Trash2 className="w-4 h-4" /></button>
+                                                        <button onClick={() => { setEditingSdm(sdm); setShowSdmModal(true); }} className={ACTION_EDIT_BUTTON_CLS}><Pencil className="w-4 h-4" /></button>
+                                                        <button onClick={() => handleDeleteSdm(sdm)} disabled={deleteSdmMutation.isPending} className={ACTION_DELETE_BUTTON_CLS}><Trash2 className="w-4 h-4" /></button>
                                                     </div>
                                                 </td>
                                             </tr>
                                         ))}
                                         {sdmList.length === 0 && (
-                                            <tr><td colSpan={8} className="px-6 py-8 text-center text-slate-400">Belum ada data SDM</td></tr>
+                                            <tr><td colSpan={8} className="px-6 py-8 text-center" style={{ color: "var(--dashboard-text-muted)" }}>Belum ada data SDM</td></tr>
                                         )}
                                     </tbody>
                                 </table>
@@ -1017,13 +1083,59 @@ export default function CSIRT() {
                         </div>
 
                         {/* SE Table */}
-                        <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-                            <div className="px-6 py-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                <h3 className="font-bold text-slate-800 text-lg">Tabel Daftar SE-CSIRT</h3>
+                        <div className="dashboard-table-surface overflow-hidden rounded-3xl border shadow-sm">
+                            <div className="dashboard-divider flex flex-col gap-4 border-b px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+                                <h3 className="text-lg font-bold" style={{ color: "var(--dashboard-text)" }}>Tabel Daftar SE-CSIRT</h3>
                             </div>
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-left text-sm text-slate-600 whitespace-nowrap">
-                                    <thead className="bg-slate-50 text-xs uppercase font-extrabold text-slate-500 tracking-wider">
+                            <div className="space-y-4 p-4 md:hidden">
+                                {seList.length === 0 ? (
+                                    <div className="rounded-2xl border border-dashed p-5 text-center text-sm" style={{ color: "var(--dashboard-text-muted)" }}>
+                                        Belum ada data SE
+                                    </div>
+                                ) : (
+                                    seList.map((se: any, i: number) => (
+                                        <div key={se.id} className="rounded-2xl border p-4 shadow-sm" style={{ borderColor: "var(--dashboard-border)", background: "var(--dashboard-surface)" }}>
+                                            <div className="flex items-start justify-between gap-3">
+                                                <div className="min-w-0">
+                                                    <p className="text-[11px] font-bold uppercase tracking-wider" style={{ color: "var(--dashboard-text-muted)" }}>SE #{i + 1}</p>
+                                                    <h4 className="mt-1 text-base font-bold" style={{ color: "var(--dashboard-text)" }}>{se.nama_se}</h4>
+                                                </div>
+                                                <button onClick={() => setViewingSe(se)} className={ACTION_VIEW_BUTTON_CLS}><Eye className="w-4 h-4" /></button>
+                                            </div>
+
+                                            <div className="mt-4 grid grid-cols-1 gap-3 text-sm">
+                                                <div>
+                                                    <p className="text-[11px] font-bold uppercase tracking-wider" style={{ color: "var(--dashboard-text-muted)" }}>IP SE</p>
+                                                    <p className="mt-1 font-semibold" style={{ color: "var(--dashboard-selection-text)" }}>{se.ip_se || "-"}</p>
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    <div>
+                                                        <p className="text-[11px] font-bold uppercase tracking-wider" style={{ color: "var(--dashboard-text-muted)" }}>AS Number</p>
+                                                        <p className="mt-1" style={{ color: "var(--dashboard-text-soft)" }}>{se.as_number_se || "-"}</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[11px] font-bold uppercase tracking-wider" style={{ color: "var(--dashboard-text-muted)" }}>Kategori</p>
+                                                        <div className="mt-2">
+                                                            {se.kategori_se ? <span className="dashboard-chip-warning rounded-lg border px-3 py-1 text-xs font-bold tracking-wide">{se.kategori_se}</span> : <span style={{ color: "var(--dashboard-text-muted)" }}>-</span>}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <p className="text-[11px] font-bold uppercase tracking-wider" style={{ color: "var(--dashboard-text-muted)" }}>Pengelola</p>
+                                                    <p className="mt-1" style={{ color: "var(--dashboard-text-soft)" }}>{se.pengelola_se || "-"}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-[11px] font-bold uppercase tracking-wider" style={{ color: "var(--dashboard-text-muted)" }}>Fitur</p>
+                                                    <p className="mt-1" style={{ color: "var(--dashboard-text-soft)" }}>{se.fitur_se || "-"}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                            <div className="hidden overflow-x-auto md:block">
+                                <table className="w-full whitespace-nowrap text-left text-sm" style={{ color: "var(--dashboard-text-soft)" }}>
+                                    <thead className="dashboard-table-head text-xs uppercase font-extrabold tracking-wider">
                                         <tr>
                                             <th className="px-6 py-4">NO</th>
                                             <th className="px-6 py-4"><div className="flex items-center gap-2"><Server className="w-3.5 h-3.5" /> NAMA SE</div></th>
@@ -1035,27 +1147,27 @@ export default function CSIRT() {
                                             <th className="px-6 py-4 text-center">AKSI</th>
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-slate-100">
+                                    <tbody className="dashboard-table-divider divide-y">
                                         {seList.map((se: any, i: number) => (
-                                            <tr key={se.id} className="hover:bg-slate-50/50 transition-colors">
+                                            <tr key={se.id} className="dashboard-table-row-hover transition-colors">
                                                 <td className="px-6 py-4 font-medium">{i + 1}</td>
-                                                <td className="px-6 py-4 font-bold text-slate-800">{se.nama_se}</td>
-                                                <td className="px-6 py-4 font-semibold text-blue-500">{se.ip_se}</td>
-                                                <td className="px-6 py-4 text-slate-500">{se.as_number_se}</td>
-                                                <td className="px-6 py-4 text-slate-700 font-medium">{se.pengelola_se}</td>
-                                                <td className="px-6 py-4 text-slate-500">{se.fitur_se}</td>
+                                                <td className="px-6 py-4 font-bold" style={{ color: "var(--dashboard-text)" }}>{se.nama_se}</td>
+                                                <td className="px-6 py-4 font-semibold" style={{ color: "var(--dashboard-selection-text)" }}>{se.ip_se}</td>
+                                                <td className="px-6 py-4" style={{ color: "var(--dashboard-text-muted)" }}>{se.as_number_se}</td>
+                                                <td className="px-6 py-4 font-medium" style={{ color: "var(--dashboard-text-soft)" }}>{se.pengelola_se}</td>
+                                                <td className="px-6 py-4" style={{ color: "var(--dashboard-text-muted)" }}>{se.fitur_se}</td>
                                                 <td className="px-6 py-4">
-                                                    {se.kategori_se ? <span className="bg-orange-50 border border-orange-100 text-orange-600 px-3 py-1 rounded-lg text-xs font-bold tracking-wide">{se.kategori_se}</span> : <span className="text-slate-400">-</span>}
+                                                    {se.kategori_se ? <span className="dashboard-chip-warning rounded-lg border px-3 py-1 text-xs font-bold tracking-wide">{se.kategori_se}</span> : <span style={{ color: "var(--dashboard-text-muted)" }}>-</span>}
                                                 </td>
                                                 <td className="px-6 py-4">
                                                     <div className="flex items-center justify-center gap-2">
-                                                        <button onClick={() => setViewingSe(se)} className="p-2 text-blue-500 bg-blue-50 rounded-xl hover:bg-blue-100 transition-colors"><Eye className="w-4 h-4" /></button>
+                                                        <button onClick={() => setViewingSe(se)} className={ACTION_VIEW_BUTTON_CLS}><Eye className="w-4 h-4" /></button>
                                                     </div>
                                                 </td>
                                             </tr>
                                         ))}
                                         {seList.length === 0 && (
-                                            <tr><td colSpan={8} className="px-6 py-8 text-center text-slate-400">Belum ada data SE</td></tr>
+                                            <tr><td colSpan={8} className="px-6 py-8 text-center" style={{ color: "var(--dashboard-text-muted)" }}>Belum ada data SE</td></tr>
                                         )}
                                     </tbody>
                                 </table>

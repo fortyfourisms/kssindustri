@@ -1,8 +1,3 @@
-// ─── LMS Types ────────────────────────────────────────────────────────────────
-// Hanya berisi kolom sesuai skema database. Tidak ada kolom tambahan.
-
-// ── kelas ─────────────────────────────────────────────────────────────────────
-
 export interface Kelas {
     id: string;
     judul: string;
@@ -13,8 +8,6 @@ export interface Kelas {
     created_at: string;
     updated_at: string;
 }
-
-// ── materi ────────────────────────────────────────────────────────────────────
 
 export interface MateriItem {
     id: string;
@@ -31,8 +24,6 @@ export interface MateriItem {
     updated_at: string;
 }
 
-// ── file_pendukung ────────────────────────────────────────────────────────────
-
 export interface FilePendukung {
     id: string;
     id_materi: string;
@@ -41,8 +32,6 @@ export interface FilePendukung {
     ukuran: number;
     created_at: string;
 }
-
-// ── kuis ──────────────────────────────────────────────────────────────────────
 
 export interface KuisItem {
     id: string;
@@ -62,8 +51,6 @@ export interface KuisItem {
     updated_at: string;
 }
 
-// ── soal ──────────────────────────────────────────────────────────────────────
-
 export interface Soal {
     id: string;
     id_kuis: string;
@@ -72,8 +59,6 @@ export interface Soal {
     created_at: string;
 }
 
-// ── pilihan_jawaban ───────────────────────────────────────────────────────────
-
 export interface PilihanJawaban {
     id: string;
     id_soal: string;
@@ -81,8 +66,6 @@ export interface PilihanJawaban {
     is_correct: boolean;
     urutan: number;
 }
-
-// ── user_materi_progress ──────────────────────────────────────────────────────
 
 export interface UserMateriProgress {
     id: string;
@@ -94,8 +77,6 @@ export interface UserMateriProgress {
     created_at: string;
     updated_at: string;
 }
-
-// ── kuis_attempt ─────────────────────────────────────────────────────────────
 
 export interface KuisAttempt {
     id: string;
@@ -109,8 +90,6 @@ export interface KuisAttempt {
     finished_at?: string;
 }
 
-// ── kuis_jawaban ──────────────────────────────────────────────────────────────
-
 export interface KuisJawaban {
     id: string;
     attempt_id: string;
@@ -119,21 +98,7 @@ export interface KuisJawaban {
     is_correct: boolean;
 }
 
-// ── diskusi ───────────────────────────────────────────────────────────────────
-
-export interface DiskusiItem {
-    id: string;
-    id_materi: string;
-    id_user: string;
-    id_parent?: string;
-    konten: string;
-    created_at: string;
-    updated_at: string;
-}
-
-// ── catatan_pribadi ───────────────────────────────────────────────────────────
-
-export interface CatatanPribadi {
+export interface FeedbackItem {
     id: string;
     id_materi: string;
     id_user: string;
@@ -141,8 +106,6 @@ export interface CatatanPribadi {
     created_at: string;
     updated_at: string;
 }
-
-// ── sertifikat ────────────────────────────────────────────────────────────────
 
 export interface SertifikatItem {
     id: string;
@@ -156,8 +119,6 @@ export interface SertifikatItem {
     created_at: string;
 }
 
-// ─── API Payload Types (bukan tabel DB, untuk request body) ──────────────────
-
 export interface JawabanPayload {
     id_soal: string;
     id_pilihan: string;
@@ -168,24 +129,10 @@ export interface SubmitKuisPayload {
     jawaban?: JawabanPayload[];
 }
 
-export interface PostDiskusiPayload {
-    konten: string;
-    id_parent?: string;
+export interface GenerateSertifikatPayload {
+    nama_peserta?: string;
 }
 
-// ─── API Response Types (data JOIN dari backend, bukan kolom DB tunggal) ─────
-
-/** Soal dari endpoint start-kuis, sudah include pilihan_jawaban */
 export interface SoalWithPilihan extends Soal {
     pilihan: PilihanJawaban[];
-}
-
-/** DiskusiItem dari endpoint GET diskusi, sudah include user info dari JOIN */
-export interface DiskusiWithUser extends DiskusiItem {
-    user?: {
-        id: string;
-        name: string;
-        username?: string;
-    };
-    replies?: DiskusiWithUser[];
 }

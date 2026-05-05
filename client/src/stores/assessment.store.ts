@@ -18,6 +18,20 @@ const STORAGE_KEYS = {
 
 const EMPTY_ASSESSMENT_DATA: AssessmentData = { domains: [] };
 
+function getValidQuestionIdSet(assessmentData: AssessmentData): Set<string> {
+    const ids = new Set<string>();
+    assessmentData.domains.forEach((domain: any) => {
+        domain.categories.forEach((category: any) => {
+            category.subCategories.forEach((subCategory: any) => {
+                subCategory.questions.forEach((question: any) => {
+                    if (question?.id) ids.add(question.id);
+                });
+            });
+        });
+    });
+    return ids;
+}
+
 function createDefaultProgress(assessmentData?: AssessmentData): AssessmentProgress {
     const firstDomain = assessmentData?.domains[0];
     const firstCat = firstDomain?.categories[0];
@@ -47,6 +61,7 @@ interface AssessmentState {
     currentStakeholderSlug: string;
     respondentProfilesMap: Record<string, RespondentProfile>;
     answersMap: Record<string, AnswerMap>;
+    answerSnapshotsMap: Record<string, AnswerMap>;
     progressMap: Record<string, AssessmentProgress>;
     initialized: boolean;
     existingIkasId: string | null;
@@ -57,6 +72,7 @@ interface AssessmentState {
     // ── Derived ──────────────────────────────────────────────────────────────
     respondentProfile: () => RespondentProfile | null;
     answers: () => AnswerMap;
+    syncedAnswers: () => AnswerMap;
     progress: () => AssessmentProgress;
     hasRespondentProfile: () => boolean;
     isCompleted: () => boolean;
@@ -83,6 +99,7 @@ interface AssessmentState {
 
     /** Hydrate answersMap with pre-existing answers from the database */
     hydrateAnswers: (answerMap: AnswerMap) => void;
+    markAnswersSynced: (answerMap?: AnswerMap) => void;
 
     saveRespondentProfile: (profile: RespondentProfile) => void;
     saveAnswer: (questionId: string, index: number) => void;
@@ -102,6 +119,7 @@ export const useAssessmentStore = create<AssessmentState>()(
             currentStakeholderSlug: '',
             respondentProfilesMap: {},
             answersMap: {},
+            answerSnapshotsMap: {},
             progressMap: {},
             initialized: false,
             existingIkasId: null,
@@ -118,8 +136,28 @@ export const useAssessmentStore = create<AssessmentState>()(
                 return currentStakeholderSlug ? (respondentProfilesMap[currentStakeholderSlug] ?? null) : null;
             },
             answers: () => {
-                const { currentStakeholderSlug, answersMap } = get();
-                return currentStakeholderSlug ? (answersMap[currentStakeholderSlug] ?? {}) : {};
+                const { currentStakeholderSlug, answersMap, assessmentStructure } = get();
+                if (!currentStakeholderSlug) return {};
+
+                const scopedAnswers = answersMap[currentStakeholderSlug] ?? {};
+                const validQuestionIds = getValidQuestionIdSet(assessmentStructure);
+                if (validQuestionIds.size === 0) return scopedAnswers;
+
+                return Object.fromEntries(
+                    Object.entries(scopedAnswers).filter(([questionId]) => validQuestionIds.has(questionId))
+                );
+            },
+            syncedAnswers: () => {
+                const { currentStakeholderSlug, answerSnapshotsMap, assessmentStructure } = get();
+                if (!currentStakeholderSlug) return {};
+
+                const scopedAnswers = answerSnapshotsMap[currentStakeholderSlug] ?? {};
+                const validQuestionIds = getValidQuestionIdSet(assessmentStructure);
+                if (validQuestionIds.size === 0) return scopedAnswers;
+
+                return Object.fromEntries(
+                    Object.entries(scopedAnswers).filter(([questionId]) => validQuestionIds.has(questionId))
+                );
             },
             progress: () => {
                 const { currentStakeholderSlug, progressMap } = get();
@@ -195,6 +233,10 @@ export const useAssessmentStore = create<AssessmentState>()(
                         ...state.answersMap,
                         [slug]: state.answersMap[slug] ?? {},
                     },
+                    answerSnapshotsMap: {
+                        ...state.answerSnapshotsMap,
+                        [slug]: state.answerSnapshotsMap[slug] ?? {},
+                    },
                     progressMap: {
                         ...state.progressMap,
                         [slug]: state.progressMap[slug] ?? createDefaultProgress(state.assessmentStructure),
@@ -219,6 +261,7 @@ export const useAssessmentStore = create<AssessmentState>()(
                 set({
                     respondentProfilesMap: load<Record<string, RespondentProfile>>(STORAGE_KEYS.RESPONDENT_PROFILES) ?? {},
                     answersMap: load<Record<string, AnswerMap>>(STORAGE_KEYS.ASSESSMENT_ANSWERS) ?? {},
+                    answerSnapshotsMap: {},
                     progressMap: load<Record<string, AssessmentProgress>>(STORAGE_KEYS.ASSESSMENT_PROGRESS) ?? {},
                     initialized: true,
                 });
@@ -239,15 +282,46 @@ export const useAssessmentStore = create<AssessmentState>()(
             },
 
             hydrateAnswers: (answerMap: AnswerMap) => {
-                const { currentStakeholderSlug } = get();
+                const { currentStakeholderSlug, assessmentStructure } = get();
                 if (!currentStakeholderSlug) return;
                 set((state) => {
-                    const existing = state.answersMap[currentStakeholderSlug] ?? {};
-                    // API answers override localStorage drafts
-                    const merged = { ...existing, ...answerMap };
-                    const map = { ...state.answersMap, [currentStakeholderSlug]: merged };
+                    const validQuestionIds = getValidQuestionIdSet(assessmentStructure);
+                    const filteredIncoming = validQuestionIds.size === 0
+                        ? answerMap
+                        : Object.fromEntries(
+                            Object.entries(answerMap).filter(([questionId]) => validQuestionIds.has(questionId))
+                        );
+                    const map = { ...state.answersMap, [currentStakeholderSlug]: filteredIncoming };
                     localStorage.setItem(STORAGE_KEYS.ASSESSMENT_ANSWERS, JSON.stringify(map));
-                    return { answersMap: map };
+                    return {
+                        answersMap: map,
+                        answerSnapshotsMap: {
+                            ...state.answerSnapshotsMap,
+                            [currentStakeholderSlug]: filteredIncoming,
+                        },
+                    };
+                });
+            },
+
+            markAnswersSynced: (answerMap) => {
+                const { currentStakeholderSlug, assessmentStructure } = get();
+                if (!currentStakeholderSlug) return;
+
+                set((state) => {
+                    const source = answerMap ?? (state.answersMap[currentStakeholderSlug] ?? {});
+                    const validQuestionIds = getValidQuestionIdSet(assessmentStructure);
+                    const filtered = validQuestionIds.size === 0
+                        ? source
+                        : Object.fromEntries(
+                            Object.entries(source).filter(([questionId]) => validQuestionIds.has(questionId))
+                        );
+
+                    return {
+                        answerSnapshotsMap: {
+                            ...state.answerSnapshotsMap,
+                            [currentStakeholderSlug]: filtered,
+                        },
+                    };
                 });
             },
 
@@ -395,14 +469,21 @@ export const useAssessmentStore = create<AssessmentState>()(
                 set((state) => {
                     const profiles = { ...state.respondentProfilesMap };
                     const answers = { ...state.answersMap };
+                    const snapshots = { ...state.answerSnapshotsMap };
                     const progress = { ...state.progressMap };
                     delete profiles[currentStakeholderSlug];
                     delete answers[currentStakeholderSlug];
+                    delete snapshots[currentStakeholderSlug];
                     delete progress[currentStakeholderSlug];
                     localStorage.setItem(STORAGE_KEYS.RESPONDENT_PROFILES, JSON.stringify(profiles));
                     localStorage.setItem(STORAGE_KEYS.ASSESSMENT_ANSWERS, JSON.stringify(answers));
                     localStorage.setItem(STORAGE_KEYS.ASSESSMENT_PROGRESS, JSON.stringify(progress));
-                    return { respondentProfilesMap: profiles, answersMap: answers, progressMap: progress };
+                    return {
+                        respondentProfilesMap: profiles,
+                        answersMap: answers,
+                        answerSnapshotsMap: snapshots,
+                        progressMap: progress,
+                    };
                 });
             },
 
@@ -411,6 +492,7 @@ export const useAssessmentStore = create<AssessmentState>()(
                 set({
                     respondentProfilesMap: {},
                     answersMap: {},
+                    answerSnapshotsMap: {},
                     progressMap: {},
                     currentStakeholderSlug: '',
                     assessmentStructure: EMPTY_ASSESSMENT_DATA,

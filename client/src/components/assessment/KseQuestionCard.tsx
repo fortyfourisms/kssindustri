@@ -13,21 +13,21 @@ const optionColors: Record<string, { bg: string; border: string; selectedBg: str
   A: {
     bg: 'from-red-400 to-red-500',
     border: 'hover:border-red-300 hover:shadow-red-100',
-    selectedBg: 'bg-gradient-to-r from-red-50 to-rose-50 border-red-200',
+    selectedBg: 'bg-gradient-to-r from-red-500 to-rose-500 border-red-400',
     badge: 'bg-gradient-to-br from-red-400 to-red-500 shadow-red-400/30',
     shadow: 'shadow-red-200/50',
   },
   B: {
     bg: 'from-amber-400 to-amber-500',
     border: 'hover:border-amber-300 hover:shadow-amber-100',
-    selectedBg: 'bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200',
+    selectedBg: 'bg-gradient-to-r from-amber-400 to-orange-500 border-amber-300',
     badge: 'bg-gradient-to-br from-amber-400 to-amber-500 shadow-amber-400/30',
     shadow: 'shadow-amber-200/50',
   },
   C: {
     bg: 'from-emerald-400 to-emerald-500',
     border: 'hover:border-emerald-300 hover:shadow-emerald-100',
-    selectedBg: 'bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-200',
+    selectedBg: 'bg-gradient-to-r from-emerald-400 to-teal-500 border-emerald-300',
     badge: 'bg-gradient-to-br from-emerald-400 to-emerald-500 shadow-emerald-400/30',
     shadow: 'shadow-emerald-200/50',
   },
@@ -130,7 +130,7 @@ export default function KseQuestionCard({
                     transition-all duration-300 ease-out overflow-hidden
                     ${readonly ? 'cursor-default' : 'cursor-pointer'}
                     ${isSelected
-                      ? `${colors.selectedBg} shadow-md -translate-y-0.5`
+                      ? `button-force-white ${colors.selectedBg} shadow-md -translate-y-0.5`
                       : isNotSelected
                         ? 'bg-white border-black/[0.06] opacity-55 scale-[0.98] hover:opacity-80 hover:scale-[0.99]'
                         : `bg-white border-black/[0.06] shadow-[0_1px_4px_rgba(0,0,0,0.02)] ${!readonly ? colors.border + ' hover:-translate-y-0.5' : ''}`
@@ -143,18 +143,19 @@ export default function KseQuestionCard({
                     {/* Key Badge */}
                     <div
                       className={`
-                        w-[36px] h-[36px] md:w-[42px] md:h-[42px] flex items-center justify-center rounded-xl font-extrabold text-white text-[14px] md:text-[15px] shrink-0
+                        w-[36px] h-[36px] md:w-[42px] md:h-[42px] flex items-center justify-center rounded-xl font-extrabold text-[14px] md:text-[15px] shrink-0
                         transition-all duration-400 ease-out
                         ${colors.badge}
                         ${isSelected ? 'scale-110 rotate-[5deg] shadow-lg' : ''}
                       `}
+                      style={{ color: '#fff' }}
                     >
                       {k}
                     </div>
 
                     {/* Label */}
                     <div className="flex-1 min-w-0 pr-1">
-                      <span className="font-semibold text-slate-700 text-[13px] md:text-[14px] tracking-tight leading-snug">
+                      <span className={`text-[13px] md:text-[14px] font-semibold tracking-tight leading-snug ${isSelected ? '!text-white' : 'text-slate-700'}`}>
                         {option.label}
                       </span>
                     </div>
@@ -162,19 +163,17 @@ export default function KseQuestionCard({
                     {/* Right side indicators */}
                     <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2 shrink-0">
                       {/* Bobot */}
-                      <span className="inline-flex items-center gap-1 text-[10px] md:text-[11px] font-bold text-slate-400 bg-slate-100 px-2.5 py-1.5 rounded-lg whitespace-nowrap">
-                        <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
+                      <span className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[10px] md:text-[11px] font-bold whitespace-nowrap ${isSelected ? 'bg-white/20 !text-white' : 'bg-slate-100 text-slate-400'}`}>
+                        <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
                         {option.bobot}
                       </span>
 
                       {/* Check Circle */}
                       {isSelected && (
                         <div
-                          className={`w-6 h-6 md:w-7 md:h-7 rounded-full flex items-center justify-center text-white shrink-0 animate-in zoom-in-50 duration-300
-                            ${k === 'A' ? 'bg-red-500' : k === 'B' ? 'bg-amber-500' : 'bg-emerald-500'}
-                          `}
+                          className="button-force-white flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-white/35 bg-white/20 animate-in zoom-in-50 duration-300 md:h-7 md:w-7"
                         >
-                          <Check className="w-3.5 h-3.5 md:w-4 md:h-4" strokeWidth={3} />
+                          <Check className="!text-white w-3.5 h-3.5 md:w-4 md:h-4" strokeWidth={3} />
                         </div>
                       )}
                     </div>

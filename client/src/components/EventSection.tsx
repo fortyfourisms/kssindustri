@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { ArrowRight, CalendarDays, Clock3, MapPin } from "lucide-react";
+import { ArrowRight, CalendarDays, MapPin } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useEventsPreview } from "@/hooks/useEvents";
 import type { EventItem } from "@/types/event.types";
@@ -22,9 +22,27 @@ function EventPreviewCard({
   showAction: boolean;
 }) {
   const navigate = useNavigate();
+  const targetUrl = `/events/${event.id}`;
+
+  const handleOpenDetail = () => {
+    navigate(targetUrl);
+  };
+
+  const handleKeyDown = (eventKey: React.KeyboardEvent<HTMLElement>) => {
+    if (eventKey.key === "Enter" || eventKey.key === " ") {
+      eventKey.preventDefault();
+      handleOpenDetail();
+    }
+  };
 
   return (
-    <article className="group relative overflow-hidden rounded-[2rem] border border-white/60 bg-white/90 shadow-[0_20px_80px_rgba(31,60,136,0.10)] backdrop-blur-sm transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_28px_100px_rgba(31,60,136,0.16)]">
+    <article
+      role="link"
+      tabIndex={0}
+      onClick={handleOpenDetail}
+      onKeyDown={handleKeyDown}
+      className="group relative cursor-pointer overflow-hidden rounded-[2rem] border border-white/60 bg-white/90 shadow-[0_20px_80px_rgba(31,60,136,0.10)] backdrop-blur-sm transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_28px_100px_rgba(31,60,136,0.16)] focus:outline-none focus:ring-2 focus:ring-[#0061ff]/30 focus:ring-offset-2"
+    >
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(96,239,255,0.12),transparent_42%)] opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
       <div className="relative p-6 md:p-7">
         <div className="flex flex-wrap items-center gap-3">
@@ -32,8 +50,7 @@ function EventPreviewCard({
             {event.coverLabel}
           </span>
           <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">
-            <Clock3 className="h-3.5 w-3.5 text-cyan-600" />
-            {event.format}
+            {event.statusLabel}
           </span>
         </div>
 
@@ -58,14 +75,14 @@ function EventPreviewCard({
         {showAction ? (
           <div className="mt-8 flex items-center justify-between gap-4">
             <button
-              onClick={() => navigate(`/events/${event.id}`)}
+              onClick={handleOpenDetail}
               className="inline-flex items-center gap-2 rounded-full bg-[#0061ff] px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-blue-500/20 transition hover:bg-blue-700"
             >
               Join Event
               <ArrowRight className="h-4 w-4" />
             </button>
             <button
-              onClick={() => navigate(`/events/${event.id}`)}
+              onClick={handleOpenDetail}
               className="text-sm font-semibold text-[#0061ff] transition hover:text-[#1f3c88]"
             >
               Lihat detail

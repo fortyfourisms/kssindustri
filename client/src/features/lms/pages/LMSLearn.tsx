@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -11,10 +11,8 @@ import {
   File,
   FileText,
   Loader2,
-  MessageSquare,
   PlayCircle,
   Save,
-  Send,
   Sparkles,
   StickyNote,
 } from "lucide-react";
@@ -33,8 +31,7 @@ import { getCourseLearnRoute, getCourseQuizRoute, getCourseRoute, getCoursesRout
 const TABS = [
   { key: "materi", label: "Materi", icon: BookOpen },
   { key: "materi_pendukung", label: "Materi Pendukung", icon: File },
-  { key: "diskusi", label: "Diskusi", icon: MessageSquare },
-  { key: "catatan", label: "Catatan Pribadi", icon: StickyNote },
+  { key: "feedback", label: "Feedback", icon: StickyNote },
 ];
 
 function FilesTab() {
@@ -89,121 +86,40 @@ function FilesTab() {
   );
 }
 
-function DiscussionTab({ materiId }: { materiId: string }) {
-  const { materiDiscussion, isLoadingMateri, postDiscussion } = useLmsStore();
-  const [newMessage, setNewMessage] = useState("");
-  const [sending, setSending] = useState(false);
-
-  const handleSend = async () => {
-    if (!newMessage.trim()) return;
-    setSending(true);
-    const result = await postDiscussion(materiId, newMessage.trim());
-    setSending(false);
-    if (result.success) {
-      setNewMessage("");
-      toast.success("Pesan berhasil dikirim");
-    } else {
-      toast.error(result.error ?? "Gagal mengirim pesan");
-    }
-  };
-
-  if (isLoadingMateri) {
-    return (
-      <div className="space-y-3">
-        {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="h-16 bg-slate-100 rounded-2xl animate-pulse" />
-        ))}
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex flex-col gap-6">
-      <div className="space-y-4">
-        {materiDiscussion.length === 0 ? (
-          <div className="flex flex-col items-center py-12 text-center">
-            <MessageSquare className="w-10 h-10 text-slate-300 mb-3" />
-            <p className="text-sm font-semibold text-slate-500">Belum ada diskusi. Jadilah yang pertama!</p>
-          </div>
-        ) : (
-          materiDiscussion.map((item) => (
-            <div key={item.id} className="flex gap-3">
-              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-black text-sm shrink-0">
-                {(item.user?.name ?? "U").charAt(0).toUpperCase()}
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-sm font-bold text-slate-800">{item.user?.name ?? "Pengguna"}</span>
-                  <span className="text-xs text-slate-400">
-                    {new Date(item.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
-                  </span>
-                </div>
-                <p className="text-sm text-slate-600 leading-relaxed bg-slate-50 rounded-2xl rounded-tl-none px-4 py-3 border border-slate-100">{item.konten}</p>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-      <div className="flex gap-3 sticky bottom-0 bg-white/80 backdrop-blur-sm pt-4 border-t border-slate-100">
-        <input
-          value={newMessage}
-          onChange={(e) => setNewMessage(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
-          placeholder="Tulis pesan diskusi..."
-          className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-300 transition"
-        />
-        <button
-          onClick={handleSend}
-          disabled={!newMessage.trim() || sending}
-          className="px-4 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 text-white rounded-2xl transition-colors flex items-center gap-2 font-bold text-sm"
-        >
-          {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-          Kirim
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function NotesTab({ materiId }: { materiId: string }) {
-  const { materiNotes, saveNotes } = useLmsStore();
-  const [notes, setNotes] = useState("");
+function FeedbackTab({ materiId }: { materiId: string }) {
+  const { saveFeedback } = useLmsStore();
+  const [feedback, setFeedback] = useState("");
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
-  const initialized = useRef(false);
-
-  useEffect(() => {
-    if (materiNotes && !initialized.current) {
-      setNotes(materiNotes.konten);
-      initialized.current = true;
-    }
-  }, [materiNotes]);
 
   const handleSave = async () => {
     setSaving(true);
-    const result = await saveNotes(materiId, notes);
+    const result = await saveFeedback(materiId, feedback);
     setSaving(false);
     if (result.success) {
       setDirty(false);
-      toast.success("Catatan tersimpan");
+      toast.success("Feedback tersimpan");
     } else {
-      toast.error(result.error ?? "Gagal menyimpan catatan");
+      toast.error(result.error ?? "Gagal menyimpan feedback");
     }
   };
 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-slate-500 font-medium">Tulis catatan pribadi Anda tentang materi ini</p>
+        <p className="text-sm text-slate-500 font-medium">Tulis feedback Anda tentang materi ini</p>
         {dirty && <span className="text-xs text-amber-600 font-semibold bg-amber-50 px-2 py-1 rounded-lg">Belum tersimpan</span>}
       </div>
+      <p className="text-xs text-slate-400">
+        Feedback disimpan saat Anda menekan tombol simpan.
+      </p>
       <textarea
-        value={notes}
+        value={feedback}
         onChange={(e) => {
-          setNotes(e.target.value);
+          setFeedback(e.target.value);
           setDirty(true);
         }}
-        placeholder="Tuliskan catatan Anda di sini..."
+        placeholder="Tuliskan feedback Anda di sini..."
         rows={12}
         className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-300 transition resize-none leading-relaxed"
       />
@@ -214,7 +130,7 @@ function NotesTab({ materiId }: { materiId: string }) {
           className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 text-white font-bold text-sm rounded-xl transition-colors"
         >
           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-          Simpan Catatan
+          Simpan Feedback
         </button>
       </div>
     </div>
@@ -303,7 +219,11 @@ export default function LMSLearn() {
     const completedAfterAction = new Set(completedMateriIds);
 
     if (!isCompleted && materiId) {
-      await markMateriCompleted(materiId);
+      const completedResult = await markMateriCompleted(materiId);
+      if (!completedResult.success) {
+        toast.error(completedResult.error ?? "Gagal menandai materi selesai");
+        return;
+      }
       completedAfterAction.add(materiId);
       toast.success("Materi ditandai selesai");
     }
@@ -339,19 +259,11 @@ export default function LMSLearn() {
             </span>
             <span className="mx-2">/</span>
             <span className="hover:text-slate-600 cursor-pointer transition-colors" onClick={() => navigate(getCourseRoute(courseId!))}>
-              {activeCourse?.judul || "Course"}
+              {activeCourse?.judul || "Kelas"}
             </span>
             <span className="mx-2">/</span>
             <span className="text-slate-600 font-bold">{materi.judul}</span>
           </div>
-
-          <button
-            onClick={navigateToNextStep}
-            disabled={!isCompleted}
-            className="text-teal-600 hover:text-teal-700 disabled:text-slate-300 font-bold text-sm tracking-wide transition-colors whitespace-nowrap"
-          >
-            Selanjutnya
-          </button>
         </div>
       )}
 
@@ -381,7 +293,7 @@ export default function LMSLearn() {
                   <div className="flex flex-wrap items-center gap-3 text-white/80 text-[11px] font-black uppercase tracking-[0.22em]">
                     <span className="inline-flex items-center gap-2">
                       <Sparkles className="w-3.5 h-3.5" />
-                      Learning Module
+                      Modul Pembelajaran
                     </span>
                     {materi.tipe === "video" && materi.durasi_detik && (
                       <span className="inline-flex items-center gap-2">
@@ -392,7 +304,7 @@ export default function LMSLearn() {
                   </div>
                   <h1 className="mt-4 text-[28px] lg:text-[34px] font-black text-white leading-tight max-w-4xl">{materi.judul}</h1>
                   <p className="mt-4 text-sm lg:text-base text-white/85 max-w-3xl leading-relaxed">
-                    {materi.deskripsi_singkat || "Pelajari materi ini sampai tuntas, lanjutkan ke diskusi jika ada pertanyaan, lalu tandai selesai ketika Anda sudah benar-benar memahami isinya."}
+                    {materi.deskripsi_singkat || "Pelajari materi ini sampai tuntas, lalu tandai selesai ketika Anda sudah benar-benar memahami isinya."}
                   </p>
                 </div>
               </div>
@@ -412,7 +324,6 @@ export default function LMSLearn() {
                       </button>
                     ))}
                   </div>
-                  <div className="hidden sm:block text-xs font-black text-slate-400 tracking-widest px-4 pb-3">NOTES</div>
                 </div>
               </div>
             </div>
@@ -454,14 +365,6 @@ export default function LMSLearn() {
                     <div className={`p-4 md:p-5 border-t border-slate-200 bg-white flex flex-col md:flex-row items-center justify-between gap-4 transition-all ${isCompleted ? "bg-teal-50/30" : ""}`}>
                       <span className="text-slate-600 font-medium text-[15px] md:pl-2">{isCompleted ? "Anda sudah memahami materi ini." : "Apakah sudah paham?"}</span>
                       <div className="flex w-full md:w-auto items-center gap-3">
-                        <button
-                          onClick={() => setActiveTab("diskusi")}
-                          className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-3 bg-slate-600 hover:bg-slate-700 text-white rounded-xl text-sm font-bold transition-colors shadow-sm"
-                        >
-                          <MessageSquare className="w-4 h-4" />
-                          <span className="hidden sm:inline">Tanyakan di Forum</span>
-                          <span className="sm:hidden">Tanya Forum</span>
-                        </button>
                         {isCompleted ? (
                           <div className="flex items-center gap-2 px-5 py-3 bg-teal-50 border border-teal-200 text-teal-700 rounded-xl text-sm font-bold">
                             <CheckCircle2 className="w-4 h-4" /> Selesai
@@ -488,18 +391,10 @@ export default function LMSLearn() {
                 </motion.div>
               )}
 
-              {activeTab === "diskusi" && materiId && (
-                <motion.div key="diskusi" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+              {activeTab === "feedback" && materiId && (
+                <motion.div key="feedback" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
                   <div className="rounded-[2rem] border border-white/70 bg-white/75 backdrop-blur-xl shadow-[0_20px_80px_rgba(15,23,42,0.06)] p-6 md:p-8">
-                    <DiscussionTab materiId={materiId} />
-                  </div>
-                </motion.div>
-              )}
-
-              {activeTab === "catatan" && materiId && (
-                <motion.div key="catatan" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-                  <div className="rounded-[2rem] border border-white/70 bg-white/75 backdrop-blur-xl shadow-[0_20px_80px_rgba(15,23,42,0.06)] p-6 md:p-8">
-                    <NotesTab materiId={materiId} />
+                    <FeedbackTab materiId={materiId} />
                   </div>
                 </motion.div>
               )}
@@ -511,7 +406,7 @@ export default function LMSLearn() {
                 disabled={!isCompleted}
                 className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-bold text-slate-700 border border-slate-200 shadow-sm hover:border-blue-200 hover:text-blue-700 disabled:text-slate-300 disabled:border-slate-100 transition-colors"
               >
-                Lanjut ke tahap berikutnya
+                Berikutnya
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>

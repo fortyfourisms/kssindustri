@@ -92,6 +92,7 @@ interface AuthState {
     completeMfaVerify: (response: unknown) => void;
     clearMfaState: () => void;
     registerUser: (payload: RegisterPayload) => Promise<{ success: boolean; error?: string }>;
+    clearSessionState: () => void;
     logUserOut: () => Promise<void>;
     syncCurrentUser: (response: unknown) => void;
 
@@ -244,6 +245,17 @@ export const useAuthStore = create<AuthState>()(
             set({ setupToken: null, mfaToken: null });
         },
 
+        clearSessionState: () => {
+            clearMfaSessionTokens();
+            set({
+                authenticated: false,
+                currentUser: null,
+                error: null,
+                setupToken: null,
+                mfaToken: null,
+            });
+        },
+
         registerUser: async (payload) => {
             set({ loading: true, error: null });
             try {
@@ -259,14 +271,11 @@ export const useAuthStore = create<AuthState>()(
         },
 
         logUserOut: async () => {
-            await authService.logout();
-            set({
-                authenticated: false,
-                currentUser: null,
-                error: null,
-                setupToken: null,
-                mfaToken: null,
-            });
+            try {
+                await authService.logout();
+            } finally {
+                get().clearSessionState();
+            }
         },
 
         syncCurrentUser: (response) => {

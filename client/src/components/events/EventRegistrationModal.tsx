@@ -1,16 +1,15 @@
 import { useMemo, useState } from "react";
-import QRCode from "qrcode";
-import { Loader2, X } from "lucide-react";
+import { CalendarDays, CheckCircle2, Download, Loader2, MapPin, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useEventRegistration } from "@/hooks/useEvents";
-import { downloadEventTicketPdf } from "@/lib/event-pdf";
 import { industrySectorOptions } from "@/data/events";
 import type {
   EventItem,
   EventRegistrationPayload,
   EventRegistrationResult,
 } from "@/types/event.types";
-import { EventTicketCard } from "@/components/events/EventTicketCard";
+
+const PHONE_NUMBER_MAX_LENGTH = 15;
 
 const inputClassName =
   "w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30";
@@ -43,7 +42,7 @@ export function EventRegistrationModal({
   const [uiState, setUiState] = useState<RegistrationUiState>({ status: "form" });
 
   const title = useMemo(() => {
-    if (uiState.status === "success") return "E-ticket Event";
+    if (uiState.status === "success") return "Registrasi Berhasil";
     return "Workshop Registration";
   }, [uiState.status]);
 
@@ -58,16 +57,30 @@ export function EventRegistrationModal({
     }
   };
 
+  const handlePhoneNumberChange = (value: string) => {
+    const digitsOnly = value.replace(/\D/g, "").slice(0, PHONE_NUMBER_MAX_LENGTH);
+    handleChange("phoneNumber", digitsOnly);
+  };
+
   const handleSubmit = async (eventForm: React.FormEvent) => {
     eventForm.preventDefault();
+
+    if (!/^\d{1,15}$/.test(form.phoneNumber)) {
+      setUiState({
+        status: "error",
+        message: "Nomor HP harus berupa angka dan maksimal 15 karakter.",
+      });
+      return;
+    }
+
     setUiState({ status: "submitting" });
 
     try {
-      const ticket = await registrationMutation.mutateAsync(form);
-      setUiState({ status: "success", ticket });
+      const result = await registrationMutation.mutateAsync(form);
+      setUiState({ status: "success", ticket: result });
       toast({
         title: "Registrasi berhasil",
-        description: "QR e-ticket sudah siap untuk digunakan saat check-in.",
+        description: result.message,
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Gagal mengirim registrasi.";
@@ -75,28 +88,11 @@ export function EventRegistrationModal({
     }
   };
 
-  const handleDownloadPdf = async (ticket: EventRegistrationResult) => {
-    try {
-      const qrCodeDataUrl = await QRCode.toDataURL(ticket.qrValue, {
-        width: 256,
-        margin: 1,
-      });
-      downloadEventTicketPdf(ticket, qrCodeDataUrl);
-    } catch (error) {
-      toast({
-        title: "Gagal menyiapkan PDF",
-        description: error instanceof Error ? error.message : "Coba lagi beberapa saat.",
-        variant: "destructive",
-      });
-    }
-  };
-
   return (
-    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-3xl rounded-[2rem] bg-white shadow-[0_30px_120px_rgba(15,23,42,0.24)]">
+    <div className="fixed inset-0 z-[80] flex items-stretch justify-center bg-slate-950/40 p-0 backdrop-blur-sm sm:items-center sm:p-4">
+      <div className="flex h-full w-full flex-col overflow-hidden bg-white shadow-[0_30px_120px_rgba(15,23,42,0.24)] sm:h-auto sm:max-h-[calc(100dvh-2rem)] sm:max-w-3xl sm:rounded-[2rem]">
         <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-6 py-5">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.22em] text-slate-400">RSVP Flow</p>
             <h3 className="mt-2 text-2xl font-bold text-slate-900">{title}</h3>
             <p className="mt-2 text-sm text-slate-600">{event.title}</p>
           </div>
@@ -110,12 +106,9 @@ export function EventRegistrationModal({
           </button>
         </div>
 
-        <div className="p-6">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
           {uiState.status === "success" ? (
-            <EventTicketCard
-              ticket={uiState.ticket}
-              onDownloadPdf={() => handleDownloadPdf(uiState.ticket)}
-            />
+            <RegistrationSuccessState ticket={uiState.ticket} />
           ) : (
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="grid gap-5 md:grid-cols-2">
@@ -164,8 +157,12 @@ export function EventRegistrationModal({
                   <label className="mb-2 block text-sm font-semibold text-slate-700">Nomor HP</label>
                   <input
                     required
+                    type="tel"
+                    inputMode="numeric"
+                    pattern="[0-9]{1,15}"
+                    maxLength={PHONE_NUMBER_MAX_LENGTH}
                     value={form.phoneNumber}
-                    onChange={(e) => handleChange("phoneNumber", e.target.value)}
+                    onChange={(e) => handlePhoneNumberChange(e.target.value)}
                     className={inputClassName}
                     placeholder="08xxxxxxxxxx"
                   />
@@ -218,6 +215,97 @@ export function EventRegistrationModal({
               </div>
             </form>
           )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat("id-ID", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
+}
+
+function RegistrationSuccessState({ ticket }: { ticket: EventRegistrationResult }) {
+  const [isQrBroken, setIsQrBroken] = useState(false);
+
+  return (
+    <div className="space-y-5">
+      <div className="rounded-3xl border border-emerald-100 bg-emerald-50 p-5">
+        <div className="flex items-start gap-3">
+          <CheckCircle2 className="mt-0.5 h-6 w-6 text-emerald-600" />
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-[0.22em] text-emerald-600">Registrasi Berhasil</p>
+            <h4 className="mt-2 text-2xl font-bold text-slate-900">{ticket.event.title}</h4>
+            <p className="mt-2 text-sm leading-relaxed text-slate-600">{ticket.message}</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid gap-5 md:grid-cols-2">
+        <div className="rounded-3xl border border-slate-200 bg-slate-50/80 p-5">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Peserta</p>
+          <p className="mt-1 text-lg font-bold text-slate-900">{ticket.attendee.fullName}</p>
+          <p className="text-sm text-slate-600">{ticket.attendee.company} - {ticket.attendee.position}</p>
+          <p className="mt-2 text-sm text-slate-600">{ticket.attendee.email}</p>
+          <p className="text-sm text-slate-600">{ticket.attendee.phoneNumber}</p>
+          <p className="mt-2 text-sm text-slate-600">Sektor: {ticket.attendee.industrySector}</p>
+        </div>
+
+        <div className="space-y-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+            <div className="flex items-center gap-2 text-sm font-semibold text-slate-500">
+              <CalendarDays className="h-4 w-4 text-[#0061ff]" />
+              Tanggal event
+            </div>
+            <p className="mt-2 text-sm font-bold text-slate-900">{formatDate(ticket.event.eventDate)}</p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+            <div className="flex items-center gap-2 text-sm font-semibold text-slate-500">
+              <MapPin className="h-4 w-4 text-[#0061ff]" />
+              Lokasi
+            </div>
+            <p className="mt-2 text-sm font-bold text-slate-900">{ticket.event.location}</p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+            <p className="text-sm font-semibold text-slate-500">Status kegiatan</p>
+            <p className="mt-2 text-sm font-bold text-slate-900">{ticket.event.statusLabel}</p>
+          </div>
+          {ticket.qrCodeBase64 && !isQrBroken ? (
+            <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+              <p className="text-sm font-semibold text-slate-500">QR Registrasi</p>
+              <img
+                src={ticket.qrCodeBase64}
+                alt={`QR registrasi ${ticket.event.title}`}
+                onError={() => setIsQrBroken(true)}
+                className="mt-3 w-full rounded-2xl border border-slate-200 bg-white p-3"
+              />
+            </div>
+          ) : null}
+          {ticket.qrCodeBase64 && isQrBroken ? (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50/80 p-4 text-sm font-medium text-amber-700">
+              QR tersedia di backend, tetapi format gambar tidak bisa ditampilkan langsung di modal. Silakan gunakan tombol download e-ticket.
+            </div>
+          ) : null}
+          {ticket.downloadUrl ? (
+            <a
+              href={ticket.downloadUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#0061ff] px-5 py-3 text-sm font-bold text-white shadow-lg shadow-blue-500/20 transition hover:bg-blue-700"
+            >
+              <Download className="h-4 w-4" />
+              Download E-Ticket
+            </a>
+          ) : null}
+          <p className="text-xs leading-relaxed text-slate-500">
+            Registrasi tercatat pada {formatDate(ticket.registeredAt)}. Tim penyelenggara dapat menghubungi Anda lewat email atau nomor HP yang didaftarkan.
+          </p>
         </div>
       </div>
     </div>

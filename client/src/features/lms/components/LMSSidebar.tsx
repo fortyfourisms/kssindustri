@@ -29,7 +29,8 @@ import {
     sortMateriByOrder,
     useLmsStore,
 } from "@/features/lms/stores/lms.store";
-import { getCourseLearnRoute, getCourseQuizRoute, getCoursesRoute } from "@/features/lms/lib/lms-routes";
+import { getCourseCertificateRoute, getCourseLearnRoute, getCourseQuizRoute, getCoursesRoute } from "@/features/lms/lib/lms-routes";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface LMSSidebarProps {
     mobileOpen?: boolean;
@@ -38,6 +39,8 @@ interface LMSSidebarProps {
 
 export function LMSSidebar({ mobileOpen = false, onClose }: LMSSidebarProps) {
     const [collapsed, setCollapsed] = useState(false);
+    const [passedQuizModalOpen, setPassedQuizModalOpen] = useState(false);
+    const [selectedQuizTitle, setSelectedQuizTitle] = useState("");
     const location = useLocation();
     const logout = useLogout();
     const navigate = useNavigate();
@@ -45,14 +48,19 @@ export function LMSSidebar({ mobileOpen = false, onClose }: LMSSidebarProps) {
     const { courseMateri, courseQuizzes, completedMateriIds, quizProgressById } = useLmsStore();
     const role = getUserRole(currentUser);
     const navItems = [
-        { label: role === ROLE_USER_PIC ? "LMS" : "LMS / My Learning", href: "/lms", icon: LayoutDashboard },
-        { label: "Courses", href: getCoursesRoute(), icon: BookOpen, description: "Materi Pembelajaran" },
+        { label: "Pembelajaran Saya", href: "/lms", icon: LayoutDashboard },
+        { label: "Daftar Kelas", href: getCoursesRoute(), icon: BookOpen, description: "Materi Pembelajaran" },
         { label: "Progress Belajar", href: "/lms/progress", icon: TrendingUp },
     ];
 
     const isCoursePlayerRoute = (location.pathname.startsWith("/lms/materi/") || location.pathname.startsWith("/course/")) && !collapsed;
     const sortedMateri = useMemo(() => sortMateriByOrder(courseMateri), [courseMateri]);
     const desktopSidebarWidth = isCoursePlayerRoute ? "w-[320px]" : "w-64";
+
+    const openPassedQuizModal = (quizTitle: string) => {
+        setSelectedQuizTitle(quizTitle);
+        setPassedQuizModalOpen(true);
+    };
 
     const NavContent = ({ forMobile = false }: { forMobile?: boolean }) => (
         <>
@@ -64,7 +72,7 @@ export function LMSSidebar({ mobileOpen = false, onClose }: LMSSidebarProps) {
                     </div>
                     {(forMobile || !collapsed) && (
                         <div className="overflow-hidden">
-                            <img src={kssiLogo} alt="KSSI" className="h-6 w-auto object-contain" />
+                            <img src={kssiLogo} alt="KSSI" className="kssi-logo h-6 w-auto object-contain" />
                         </div>
                     )}
                 </div>
@@ -80,7 +88,7 @@ export function LMSSidebar({ mobileOpen = false, onClose }: LMSSidebarProps) {
             </div>
 
             {/* Nav */}
-            <nav className="flex-1 px-3 py-5 overflow-y-auto overflow-x-hidden">
+            <nav data-tour-id="lms-sidebar-menu" className="flex-1 px-3 py-5 overflow-y-auto overflow-x-hidden">
                 <div className="space-y-2">
                 {navItems.map((item) => {
                     // Exact match for /lms to prevent it from matching nested LMS routes
@@ -94,6 +102,7 @@ export function LMSSidebar({ mobileOpen = false, onClose }: LMSSidebarProps) {
                     return (
                         <div key={item.href}>
                             <NavLink
+                                data-tour-id={item.href === "/lms" ? "lms-sidebar-home" : undefined}
                                 to={item.href}
                                 onClick={forMobile ? onClose : undefined}
                                 title={!forMobile && collapsed ? item.label : ""}
@@ -119,7 +128,7 @@ export function LMSSidebar({ mobileOpen = false, onClose }: LMSSidebarProps) {
                                 <div className="mt-3 ml-4 border-l border-slate-200 pl-4 pr-1">
                                     <div className="max-h-[calc(100vh-20rem)] overflow-y-auto session-scrollbar pr-2">
                                         <div className="flex items-center justify-between mb-3">
-                                            <div className="text-[11px] font-black text-slate-400 tracking-[0.22em] uppercase">Table of Contents</div>
+                                            <div className="text-[11px] font-black text-slate-400 tracking-[0.22em] uppercase">Daftar Isi</div>
                                             <span className="text-[11px] font-bold text-slate-400">{sortedMateri.length}</span>
                                         </div>
 
@@ -168,7 +177,7 @@ export function LMSSidebar({ mobileOpen = false, onClose }: LMSSidebarProps) {
                                                                                     {materi.judul}
                                                                                 </span>
                                                                                 <div className="mt-1 flex items-center gap-2 text-[11px] font-medium text-slate-400">
-                                                                                    <span>Lesson {idx + 1}</span>
+                                                                                    <span>Materi {idx + 1}</span>
                                                                                     {materi.tipe === "video" && materi.durasi_detik && (
                                                                                         <>
                                                                                             <span>/</span>
@@ -197,12 +206,15 @@ export function LMSSidebar({ mobileOpen = false, onClose }: LMSSidebarProps) {
                                                             <button
                                                                 key={kuis.id}
                                                                 onClick={() => {
-                                                                    if (canAccessQuiz) {
-                                                                        navigate(getCourseQuizRoute(kuis.id_kelas, kuis.id));
-                                                                        if (forMobile) onClose?.();
+                                                                    if (!canAccessQuiz) return;
+                                                                    if (quizPassed) {
+                                                                        openPassedQuizModal(kuis.judul);
+                                                                        return;
                                                                     }
+
+                                                                    navigate(getCourseQuizRoute(kuis.id_kelas, kuis.id));
+                                                                    if (forMobile) onClose?.();
                                                                 }}
-                                                                disabled={!canAccessQuiz}
                                                                 className={cn(
                                                                     "w-full flex items-center gap-3 px-2 py-2 ml-4 text-left transition-all group rounded-lg",
                                                                     !canAccessQuiz ? "opacity-50 cursor-not-allowed" : quizPassed ? "hover:bg-teal-50/70" : "hover:bg-amber-50/70"
@@ -232,12 +244,16 @@ export function LMSSidebar({ mobileOpen = false, onClose }: LMSSidebarProps) {
                                                             return (
                                                             <button
                                                                 key={kuis.id}
-                                                                disabled={isFinalLocked}
                                                                 onClick={() => {
-                                                                    if (!isFinalLocked) {
-                                                                        navigate(getCourseQuizRoute(kuis.id_kelas, kuis.id));
+                                                                    if (isFinalLocked) return;
+                                                                    if (quizPassed) {
+                                                                        navigate(getCourseCertificateRoute(kuis.id_kelas));
                                                                         if (forMobile) onClose?.();
+                                                                        return;
                                                                     }
+
+                                                                    navigate(getCourseQuizRoute(kuis.id_kelas, kuis.id));
+                                                                    if (forMobile) onClose?.();
                                                                 }}
                                                                 className={cn(
                                                                     "w-full flex items-center gap-3 px-2 py-2 text-left transition-all group rounded-lg",
@@ -246,7 +262,7 @@ export function LMSSidebar({ mobileOpen = false, onClose }: LMSSidebarProps) {
                                                             >
                                                                 {isFinalLocked ? <Lock className="w-4 h-4 text-slate-400 shrink-0" /> : quizPassed ? <CheckCircle2 className="w-4 h-4 text-teal-500 shrink-0" /> : <Sparkles className="w-4 h-4 text-amber-500 shrink-0" />}
                                                                 <span className={cn("text-sm font-bold flex-1 min-w-0 line-clamp-2", isFinalLocked ? "text-slate-500" : quizPassed ? "text-teal-700" : "text-amber-900")}>
-                                                                    Final: {kuis.judul}
+                                                                    Kuis Akhir: {kuis.judul}
                                                                 </span>
                                                             </button>
                                                             );
@@ -298,11 +314,29 @@ export function LMSSidebar({ mobileOpen = false, onClose }: LMSSidebarProps) {
 
     return (
         <>
+            <Dialog open={passedQuizModalOpen} onOpenChange={setPassedQuizModalOpen}>
+                <DialogContent className="inset-auto left-1/2 top-1/2 h-auto max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg p-6">
+                    <DialogHeader>
+                        <DialogTitle>Anda sudah lulus kuis ini</DialogTitle>
+                        <DialogDescription>
+                            {selectedQuizTitle ? `Kuis "${selectedQuizTitle}" sudah dinyatakan lulus.` : "Kuis ini sudah dinyatakan lulus."}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <button
+                            onClick={() => setPassedQuizModalOpen(false)}
+                            className="inline-flex h-10 w-auto items-center justify-center self-end whitespace-nowrap rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+                        >
+                            Mengerti
+                        </button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
             {/* ── MOBILE DRAWER ── */}
             {/* Overlay backdrop */}
             {mobileOpen && (
                 <div
-                    className="fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-sm md:hidden"
+                    className="fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-sm lg:hidden"
                     onClick={onClose}
                 />
             )}
@@ -310,7 +344,7 @@ export function LMSSidebar({ mobileOpen = false, onClose }: LMSSidebarProps) {
             {/* Mobile slide-in sidebar */}
             <aside
                 className={cn(
-                    "fixed top-0 left-0 h-screen z-50 flex flex-col transition-transform duration-300 md:hidden",
+                    "fixed top-0 left-0 h-screen z-50 flex flex-col transition-transform duration-300 lg:hidden",
                     "bg-white/95 backdrop-blur-xl border-r border-white/50 shadow-2xl",
                     "w-72",
                     mobileOpen ? "translate-x-0" : "-translate-x-full"
@@ -322,7 +356,7 @@ export function LMSSidebar({ mobileOpen = false, onClose }: LMSSidebarProps) {
             {/* ── DESKTOP SIDEBAR ── */}
             <aside
                 className={cn(
-                    "fixed top-0 left-0 h-screen z-40 flex-col transition-all duration-300 hidden md:flex",
+                    "fixed top-0 left-0 h-screen z-40 hidden flex-col transition-all duration-300 lg:flex",
                     "bg-[#f8fafc]/92 backdrop-blur-xl border-r border-white/60 shadow-xl shadow-slate-900/5",
                     collapsed ? "w-[72px]" : desktopSidebarWidth
                 )}
@@ -340,7 +374,7 @@ export function LMSSidebar({ mobileOpen = false, onClose }: LMSSidebarProps) {
             </aside>
 
             {/* Desktop Spacer */}
-            <div className={cn("flex-shrink-0 transition-all duration-300 hidden md:block", collapsed ? "w-[72px]" : desktopSidebarWidth)} />
+            <div className={cn("hidden flex-shrink-0 transition-all duration-300 lg:block", collapsed ? "w-[72px]" : desktopSidebarWidth)} />
         </>
     );
 }

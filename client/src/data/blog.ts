@@ -164,6 +164,150 @@ export const blogArticles: BlogArticle[] = [
       },
     ],
   },
+  {
+    slug: "mengurangi-risiko-phishing-dengan-kebiasaan-sederhana",
+    title: "Mengurangi Risiko Phishing dengan Kebiasaan Sederhana yang Konsisten",
+    category: "Awareness",
+    excerpt:
+      "Sebagian besar serangan phishing berhasil bukan karena teknologinya canggih, tetapi karena proses verifikasi di lapangan belum menjadi kebiasaan tim.",
+    coverLabel: "Phishing Defense",
+    publishedAt: "22 April 2026",
+    readingTime: "6 menit",
+    author: "Tim FortyFour",
+    tags: ["Phishing", "Awareness", "Email Security"],
+    highlight:
+      "Pertahanan terhadap phishing dimulai dari perilaku kecil yang dilakukan berulang, bukan hanya dari filter email.",
+    sections: [
+      {
+        heading: "Phishing memanfaatkan momen lengah",
+        paragraphs: [
+          "Pelaku phishing biasanya memanfaatkan situasi yang terasa mendesak, seperti permintaan reset password, konfirmasi pembayaran, atau dokumen yang tampak penting. Dalam kondisi sibuk, orang cenderung mengambil keputusan cepat tanpa memeriksa konteks secara menyeluruh.",
+          "Karena itu, penguatan pertahanan tidak cukup hanya mengandalkan teknologi. Organisasi perlu membentuk refleks verifikasi agar setiap pengguna terbiasa berhenti sejenak sebelum membuka tautan, mengunduh lampiran, atau membagikan informasi sensitif.",
+        ],
+      },
+      {
+        heading: "Bangun daftar cek yang mudah diingat",
+        paragraphs: [
+          "Tim akan lebih mudah menerapkan kebiasaan aman jika panduannya singkat dan relevan. Daftar cek sederhana membantu pegawai mengenali tanda bahaya tanpa perlu menghafal kebijakan yang panjang.",
+        ],
+        bullets: [
+          "Periksa alamat pengirim secara utuh, bukan hanya nama tampilannya.",
+          "Konfirmasi permintaan sensitif melalui kanal lain jika terasa mendesak atau tidak biasa.",
+          "Hindari mengklik tautan langsung dari email bila bisa membuka sistem melalui bookmark resmi.",
+        ],
+      },
+      {
+        heading: "Latihan rutin mempercepat pengenalan ancaman",
+        paragraphs: [
+          "Simulasi phishing, pembahasan contoh kasus, dan umpan balik singkat setelah insiden kecil membantu tim belajar dari situasi nyata. Frekuensi latihan yang konsisten akan meningkatkan kepekaan tanpa membuat program awareness terasa membebani.",
+          "Ketika pelatihan dikaitkan dengan aktivitas kerja sehari-hari, pengguna lebih mudah memahami bahwa keamanan bukan tugas tambahan, melainkan bagian dari kualitas kerja.",
+        ],
+      },
+    ],
+    cta: {
+      title: "Perkuat awareness tim melalui LMS",
+      description:
+        "Gunakan materi pembelajaran dan evaluasi di LMS untuk membangun kebiasaan verifikasi yang lebih konsisten di seluruh organisasi.",
+      label: "Lihat LMS",
+      href: "/lms",
+    },
+  },
+  {
+    slug: "menata-akses-pengguna-agar-lebih-aman-dan-terkendali",
+    title: "Menata Akses Pengguna agar Lebih Aman dan Terkendali",
+    category: "Access Control",
+    excerpt:
+      "Hak akses yang terlalu luas sering menjadi sumber risiko tersembunyi. Penataan akses yang rapi membantu organisasi membatasi dampak ketika terjadi kesalahan atau insiden.",
+    coverLabel: "Access Governance",
+    publishedAt: "25 April 2026",
+    readingTime: "7 menit",
+    author: "Tim FortyFour",
+    tags: ["IAM", "Governance", "Least Privilege"],
+    highlight:
+      "Akses yang tepat bukan soal membatasi pekerjaan, tetapi memastikan setiap orang hanya memiliki kewenangan yang benar-benar diperlukan.",
+    sections: [
+      {
+        heading: "Mulai dari pemetaan peran yang nyata",
+        paragraphs: [
+          "Banyak organisasi mewarisi struktur akses yang tumbuh tanpa desain yang jelas. Akibatnya, pengguna baru sering menerima hak akses berdasarkan kebiasaan lama, bukan berdasarkan kebutuhan pekerjaannya.",
+          "Pemetaan peran yang nyata membantu menyusun paket akses yang sesuai fungsi. Dengan begitu, proses onboarding lebih rapi dan risiko privilege berlebih dapat ditekan sejak awal.",
+        ],
+      },
+      {
+        heading: "Terapkan prinsip least privilege secara bertahap",
+        paragraphs: [
+          "Tidak semua pembenahan akses harus dilakukan sekaligus. Pendekatan bertahap justru lebih aman karena memberi ruang validasi bersama pemilik proses dan pengguna bisnis.",
+        ],
+        bullets: [
+          "Identifikasi akun dengan akses administratif atau akses ke data sensitif terlebih dahulu.",
+          "Tinjau akun bersama atasan atau pemilik aplikasi untuk memastikan relevansi akses.",
+          "Tetapkan proses persetujuan dan pencabutan akses yang jelas saat ada mutasi peran.",
+        ],
+      },
+      {
+        heading: "Jadikan review akses sebagai rutinitas",
+        paragraphs: [
+          "Review akses berkala membantu organisasi mendeteksi akun lama, akses yang tidak lagi dibutuhkan, atau pengecualian yang terlupakan. Rutinitas ini penting terutama untuk aplikasi kritikal dan sistem yang menyimpan data strategis.",
+          "Ketika review akses menjadi bagian dari tata kelola, organisasi akan lebih siap menjaga keseimbangan antara kelancaran operasional dan pengendalian risiko.",
+        ],
+      },
+    ],
+    cta: {
+      title: "Pelajari kontrol akses dan governance lebih lanjut",
+      description:
+        "Akses materi terkait tata kelola, peran, dan kontrol keamanan di LMS untuk membantu penyusunan kebijakan yang lebih matang.",
+      label: "Buka Materi",
+      href: "/lms",
+    },
+  },
+  {
+    slug: "membangun-kebiasaan-backup-yang-siap-digunakan-saat-dibutuhkan",
+    title: "Membangun Kebiasaan Backup yang Siap Digunakan Saat Dibutuhkan",
+    category: "Resilience",
+    excerpt:
+      "Backup yang baik bukan sekadar ada, tetapi bisa dipulihkan dengan cepat dan telah diuji sesuai prioritas layanan organisasi.",
+    coverLabel: "Data Resilience",
+    publishedAt: "28 April 2026",
+    readingTime: "6 menit",
+    author: "Tim FortyFour",
+    tags: ["Backup", "Recovery", "Business Continuity"],
+    highlight:
+      "Nilai backup baru terasa ketika organisasi mampu memulihkan layanan dengan tenang, cepat, dan terukur.",
+    sections: [
+      {
+        heading: "Backup harus mengikuti prioritas bisnis",
+        paragraphs: [
+          "Tidak semua sistem memiliki tingkat kritikalitas yang sama. Karena itu, strategi backup perlu disusun berdasarkan prioritas layanan, sensitivitas data, dan toleransi gangguan yang disepakati organisasi.",
+          "Pendekatan ini membantu tim menentukan frekuensi backup, lokasi penyimpanan, dan target waktu pemulihan yang realistis untuk tiap sistem penting.",
+        ],
+      },
+      {
+        heading: "Pisahkan antara menyimpan dan siap memulihkan",
+        paragraphs: [
+          "Banyak organisasi merasa aman karena backup berjalan otomatis, padahal belum pernah menguji hasil pemulihannya. Backup yang tidak diuji bisa menyimpan kejutan saat dibutuhkan dalam kondisi darurat.",
+        ],
+        bullets: [
+          "Lakukan uji restore berkala untuk memastikan file dan sistem benar-benar dapat dipulihkan.",
+          "Dokumentasikan langkah pemulihan agar tidak bergantung pada satu orang saja.",
+          "Simpan salinan cadangan dengan kontrol akses dan perlindungan yang memadai.",
+        ],
+      },
+      {
+        heading: "Latihan recovery meningkatkan kepercayaan tim",
+        paragraphs: [
+          "Tabletop exercise dan simulasi pemulihan sederhana membantu tim memahami urutan tindakan saat terjadi gangguan. Selain menguji teknologi, latihan ini juga menguji koordinasi, komunikasi, dan pengambilan keputusan.",
+          "Semakin sering proses recovery diuji, semakin besar peluang organisasi menjaga layanan tetap berjalan meski menghadapi insiden yang tidak direncanakan.",
+        ],
+      },
+    ],
+    cta: {
+      title: "Perdalam topik resilience di LMS FortyFour",
+      description:
+        "Gunakan materi pembelajaran untuk membantu tim memahami backup, recovery, dan kesinambungan layanan secara lebih terstruktur.",
+      label: "Masuk LMS",
+      href: "/lms",
+    },
+  },
 ];
 
 export function getBlogArticleBySlug(slug: string) {

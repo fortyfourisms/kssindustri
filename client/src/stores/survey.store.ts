@@ -12,6 +12,7 @@ interface ActionResult<T = unknown> {
     success: boolean;
     data?: T;
     error?: string;
+    reason?: 'not_found' | 'error';
 }
 
 interface SurveyStoreState {
@@ -23,8 +24,8 @@ interface SurveyStoreState {
     saving: boolean;
     error: string | null;
     fetchRespondents: () => Promise<void>;
-    hydrateByEmail: (email?: string | null) => Promise<ActionResult<SurveyRespondent>>;
-    saveRespondent: (payload: UpsertSurveyRespondentPayload, existingId?: number | null) => Promise<ActionResult<SurveyRespondent>>;
+    hydrateByUserId: (userId?: number | string | null) => Promise<ActionResult<SurveyRespondent>>;
+    saveRespondent: (payload: UpsertSurveyRespondentPayload, existingId?: number | string | null) => Promise<ActionResult<SurveyRespondent>>;
     loadSurveyContext: (respondenId: number | string) => Promise<ActionResult<{ progress: SurveyProgress | null; currentRisk: SurveyRiskResponse | null }>>;
     saveRiskStep: (payload: SaveSurveyRiskStepPayload) => Promise<ActionResult<SurveyRiskResponse | SurveyProgress>>;
     navigateRisk: (payload: { respondenId: number | string; currentRisk: number; direction: string }) => Promise<ActionResult<SurveyRiskResponse>>;
@@ -58,13 +59,13 @@ export const useSurveyStore = create<SurveyStoreState>()((set, get) => ({
         }
     },
 
-    hydrateByEmail: async (email) => {
+    hydrateByUserId: async (userId) => {
         set({ loading: true, error: null });
         try {
-            const respondent = await surveyService.findRespondentByEmail(email);
+            const respondent = await surveyService.getRespondentByIdOrNull(userId);
             if (!respondent) {
                 set({ currentRespondent: null, progress: null, currentRisk: null, loading: false });
-                return { success: false, error: 'Responden survei belum ditemukan' };
+                return { success: false, error: 'Responden survei belum ditemukan', reason: 'not_found' };
             }
 
             const [progress, currentRisk] = await Promise.all([
@@ -83,7 +84,7 @@ export const useSurveyStore = create<SurveyStoreState>()((set, get) => ({
         } catch (error: unknown) {
             const message = error instanceof Error ? error.message : 'Gagal memuat konteks survei';
             set({ loading: false, error: message });
-            return { success: false, error: message };
+            return { success: false, error: message, reason: 'error' };
         }
     },
 

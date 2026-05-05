@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowLeft, CalendarDays, Loader2, MapPin, Users } from "lucide-react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
 import { EventRegistrationModal } from "@/components/events/EventRegistrationModal";
 import { useEventDetail } from "@/hooks/useEvents";
+import { useScrollToTop } from "@/hooks/useScrollToTop";
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("id-ID", {
@@ -17,10 +18,16 @@ function formatDate(value: string) {
 }
 
 export default function EventDetail() {
-  const navigate = useNavigate();
   const { eventId } = useParams();
   const { data: event, isLoading, isError } = useEventDetail(eventId);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  useScrollToTop(eventId);
+
+  useEffect(() => {
+    if (event?.status === "past" && isModalOpen) {
+      setIsModalOpen(false);
+    }
+  }, [event?.status, isModalOpen]);
 
   return (
     <div className="min-h-screen bg-background font-sans selection:bg-primary selection:text-white">
@@ -62,13 +69,14 @@ export default function EventDetail() {
                   <h1 className="mt-5 text-4xl md:text-6xl font-display font-medium tracking-tight text-slate-900 leading-tight">
                     {event.title}
                   </h1>
-                  <p className="mt-6 max-w-3xl text-base md:text-lg leading-relaxed text-slate-600">
-                    {event.fullDescription}
-                  </p>
+                  <div
+                    className="event-html-content prose prose-slate mt-6 max-w-3xl text-base md:text-lg leading-relaxed text-slate-600 prose-headings:font-display prose-headings:text-slate-900 prose-a:text-[#0061ff] prose-strong:text-slate-900 prose-img:my-6 prose-img:max-w-full prose-img:rounded-2xl prose-img:shadow-lg prose-ul:my-4 prose-ol:my-4 prose-li:my-1"
+                    dangerouslySetInnerHTML={{ __html: event.fullDescription }}
+                  />
                 </div>
 
                 <aside className="rounded-[2rem] border border-white/60 bg-white/85 p-6 shadow-[0_24px_80px_rgba(31,60,136,0.10)] backdrop-blur-xl">
-                  <p className="text-sm font-semibold uppercase tracking-[0.22em] text-slate-400">Event Detail / RSVP</p>
+                  <p className="text-sm font-semibold uppercase tracking-[0.22em] text-slate-400">Event Detail</p>
                   <div className="mt-6 space-y-4">
                     <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
                       <div className="flex items-center gap-2 text-sm font-semibold text-slate-500">
@@ -87,18 +95,24 @@ export default function EventDetail() {
                     <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
                       <div className="flex items-center gap-2 text-sm font-semibold text-slate-500">
                         <Users className="h-4 w-4 text-[#0061ff]" />
-                        Format
+                        Status
                       </div>
-                      <p className="mt-2 text-sm font-bold capitalize text-slate-900">{event.format}</p>
+                      <p className="mt-2 text-sm font-bold text-slate-900">{event.statusLabel}</p>
                     </div>
                   </div>
 
-                  <button
-                    onClick={() => setIsModalOpen(true)}
-                    className="mt-8 inline-flex w-full items-center justify-center rounded-full bg-[#0061ff] px-5 py-3 text-sm font-bold text-white shadow-lg shadow-blue-500/20 transition hover:bg-blue-700"
-                  >
-                    Join Event
-                  </button>
+                  {event.status === "upcoming" ? (
+                    <button
+                      onClick={() => setIsModalOpen(true)}
+                      className="mt-8 inline-flex w-full items-center justify-center rounded-full bg-[#0061ff] px-5 py-3 text-sm font-bold text-white shadow-lg shadow-blue-500/20 transition hover:bg-blue-700"
+                    >
+                      Join Event
+                    </button>
+                  ) : (
+                    <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-center text-sm font-semibold text-slate-500">
+                      Event ini sudah selesai dan registrasi ditutup.
+                    </div>
+                  )}
                 </aside>
               </div>
             </>
@@ -108,7 +122,7 @@ export default function EventDetail() {
         <Footer />
       </main>
 
-      {event ? (
+      {event?.status === "upcoming" ? (
         <EventRegistrationModal
           event={event}
           isOpen={isModalOpen}

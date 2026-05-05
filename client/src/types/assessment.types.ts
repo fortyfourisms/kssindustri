@@ -54,6 +54,8 @@ export interface AnswerMap {
     [questionId: string]: Answer;
 }
 
+export type AnswerSnapshotMap = Record<string, AnswerMap>;
+
 // ─── Progress Tracking ────────────────────────────────────────────────────────
 
 export interface AssessmentProgress {

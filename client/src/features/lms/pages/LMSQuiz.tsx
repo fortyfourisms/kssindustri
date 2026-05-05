@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -21,9 +21,12 @@ import {
 } from "@/features/lms/stores/lms.store";
 import { toast } from "sonner";
 import type { JawabanPayload, SoalWithPilihan } from "@/features/lms/types/lms.types";
-import { getCourseLearnRoute, getCourseQuizRoute, getCourseRoute } from "@/features/lms/lib/lms-routes";
+import { getCourseCertificateRoute, getCourseLearnRoute, getCourseQuizRoute, getCourseRoute } from "@/features/lms/lib/lms-routes";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useAuthStore } from "@/stores/auth.store";
 
 type Stage = "start" | "questions" | "submitting" | "result";
+const QUIZ_CONTENT_MAX_WIDTH = "max-w-5xl";
 
 function RichTextContent({
     html,
@@ -63,7 +66,7 @@ function StartScreen({
         <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mx-auto flex w-full max-w-3xl flex-col items-center px-1 py-6 text-center sm:py-10"
+            className={`mx-auto flex w-full ${QUIZ_CONTENT_MAX_WIDTH} flex-col items-center px-1 py-6 text-center sm:py-10`}
         >
             <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-3xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-xl shadow-blue-200 sm:mb-6 sm:h-20 sm:w-20">
                 <ClipboardList className="h-8 w-8 text-white sm:h-10 sm:w-10" />
@@ -109,32 +112,17 @@ function StartScreen({
 
 function QuestionsScreen({
     soal,
-    onSubmit,
-    isSubmitting,
+    answers,
+    onSelect,
 }: {
     soal: SoalWithPilihan[];
-    onSubmit: (answers: JawabanPayload[]) => void;
-    isSubmitting: boolean;
+    answers: Record<string, string>;
+    onSelect: (soalId: string, pilihanId: string) => void;
 }) {
-    const [answers, setAnswers] = useState<Record<string, string>>({});
-
-    const allAnswered = soal.length > 0 && soal.every((q) => answers[q.id] !== undefined);
     const answered = Object.keys(answers).length;
 
-    const handleSelect = (soalId: string, pilihanId: string) => {
-        setAnswers((prev) => ({ ...prev, [soalId]: pilihanId }));
-    };
-
-    const handleSubmit = () => {
-        const payload: JawabanPayload[] = soal.map((q) => ({
-            id_soal: q.id,
-            id_pilihan: answers[q.id],
-        }));
-        onSubmit(payload);
-    };
-
     return (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mx-auto w-full max-w-3xl">
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className={`mx-auto w-full ${QUIZ_CONTENT_MAX_WIDTH}`}>
             <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                     <p className="text-sm font-medium text-slate-500">Jawab semua soal untuk melanjutkan</p>
@@ -158,7 +146,7 @@ function QuestionsScreen({
                 ))}
             </div>
 
-            <div className="space-y-8">
+            <div className="space-y-8 pb-28 sm:pb-32">
                 {soal
                     .slice()
                     .sort((a, b) => (a.urutan ?? 0) - (b.urutan ?? 0))
@@ -189,7 +177,7 @@ function QuestionsScreen({
                                         return (
                                             <button
                                                 key={p.id}
-                                                onClick={() => handleSelect(q.id, p.id)}
+                                                onClick={() => onSelect(q.id, p.id)}
                                                 className={`flex w-full items-start gap-3 rounded-2xl border-2 px-4 py-3.5 text-left text-sm font-semibold transition-all duration-200 ${isSelected
                                                     ? "border-blue-600 bg-blue-600 text-white shadow-lg shadow-blue-200/60"
                                                     : "border-slate-100 bg-slate-50 text-slate-600 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
@@ -205,7 +193,7 @@ function QuestionsScreen({
                                                 </span>
                                                 <RichTextContent
                                                     html={p.teks}
-                                                    className="prose min-w-0 flex-1 leading-relaxed prose-p:my-0 prose-headings:my-0 [&_*]:text-inherit [&_em]:text-inherit [&_strong]:text-inherit"
+                                                    className={`prose min-w-0 flex-1 leading-relaxed prose-p:my-0 prose-headings:my-0 [&_*]:text-inherit [&_em]:text-inherit [&_strong]:text-inherit ${isSelected ? "text-white prose-headings:text-white prose-strong:text-white prose-p:text-white" : ""}`}
                                                 />
                                             </button>
                                         );
@@ -216,29 +204,6 @@ function QuestionsScreen({
                     })}
             </div>
 
-            <div className="sticky bottom-0 mt-8 bg-gradient-to-t from-[#f4f7fb] via-[#f4f7fb]/95 to-transparent pb-2 pt-6">
-                <button
-                    onClick={handleSubmit}
-                    disabled={!allAnswered || isSubmitting}
-                    className={`w-full rounded-2xl py-4 text-base font-black transition-all duration-300 ${allAnswered && !isSubmitting
-                        ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-xl shadow-blue-200 hover:scale-[1.01]"
-                        : "cursor-not-allowed bg-slate-100 text-slate-400"
-                        }`}
-                >
-                    {isSubmitting ? (
-                        <span className="flex items-center justify-center gap-2">
-                            <Loader2 className="h-4 w-4 animate-spin" /> Mengirim...
-                        </span>
-                    ) : allAnswered ? (
-                        <span className="flex items-center justify-center gap-2">
-                            Kumpulkan Jawaban
-                            <ChevronRight className="h-4 w-4" />
-                        </span>
-                    ) : (
-                        `Jawab ${soal.length - answered} soal lagi`
-                    )}
-                </button>
-            </div>
         </motion.div>
     );
 }
@@ -248,21 +213,29 @@ function ResultScreen({
     isPassed,
     totalBenar,
     totalSoal,
+    certificateId,
+    showCertificateAction,
+    onOpenCertificate,
     onRetry,
-    onBack,
+    onPrimaryAction,
+    primaryActionLabel,
 }: {
     skor: number;
     isPassed: boolean;
     totalBenar: number;
     totalSoal: number;
+    certificateId?: string | null;
+    showCertificateAction?: boolean;
+    onOpenCertificate?: () => void;
     onRetry: () => void;
-    onBack: () => void;
+    onPrimaryAction: () => void;
+    primaryActionLabel: string;
 }) {
     return (
         <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mx-auto flex w-full max-w-3xl flex-col items-center gap-8 py-6 sm:py-8"
+            className={`mx-auto flex w-full ${QUIZ_CONTENT_MAX_WIDTH} flex-col items-center gap-8 py-6 sm:py-8`}
         >
             <div
                 className={`relative w-full overflow-hidden rounded-3xl p-6 text-center sm:p-8 ${isPassed
@@ -296,7 +269,7 @@ function ResultScreen({
                         <span className="text-3xl sm:text-4xl">%</span>
                     </div>
                     <p className="text-base font-bold text-white/90 sm:text-lg">
-                        {isPassed ? "Selamat! Kamu lulus" : "Belum lulus - coba lagi"}
+                        {isPassed ? "Selamat! Anda lulus" : "Belum lulus, silakan coba lagi"}
                     </p>
                     <p className="mt-1 text-sm text-white/70">
                         {totalBenar} dari {totalSoal} soal benar
@@ -327,6 +300,15 @@ function ResultScreen({
             )}
 
             <div className="flex w-full flex-col gap-3 sm:flex-row">
+                {showCertificateAction && certificateId && onOpenCertificate && (
+                    <button
+                        onClick={onOpenCertificate}
+                        className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 px-6 py-3 font-bold text-white shadow-lg transition-all hover:scale-[1.01]"
+                    >
+                        Lihat Sertifikat
+                        <ChevronRight className="h-4 w-4" />
+                    </button>
+                )}
                 <button
                     onClick={onRetry}
                     className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-slate-200 px-6 py-3 font-bold text-slate-600 transition-colors hover:bg-slate-50"
@@ -335,10 +317,10 @@ function ResultScreen({
                     Ulangi Kuis
                 </button>
                 <button
-                    onClick={onBack}
+                    onClick={onPrimaryAction}
                     className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-3 font-bold text-white shadow-lg transition-all hover:scale-[1.01]"
                 >
-                    Kembali ke Kelas
+                    {primaryActionLabel}
                     <ChevronRight className="h-4 w-4" />
                 </button>
             </div>
@@ -350,6 +332,10 @@ export default function LMSQuiz() {
     const navigate = useNavigate();
     const { courseId, quizId } = useParams<{ courseId: string; quizId: string }>();
     const [stage, setStage] = useState<Stage>("start");
+    const [answers, setAnswers] = useState<Record<string, string>>({});
+    const [passedQuizModalOpen, setPassedQuizModalOpen] = useState(false);
+    const pageRef = useRef<HTMLDivElement | null>(null);
+    const currentUser = useAuthStore((state) => state.currentUser);
 
     const {
         activeCourse,
@@ -360,14 +346,18 @@ export default function LMSQuiz() {
         kuisAttempt,
         kuisSoal,
         kuisResult,
+        courseCertificate,
         isLoadingKuis,
         kuisError,
         startKuis,
         submitKuis,
         fetchKuisResult,
+        fetchCertificate,
+        generateCertificate,
         updateQuizProgress,
         resetKuis,
     } = useLmsStore();
+    const [finalCertificateId, setFinalCertificateId] = useState<string | null>(null);
 
     useEffect(() => {
         return () => {
@@ -378,6 +368,7 @@ export default function LMSQuiz() {
 
     const kuisInfo = courseQuizzes.find((k) => k.id === quizId);
     const sortedMateri = sortMateriByOrder(courseMateri);
+    const quizPassed = quizId ? quizProgressById[quizId]?.isPassed === true : false;
     const isAccessible = kuisInfo
         ? isQuizAccessible(kuisInfo, sortedMateri, completedMateriIds, courseQuizzes, quizProgressById)
         : false;
@@ -396,11 +387,41 @@ export default function LMSQuiz() {
         }
     }, [courseId, quizId, courseQuizzes, kuisInfo, isAccessible, sortedMateri, completedMateriIds, quizProgressById, navigate]);
 
+    useEffect(() => {
+        const node = pageRef.current;
+        if (!node) return;
+
+        let current: HTMLElement | null = node;
+        while (current) {
+            const style = window.getComputedStyle(current);
+            const overflowY = style.overflowY;
+            const isScrollable = (overflowY === "auto" || overflowY === "scroll") && current.scrollHeight > current.clientHeight;
+
+            if (isScrollable) {
+                current.scrollTo({ top: 0, behavior: "smooth" });
+                return;
+            }
+
+            current = current.parentElement;
+        }
+
+        node.scrollIntoView({ block: "start", behavior: "smooth" });
+    }, [stage]);
+
     const handleStart = async () => {
         if (!quizId || !isAccessible) return;
+        if (quizPassed) {
+            setPassedQuizModalOpen(true);
+            return;
+        }
+
+        setAnswers({});
         const result = await startKuis(quizId);
-        if (result.success) {
+        const questionCount = result.data?.soal?.length ?? 0;
+        if (result.success && questionCount > 0) {
             setStage("questions");
+        } else if (result.success) {
+            toast.error("Soal kuis tidak tersedia");
         } else {
             toast.error(result.error ?? "Gagal memulai kuis");
         }
@@ -416,6 +437,23 @@ export default function LMSQuiz() {
                 if (quizId && resultRes.data) {
                     updateQuizProgress(quizId, resultRes.data);
                 }
+                if (courseId && kuisInfo?.is_final && resultRes.data?.is_passed) {
+                    const displayName = currentUser?.display_name || currentUser?.displayName || currentUser?.name || currentUser?.username || "";
+                    const existingCertificate = await fetchCertificate(courseId);
+                    if (existingCertificate) {
+                        setFinalCertificateId(existingCertificate.id);
+                    } else {
+                        const generated = await generateCertificate(courseId, displayName);
+                        if (generated.success && generated.data) {
+                            setFinalCertificateId(generated.data.id);
+                        } else {
+                            setFinalCertificateId(null);
+                            toast.error(generated.error ?? "Gagal membuat sertifikat");
+                        }
+                    }
+                } else {
+                    setFinalCertificateId(null);
+                }
                 setStage("result");
             } else {
                 toast.error(resultRes.error ?? "Gagal mengambil hasil kuis");
@@ -429,35 +467,132 @@ export default function LMSQuiz() {
 
     const handleRetry = () => {
         resetKuis();
+        setAnswers({});
         setStage("start");
     };
 
+    const handleSelectAnswer = (soalId: string, pilihanId: string) => {
+        setAnswers((prev) => ({ ...prev, [soalId]: pilihanId }));
+    };
+
+    const allAnswered = kuisSoal.length > 0 && kuisSoal.every((q) => answers[q.id] !== undefined);
+    const answeredCount = Object.keys(answers).length;
+    const nextStep = getNextCourseStep(sortedMateri, courseQuizzes, completedMateriIds, quizProgressById);
+
+    const resultPrimaryAction = () => {
+        if (!courseId) return;
+
+        if (kuisResult?.is_passed) {
+            if (nextStep?.type === "materi") {
+                navigate(getCourseLearnRoute(courseId, nextStep.id));
+                return;
+            }
+
+            if (nextStep?.type === "quiz") {
+                navigate(getCourseQuizRoute(courseId, nextStep.id));
+                return;
+            }
+        }
+
+        navigate(getCourseRoute(courseId));
+    };
+
+    const resultPrimaryLabel = kuisResult?.is_passed
+        ? nextStep?.type === "materi"
+            ? "Lanjut ke Materi Berikutnya"
+            : nextStep?.type === "quiz"
+                ? "Lanjut ke Kuis Berikutnya"
+                : "Kembali ke Kelas"
+        : "Kembali ke Kelas";
+
+    const handleSubmitAnswers = () => {
+        const payload: JawabanPayload[] = kuisSoal.map((q) => ({
+            id_soal: q.id,
+            id_pilihan: answers[q.id],
+        }));
+        handleSubmit(payload);
+    };
+
     return (
-        <div className="flex h-full w-full flex-col overflow-y-auto px-4 pb-8 pt-4 sm:px-6 sm:pt-6 lg:px-8">
-            <div className="relative mb-6 w-full overflow-hidden rounded-3xl bg-gradient-to-r from-[#1e3a8a] to-[#2a45a3] p-5 shadow-xl sm:mb-8 sm:p-8">
-                <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_20%_50%,white_0%,transparent_50%)]" />
-                <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center">
-                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-white/20 bg-white/10 backdrop-blur-sm">
-                        <ClipboardList className="h-7 w-7 text-white" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                        <p className="mb-1 text-[11px] font-black uppercase tracking-[0.24em] text-blue-200 sm:text-xs">
-                            {activeCourse?.judul ?? "Kelas"} · {kuisInfo?.is_final ? "Kuis Akhir" : "Kuis"}
-                        </p>
-                        <h2 className="text-xl font-black text-white sm:text-2xl">
-                            {kuisInfo?.judul ?? "Kuis"}
-                        </h2>
-                    </div>
-                    <div className="flex items-center gap-2 self-start sm:ml-auto sm:self-center">
-                        {(["start", "questions", "result"] as const).map((s) => (
-                            <div
-                                key={s}
-                                className={`h-2 w-2 rounded-full transition-all ${stage === s || (stage === "submitting" && s === "questions")
-                                    ? "scale-125 bg-white"
-                                    : "bg-white/30"
-                                    }`}
-                            />
-                        ))}
+        <div ref={pageRef} className="flex w-full min-h-full flex-col px-4 pb-6 pt-4 sm:px-6 sm:pt-6 lg:px-8">
+            <Dialog
+                open={passedQuizModalOpen}
+                onOpenChange={(open) => {
+                    setPassedQuizModalOpen(open);
+                    if (!open && courseId) {
+                        navigate(getCourseRoute(courseId), { replace: true });
+                    }
+                }}
+            >
+                <DialogContent className="inset-auto left-1/2 top-1/2 h-auto max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg p-6">
+                    <DialogHeader>
+                        <DialogTitle>Anda sudah lulus kuis ini</DialogTitle>
+                        <DialogDescription>
+                            {kuisInfo?.judul ? `Kuis "${kuisInfo.judul}" sudah dinyatakan lulus.` : "Kuis ini sudah dinyatakan lulus."}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <button
+                            onClick={() => {
+                                setPassedQuizModalOpen(false);
+                                if (courseId) {
+                                    navigate(getCourseRoute(courseId), { replace: true });
+                                }
+                            }}
+                            className="inline-flex h-10 w-auto items-center justify-center self-end whitespace-nowrap rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+                        >
+                            Kembali ke kelas
+                        </button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <div className={`mx-auto w-full ${QUIZ_CONTENT_MAX_WIDTH}`}>
+                <div className="mb-8 overflow-hidden rounded-[2rem] border border-white/70 bg-white/75 shadow-[0_20px_80px_rgba(15,23,42,0.06)] backdrop-blur-xl">
+                    <div className="relative overflow-hidden bg-gradient-to-r from-[#1f3c88] via-[#0061ff] to-[#60efff] p-6 lg:p-8">
+                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.26),transparent_30%)]" />
+                        <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10 blur-xl" />
+                        <div className="relative z-10 flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                            <div className="min-w-0">
+                                <div className="flex flex-wrap items-center gap-3 text-[11px] font-black uppercase tracking-[0.22em] text-white/80">
+                                    <span className="inline-flex items-center gap-2">
+                                        <ClipboardList className="h-3.5 w-3.5" />
+                                        {kuisInfo?.is_final ? "Kuis Akhir" : "Kuis"}
+                                    </span>
+                                    <span>{activeCourse?.judul ?? "Kelas"}</span>
+                                    {kuisInfo?.passing_grade !== undefined && (
+                                        <span className="inline-flex items-center gap-2">
+                                            <Trophy className="h-3.5 w-3.5" />
+                                            Lulus {kuisInfo.passing_grade}%
+                                        </span>
+                                    )}
+                                    {kuisInfo?.durasi_menit && (
+                                        <span className="inline-flex items-center gap-2">
+                                            <Clock3 className="h-3.5 w-3.5" />
+                                            {kuisInfo.durasi_menit} menit
+                                        </span>
+                                    )}
+                                </div>
+                                <h1 className="mt-4 max-w-4xl text-[28px] font-black leading-tight text-white lg:text-[34px]">
+                                    {kuisInfo?.judul ?? "Kuis"}
+                                </h1>
+                                <p className="mt-4 max-w-3xl text-sm leading-relaxed text-white/85 lg:text-base">
+                                    {kuisInfo?.deskripsi || "Jawab setiap soal dengan teliti. Pastikan semua pertanyaan terisi sebelum mengumpulkan jawaban Anda."}
+                                </p>
+                            </div>
+
+                            <div className="flex items-center gap-2 self-start rounded-full border border-white/15 bg-white/10 px-4 py-2 backdrop-blur-sm">
+                                {(["start", "questions", "result"] as const).map((s) => (
+                                    <div
+                                        key={s}
+                                        className={`h-2.5 w-2.5 rounded-full transition-all ${stage === s || (stage === "submitting" && s === "questions")
+                                            ? "scale-125 bg-white"
+                                            : "bg-white/35"
+                                            }`}
+                                    />
+                                ))}
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -481,9 +616,16 @@ export default function LMSQuiz() {
                     <motion.div key="questions" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                         <QuestionsScreen
                             soal={kuisSoal}
-                            onSubmit={handleSubmit}
-                            isSubmitting={stage === "submitting"}
+                            answers={answers}
+                            onSelect={handleSelectAnswer}
                         />
+                    </motion.div>
+                )}
+
+                {stage === "questions" && kuisSoal.length === 0 && (
+                    <motion.div key="questions-empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="mx-auto w-full max-w-2xl rounded-3xl border border-amber-200 bg-amber-50 p-6 text-center text-amber-800">
+                        <p className="font-bold">Soal kuis belum terbaca.</p>
+                        <p className="mt-1 text-sm">Silakan coba muat ulang atau buka kuis ini lagi.</p>
                     </motion.div>
                 )}
 
@@ -494,12 +636,44 @@ export default function LMSQuiz() {
                             isPassed={kuisResult.is_passed}
                             totalBenar={kuisResult.total_benar}
                             totalSoal={kuisResult.total_soal}
+                            certificateId={finalCertificateId ?? courseCertificate?.id ?? null}
+                            showCertificateAction={Boolean(kuisInfo?.is_final && kuisResult.is_passed)}
+                            onOpenCertificate={() => navigate(getCourseCertificateRoute(courseId!))}
                             onRetry={handleRetry}
-                            onBack={() => navigate(getCourseRoute(courseId!))}
+                            onPrimaryAction={resultPrimaryAction}
+                            primaryActionLabel={resultPrimaryLabel}
                         />
                     </motion.div>
                 )}
             </AnimatePresence>
+
+            {(stage === "questions" || stage === "submitting") && kuisSoal.length > 0 && (
+                <div className="sticky bottom-0 z-20 -mx-4 mt-auto border-t border-slate-200/70 bg-[#f4f7fb]/96 px-4 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-4 backdrop-blur sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+                    <div className={`mx-auto flex w-full ${QUIZ_CONTENT_MAX_WIDTH} items-center gap-3`}>
+                        <button
+                            onClick={handleSubmitAnswers}
+                            disabled={!allAnswered || stage === "submitting"}
+                            className={`min-h-12 w-full rounded-2xl px-4 py-4 text-base font-black transition-all duration-300 ${allAnswered && stage !== "submitting"
+                                ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-[0_20px_40px_rgba(59,130,246,0.22)] hover:scale-[1.01]"
+                                : "cursor-not-allowed bg-slate-100 text-slate-400"
+                                }`}
+                        >
+                            {stage === "submitting" ? (
+                                <span className="flex items-center justify-center gap-2">
+                                    <Loader2 className="h-4 w-4 animate-spin" /> Mengirim...
+                                </span>
+                            ) : allAnswered ? (
+                                <span className="flex items-center justify-center gap-2">
+                                    Kumpulkan Jawaban
+                                    <ChevronRight className="h-4 w-4" />
+                                </span>
+                            ) : (
+                                `Jawab ${kuisSoal.length - answeredCount} soal lagi`
+                            )}
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

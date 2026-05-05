@@ -8,12 +8,16 @@ import { ikasService } from '@/services/ikas.service';
 import type { DomainSlug } from '@/types/ikas.types';
 import type { JawabanIdMap } from '@/hooks/useIkasAssessmentSetup';
 
+const SUCCESS_BUTTON_CLS = 'button-force-white inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-700 via-emerald-600 to-green-500 px-4 py-2.5 text-sm font-bold transition-all hover:-translate-y-0.5 hover:from-emerald-800 hover:via-emerald-700 hover:to-green-600 active:translate-y-0 disabled:opacity-50 disabled:hover:translate-y-0';
+
 interface AssessmentViewProps {
   onBack: () => void;
   onEdit: () => void;
   embedded?: boolean;
   /** Map of questionId → existing jawabanId; used for PUT vs POST when saving */
   jawabanIdMap?: JawabanIdMap;
+  canEditAnswers?: boolean;
+  editLockMessage?: string;
 }
 
 export default function AssessmentView({
@@ -21,11 +25,14 @@ export default function AssessmentView({
   onEdit,
   embedded = false,
   jawabanIdMap = {},
+  canEditAnswers = true,
+  editLockMessage,
 }: AssessmentViewProps) {
   const store = useAssessmentStore();
   const { toast } = useToast();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const isAnswerEditingLocked = !canEditAnswers;
 
   const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -133,6 +140,14 @@ export default function AssessmentView({
   /** Save all answers to the appropriate jawaban-{domain} endpoints */
   const handleSaveAction = async () => {
     if (isSaving) return;
+    if (isAnswerEditingLocked) {
+      toast({
+        title: 'Edit Assessment Terkunci',
+        description: editLockMessage ?? 'Data IKAS yang sudah tervalidasi hanya dapat diubah setelah pengajuan perubahan disetujui admin.',
+        variant: 'destructive',
+      });
+      return;
+    }
     setIsSaving(true);
     const allAnswered = store.answeredQuestions() === store.totalQuestions();
     const existingId = store.existingIkasId;
@@ -143,6 +158,7 @@ export default function AssessmentView({
       }
 
       const answersMap = store.answers();
+      const syncedAnswers = store.syncedAnswers();
       const resolvedJawabanIdMap: JawabanIdMap = { ...jawabanIdMap };
       const entries = Object.values(answersMap)
         .map((ans) => {
@@ -163,8 +179,12 @@ export default function AssessmentView({
           if (a.domainSlug === b.domainSlug) return a.pertanyaanId - b.pertanyaanId;
           return a.domainSlug.localeCompare(b.domainSlug);
         });
+      const changedEntries = entries.filter((item) => {
+        const previous = syncedAnswers[item.answer.questionId];
+        return !previous || previous.index !== item.answer.index;
+      });
 
-      for (const item of entries) {
+      for (const item of changedEntries) {
         const saved = await persistAnswerWithThrottle(item.domainSlug, item.existingJawabanId, {
           ikas_id: existingId,
           pertanyaan_id: item.pertanyaanId,
@@ -180,6 +200,7 @@ export default function AssessmentView({
         await sleep(180);
       }
 
+      store.markAnswersSynced(answersMap);
       store.completeAssessment();
       toast({
         title: 'Berhasil',
@@ -198,11 +219,20 @@ export default function AssessmentView({
   };
 
   const handleEditData = () => {
+    if (isAnswerEditingLocked) {
+      toast({
+        title: 'Edit Assessment Terkunci',
+        description: editLockMessage ?? 'Ajukan perubahan data terlebih dahulu sebelum mengubah jawaban assessment.',
+        variant: 'destructive',
+      });
+      return;
+    }
     store.unlockAssessment();
     toast({ title: 'Info', description: 'Mode edit aktif. Silakan ubah data.' });
   };
 
   const allQuestionsAnswered = store.answeredQuestions() === store.totalQuestions();
+  const isViewReadOnly = store.isLocked() || isAnswerEditingLocked;
 
   // Build missing questions list for the last page warning
   let missingQuestionsList: Array<{ domain: string; category: string; sub: string; qNum: number }> = [];
@@ -274,45 +304,47 @@ export default function AssessmentView({
             {!sidebarCollapsed && (
               <div className="mb-8 px-2">
                 {!embedded ? (
-                  !store.isLocked() ? (
+                  !isViewReadOnly ? (
                     <button
-                      className={`w-full py-3 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${allQuestionsAnswered
-                        ? 'bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90 shadow-[0_4px_14px_0_rgba(0,0,0,0.1)]'
+                      className={`w-full ${allQuestionsAnswered
+                        ? `${SUCCESS_BUTTON_CLS} shadow-md`
                         : 'bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300'
                       }`}
                       onClick={handleSaveAction}
-                      disabled={isSaving}
+                      disabled={isSaving || isAnswerEditingLocked}
                     >
                       {isSaving ? <i className="ri-loader-4-line animate-spin text-lg" /> : <i className="ri-save-line text-lg" />}
                       {isSaving ? 'Menyimpan...' : allQuestionsAnswered ? 'Submit Assessment' : 'Save Draft'}
                     </button>
                   ) : (
                     <button
-                      className="w-full py-3 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
+                      className="w-full py-3 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all bg-blue-600 hover:bg-blue-700 text-white shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
                       onClick={handleEditData}
+                      disabled={isAnswerEditingLocked}
                     >
                       <i className="ri-edit-line text-lg" />
                       Edit Responses
                     </button>
                   )
                 ) : (
-                  !store.isLocked() ? (
+                  !isViewReadOnly ? (
                     <>
                       <button
-                        className={`w-full py-3 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all mb-3 ${allQuestionsAnswered
-                          ? 'bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black shadow-md'
+                        className={`w-full mb-3 ${allQuestionsAnswered
+                          ? `${SUCCESS_BUTTON_CLS} shadow-md`
                           : 'bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300'
                         }`}
                         onClick={handleSaveAction}
-                        disabled={isSaving}
+                        disabled={isSaving || isAnswerEditingLocked}
                       >
                         {isSaving ? <i className="ri-loader-4-line animate-spin text-lg" /> : <i className="ri-save-line text-lg" />}
                         {isSaving ? 'Menyimpan...' : allQuestionsAnswered ? 'Submit Assessment' : 'Save Draft'}
                       </button>
                       {allQuestionsAnswered && (
                         <button
-                          className="w-full py-3 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800"
+                          className="w-full py-3 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed"
                           onClick={onEdit}
+                          disabled={isAnswerEditingLocked}
                         >
                           <i className="ri-edit-line text-lg" />
                           Edit Data
@@ -321,8 +353,9 @@ export default function AssessmentView({
                     </>
                   ) : (
                     <button
-                      className="w-full py-3 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all bg-orange-500 hover:bg-orange-600 text-white shadow-sm"
+                      className="w-full py-3 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all bg-orange-500 hover:bg-orange-600 text-white shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
                       onClick={handleEditData}
+                      disabled={isAnswerEditingLocked}
                     >
                       <i className="ri-edit-line text-lg" />
                       Edit Data
@@ -330,7 +363,7 @@ export default function AssessmentView({
                   )
                 )}
 
-                {!store.isLocked() && !embedded && (
+                {!isViewReadOnly && !embedded && (
                   <div className="text-center mt-3">
                     {!allQuestionsAnswered ? (
                       <small className="text-slate-400 font-medium text-xs">
@@ -426,13 +459,19 @@ export default function AssessmentView({
 
             <div className="px-2 sm:px-8 pb-16">
               {/* Locked State Message */}
-              {store.isLocked() && (
+              {isViewReadOnly && (
                 <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 text-yellow-800 dark:text-yellow-200 rounded-xl p-4 mb-8 flex items-start shadow-sm mx-auto">
                   <i className="ri-lock-2-line text-2xl mr-4 mt-1 text-yellow-500" />
                   <div>
-                    <h6 className="font-bold text-base mb-1">Assessment Selesai</h6>
+                    <h6 className="font-bold text-base mb-1">
+                      {store.isLocked() ? 'Assessment Selesai' : 'Edit Assessment Terkunci'}
+                    </h6>
                     <p className="text-sm m-0 opacity-90 leading-relaxed">
-                      Data ini telah dikunci. Anda dapat mengubah kembali dengan menekan tombol "Edit Responses" pada sidebar.
+                      {editLockMessage ?? (
+                        store.isLocked()
+                          ? 'Data ini telah dikunci. Anda dapat mengubah kembali dengan menekan tombol "Edit Responses" pada sidebar.'
+                          : 'Data IKAS yang sudah tervalidasi hanya dapat diubah setelah pengajuan perubahan disetujui admin.'
+                      )}
                     </p>
                   </div>
                 </div>
@@ -447,7 +486,7 @@ export default function AssessmentView({
                       question={question}
                       questionNumber={(store.progress().currentPage - 1) * 5 + index + 1}
                       selectedIndex={store.getAnswer(question.id)?.index}
-                      readOnly={store.isLocked()}
+                      readOnly={isViewReadOnly}
                       onAnswer={(questionId, val) => store.saveAnswer(questionId, val)}
                     />
                   ))}
@@ -499,6 +538,7 @@ export default function AssessmentView({
                 onNext={() => store.goToNextPage()}
                 isSubmitStep={isLastPage && allQuestionsAnswered}
                 onSubmitStep={handleSaveAction}
+                isSubmitDisabled={isAnswerEditingLocked}
               />
             </div>
           </div>

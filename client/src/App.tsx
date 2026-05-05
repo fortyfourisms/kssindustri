@@ -13,6 +13,7 @@ import { RoleGuard } from "@/components/RoleGuard";
 import { ORGANIZATION_ALLOWED_ROLES } from "@/lib/access-control";
 import { bootstrapApp } from "@/lib/bootstrapApp";
 import { useAppStore } from "@/stores/useAppStore";
+import { GlobalModalProvider } from "@/ui";
 
 import Home from "@/pages/Home";
 import Login from "@/pages/Login";
@@ -20,6 +21,8 @@ import Register from "@/pages/Register";
 import MfaVerify from "@/pages/MfaVerify";
 import NotFound from "@/pages/not-found";
 import CoursePreview from "@/pages/CoursePreview";
+import Courses from "@/pages/Courses";
+import Blogs from "@/pages/Blogs";
 import BlogArticle from "@/pages/BlogArticle";
 import Events from "@/pages/Events";
 import EventDetail from "@/pages/EventDetail";
@@ -57,6 +60,8 @@ const router = createBrowserRouter([
   { path: "/register", element: <Register /> },
   { path: "/mfa", element: <MfaVerify /> },
   { path: "/course-preview/:slug", element: <CoursePreview /> },
+  { path: "/courses", element: <Courses /> },
+  { path: "/blog", element: <Blogs /> },
   { path: "/blog/:slug", element: <BlogArticle /> },
   { path: "/events", element: <Events /> },
   { path: "/events/:eventId", element: <EventDetail /> },
@@ -166,9 +171,9 @@ const router = createBrowserRouter([
   {
     element: <LMSLayout />,
     children: [
-      { path: "/lms", element: <LMSDashboard />, handle: { title: "LMS / My Learning" } },
-      { path: "/courses", element: <LMSMateri />, handle: { title: "Courses" } },
-      { path: "/lms/materi", element: <Navigate to="/courses" replace /> },
+      { path: "/lms", element: <LMSDashboard />, handle: { title: "Pembelajaran Saya" } },
+      { path: "/lms/courses", element: <LMSMateri />, handle: { title: "Daftar Kelas" } },
+      { path: "/lms/materi", element: <Navigate to="/lms/courses" replace /> },
       { path: "/lms/progress", element: <LMSProgress />, handle: { title: "Progress Belajar" } },
       {
         path: "/course/:courseId",
@@ -198,6 +203,7 @@ const router = createBrowserRouter([
 function App() {
   const isAppReady = useAppStore((state) => state.isAppReady);
   const setAppReady = useAppStore((state) => state.setAppReady);
+  const dashboardTheme = useAppStore((state) => state.dashboardTheme);
 
   useEffect(() => {
     const initApp = async () => {
@@ -208,6 +214,13 @@ function App() {
     initApp();
   }, [setAppReady]);
 
+  useEffect(() => {
+    document.documentElement.dataset.theme = dashboardTheme;
+    document.documentElement.dataset.dashboardTheme = dashboardTheme;
+    document.body.dataset.theme = dashboardTheme;
+    document.body.dataset.dashboardTheme = dashboardTheme;
+  }, [dashboardTheme]);
+
   if (!isAppReady) {
     return <LoadingScreen />;
   }
@@ -215,9 +228,11 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <Toaster />
-        <ShadcnToaster />
-        <RouterProvider router={router} />
+        <GlobalModalProvider>
+          <Toaster />
+          <ShadcnToaster />
+          <RouterProvider router={router} />
+        </GlobalModalProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );

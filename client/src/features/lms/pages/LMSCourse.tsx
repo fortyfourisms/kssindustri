@@ -34,6 +34,18 @@ function ErrorCard({ message, onRetry }: { message: string; onRetry: () => void 
   );
 }
 
+function EmptyMateriCard() {
+  return (
+    <div className="flex flex-col items-center justify-center py-24 text-center">
+      <div className="w-16 h-16 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-center mb-4">
+        <AlertCircle className="w-7 h-7 text-slate-400" />
+      </div>
+      <h3 className="text-base font-black text-slate-700 mb-1">Belum Ada Materi</h3>
+      <p className="text-sm text-slate-400">Belum ada materi pada kelas ini.</p>
+    </div>
+  );
+}
+
 export default function LMSCourse() {
   const navigate = useNavigate();
   const { courseId } = useParams<{ courseId: string }>();
@@ -89,10 +101,13 @@ export default function LMSCourse() {
       />
     );
   }
+  if (sortedMateri.length === 0) {
+    return <EmptyMateriCard />;
+  }
 
   return (
-    <div className="h-screen w-full flex bg-[#f4f7fb] overflow-hidden">
-      <div className="flex-1 flex flex-col h-full overflow-y-auto bg-transparent relative">
+    <div className="flex min-h-full w-full bg-[#f4f7fb]">
+      <div className="relative flex flex-1 min-h-0 flex-col bg-transparent">
         <div className="lg:hidden flex items-center p-4 border-b border-slate-100 bg-white/90 backdrop-blur-xl sticky top-0 z-10">
           <button onClick={() => navigate(getCoursesRoute())} className="p-2 hover:bg-slate-100 text-slate-600 rounded-lg transition-colors mr-3">
             <ArrowLeft className="w-5 h-5" />

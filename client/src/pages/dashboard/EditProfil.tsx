@@ -42,8 +42,33 @@ const PerusahaanSchema = z.object({
 type ProfileForm = z.infer<typeof ProfileSchema>;
 type PerusahaanForm = z.infer<typeof PerusahaanSchema>;
 
-const INPUT_CLS = "w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white/80 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400 transition";
-const LABEL_CLS = "block text-sm font-semibold text-slate-700 mb-1.5";
+const INPUT_CLS = "dashboard-input w-full rounded-xl border px-4 py-2.5 text-sm transition";
+const LABEL_CLS = "dashboard-label mb-1.5 block text-sm font-semibold";
+const PANEL_CLS = "dashboard-section-card rounded-2xl border p-6 shadow-[0_24px_54px_rgba(148,163,184,0.18)]";
+const PANEL_HEADER_CLS = "dashboard-divider mb-6 flex items-center gap-2 border-b pb-4";
+const HERO_PANEL_CLS = "dashboard-table-surface relative overflow-hidden rounded-2xl border shadow-[0_24px_54px_rgba(148,163,184,0.18)]";
+const MODAL_PANEL_CLS = "dashboard-modal-panel w-full max-w-md overflow-hidden rounded-3xl border p-6 shadow-[0_24px_54px_rgba(148,163,184,0.18)]";
+const MUTED_BUTTON_CLS = "button-force-white dashboard-secondary-button inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition-all";
+const DANGER_BUTTON_CLS = "button-force-white inline-flex items-center gap-2 rounded-xl border border-transparent bg-gradient-to-r from-rose-500 via-red-500 to-red-600 px-4 py-2 text-sm font-semibold transition-all hover:from-rose-600 hover:via-red-600 hover:to-red-700";
+const PRIMARY_BUTTON_CLS = "button-force-white dashboard-primary-button inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50";
+const EDIT_BUTTON_CLS = "button-force-white dashboard-warning-button inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-all hover:-translate-y-0.5";
+const ICON_PILL_CLS = "flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[var(--dashboard-info-soft-border)] bg-[var(--dashboard-info-soft-bg)]";
+const INFO_LABEL_CLS = "mb-0.5 text-sm text-[var(--dashboard-text-muted)]";
+const INFO_VALUE_CLS = "truncate font-medium text-[var(--dashboard-text)]";
+const OVERLAY_UPLOAD_BUTTON_CLS = "flex items-center gap-2 rounded-xl bg-white/20 px-4 py-2 text-sm font-medium text-white backdrop-blur transition-all hover:bg-white/30";
+const PIC_TABLE_CLS = "w-full whitespace-nowrap text-left text-sm text-[var(--dashboard-text-soft)]";
+const PIC_TABLE_HEAD_CLS = "dashboard-table-head dashboard-table-divider border-b text-xs font-extrabold uppercase tracking-wider text-[var(--dashboard-text-muted)]";
+const PIC_TABLE_BODY_CLS = "dashboard-table-divider divide-y";
+const PIC_TABLE_ROW_CLS = "dashboard-table-row-hover transition-colors";
+const GHOST_ICON_BUTTON_CLS = "rounded-xl p-2 transition-colors";
+const FIELD_ICON_CLS = "absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--dashboard-text-muted)]";
+const INFO_ICON_COLOR_CLS = "text-[var(--dashboard-info-soft-fg)]";
+const META_ICON_CLS = "h-4 w-4 text-[var(--dashboard-text-muted)]";
+const ERROR_TEXT_CLS = "mt-1 text-xs text-[var(--dashboard-danger-soft-fg)]";
+const HERO_META_LINK_CLS = "font-medium text-[var(--dashboard-info-soft-fg)] transition-colors hover:opacity-80 hover:underline";
+const BULLET_CLS = "text-[var(--dashboard-text-muted)]";
+const AVATAR_FALLBACK_CLS = "flex h-full w-full items-center justify-center bg-[var(--dashboard-page-header)] text-3xl font-black text-white";
+const HOVER_OVERLAY_CLS = "absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100";
 
 function getInitials(name: string) {
     if (!name) return "";
@@ -76,11 +101,11 @@ function PicModal({
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden p-6">
+        <div className="dashboard-modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className={MODAL_PANEL_CLS}>
                 <div className="flex items-center justify-between mb-6">
-                    <h3 className="font-black text-slate-900 text-xl">{initialData ? "Edit PIC" : "Tambah PIC"}</h3>
-                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition p-1 bg-slate-100 rounded-xl"><X className="w-5 h-5" /></button>
+                    <h3 className="text-xl font-black text-[var(--dashboard-text)]">{initialData ? "Edit PIC" : "Tambah PIC"}</h3>
+                    <button onClick={onClose} className="dashboard-modal-close rounded-xl p-1 transition hover:brightness-95"><X className="w-5 h-5" /></button>
                 </div>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
@@ -96,8 +121,8 @@ function PicModal({
                         <input required value={form.telepon} onChange={(e) => setForm({ ...form, telepon: e.target.value })} className={INPUT_CLS} placeholder="Nomor Telepon" />
                     </div>
                     <div className="flex gap-3 pt-4">
-                        <button type="button" onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 transition">Batal</button>
-                        <button type="submit" disabled={loading} className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-lg shadow-blue-500/25 disabled:opacity-50 flex items-center justify-center gap-2">
+                        <button type="button" onClick={onClose} className={`${MUTED_BUTTON_CLS} flex-1 justify-center py-2.5 font-bold`}>Batal</button>
+                        <button type="submit" disabled={loading} className={`${PRIMARY_BUTTON_CLS} flex-1 py-2.5`}>
                             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                             Simpan
                         </button>
@@ -278,7 +303,7 @@ export default function EditProfil({ defaultTab = "pengguna" }: EditProfilProps)
 
     if (isUserLoading) {
         return (
-            <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>
+            <div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-[var(--dashboard-info-soft-fg)]" /></div>
         );
     }
 
@@ -295,16 +320,16 @@ export default function EditProfil({ defaultTab = "pengguna" }: EditProfilProps)
                         <motion.div
                             initial={{ opacity: 0, y: 16 }}
                             animate={{ opacity: 1, y: 0 }}
-                            className="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-200 relative"
+                            className={HERO_PANEL_CLS}
                         >
                             {/* Banner */}
                             <div
-                                className={`h-32 w-full bg-cover bg-center relative group overflow-hidden ${!user?.banner ? 'bg-gradient-to-r from-orange-100 to-rose-100' : ''}`}
+                                className={`h-32 w-full bg-cover bg-center relative group overflow-hidden ${!user?.banner ? 'bg-gradient-to-r from-indigo-900/60 to-blue-900/60' : ''}`}
                                 style={{ backgroundImage: user?.banner ? `url(${getMediaUrl(user.banner)})` : undefined }}
                             >
                                 {isEditingPengguna && (
-                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                        <button onClick={() => userBannerInputRef.current?.click()} className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 backdrop-blur text-white text-sm font-medium rounded-xl transition-all">
+                                    <div className={HOVER_OVERLAY_CLS}>
+                                        <button onClick={() => userBannerInputRef.current?.click()} className={OVERLAY_UPLOAD_BUTTON_CLS}>
                                             <ImageIcon className="w-4 h-4" /> Ganti Banner
                                         </button>
                                     </div>
@@ -315,7 +340,7 @@ export default function EditProfil({ defaultTab = "pengguna" }: EditProfilProps)
                                 {!isEditingPengguna ? (
                                     <button 
                                         onClick={() => setIsEditingPengguna(true)}
-                                        className="flex items-center gap-2 px-4 py-2 bg-white/90 backdrop-blur hover:bg-white text-slate-700 text-sm font-semibold rounded-xl shadow-sm transition-all"
+                                        className={EDIT_BUTTON_CLS}
                                     >
                                         <Edit2 className="w-4 h-4" />
                                         Edit Data
@@ -323,7 +348,7 @@ export default function EditProfil({ defaultTab = "pengguna" }: EditProfilProps)
                                 ) : (
                                     <button 
                                         onClick={() => setIsEditingPengguna(false)}
-                                        className="flex items-center gap-2 px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 text-sm font-semibold rounded-xl shadow-sm transition-all"
+                                        className={DANGER_BUTTON_CLS}
                                     >
                                         <X className="w-4 h-4" />
                                         Batal
@@ -354,7 +379,7 @@ export default function EditProfil({ defaultTab = "pengguna" }: EditProfilProps)
                             <div className="px-6 pb-6 relative">
                                 {/* Profile Picture */}
                                 <div className="absolute -top-12 left-6 group">
-                                    <div className="w-24 h-24 rounded-full border-4 border-white bg-slate-100 overflow-hidden flex items-center justify-center shadow-sm relative">
+                                    <div className="relative flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border-4 border-white/70 bg-[var(--dashboard-surface)] shadow-sm">
                                         {user?.foto_profile ? (
                                             <img
                                                 src={getMediaUrl(user.foto_profile)}
@@ -362,12 +387,12 @@ export default function EditProfil({ defaultTab = "pengguna" }: EditProfilProps)
                                                 className="w-full h-full object-cover"
                                             />
                                         ) : (
-                                            <div className="w-full h-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-3xl font-black">
+                                            <div className={AVATAR_FALLBACK_CLS}>
                                                 {user?.username ? getInitials(user.username) : <User className="w-10 h-10" />}
                                             </div>
                                         )}
                                         {isEditingPengguna && (
-                                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                            <div className={HOVER_OVERLAY_CLS}>
                                                 <button onClick={() => userPhotoInputRef.current?.click()} className="p-2 text-white hover:scale-110 transition-transform">
                                                     <Camera className="w-6 h-6" />
                                                 </button>
@@ -376,15 +401,15 @@ export default function EditProfil({ defaultTab = "pengguna" }: EditProfilProps)
                                     </div>
                                 </div>
                                 <div className="pt-14">
-                                    <h2 className="font-bold text-slate-900 text-2xl">{user?.display_name || user?.username || "Nama Pengguna"}</h2>
+                                    <h2 className="text-2xl font-bold text-[var(--dashboard-text)]">{user?.display_name || user?.username || "Nama Pengguna"}</h2>
                                     <div className="flex flex-col gap-1.5 mt-1.5">
                                         <div className="flex flex-wrap items-center gap-x-2 text-sm">
-                                            <span className="font-medium text-slate-600">{user?.email}</span>
+                                            <span className="font-medium text-[var(--dashboard-text-muted)]">{user?.email}</span>
                                             {user?.jabatan_name && (
                                                 <>
-                                                    <span className="text-slate-300">•</span>
-                                                    <div className="flex items-center gap-1.5 text-slate-700">
-                                                        <div className="w-4 h-4 bg-blue-600 rounded flex items-center justify-center">
+                                                    <span className={BULLET_CLS}>•</span>
+                                                    <div className="flex items-center gap-1.5 text-[var(--dashboard-text-soft)]">
+                                                        <div className="flex h-4 w-4 items-center justify-center rounded bg-[var(--dashboard-info-soft-fg)]">
                                                             <Briefcase className="w-2.5 h-2.5 text-white" />
                                                         </div>
                                                         <span className="font-medium">{user.jabatan_name}</span>
@@ -393,7 +418,7 @@ export default function EditProfil({ defaultTab = "pengguna" }: EditProfilProps)
                                             )}
                                         </div>
                                     </div>
-                                    <p className="text-xs text-slate-400 mt-4">
+                                    <p className="mt-4 text-xs text-[var(--dashboard-text-muted)]">
                                         Bergabung: {user?.created_at ? new Date(user.created_at).toLocaleDateString("id-ID", { year: "numeric", month: "long", day: "numeric" }) : ""}
                                     </p>
                                 </div>
@@ -406,37 +431,37 @@ export default function EditProfil({ defaultTab = "pengguna" }: EditProfilProps)
                                 initial={{ opacity: 0, y: 16 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: 0.08 }}
-                                className="bg-white/70 backdrop-blur-sm border border-white/60 rounded-2xl p-6 shadow-sm"
+                                className={PANEL_CLS}
                             >
-                                <div className="flex items-center gap-2 mb-6 pb-4 border-b border-slate-100">
-                                    <h3 className="font-bold text-slate-900 text-lg">Informasi Akun</h3>
+                                <div className={PANEL_HEADER_CLS}>
+                                    <h3 className="text-lg font-bold text-[var(--dashboard-text)]">Informasi Akun</h3>
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                     <div className="flex items-center gap-3">
-                                        <div className="flex-shrink-0 w-11 h-11 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center">
-                                            <User className="w-5 h-5 text-blue-600" />
+                                        <div className={ICON_PILL_CLS}>
+                                            <User className={`w-5 h-5 ${INFO_ICON_COLOR_CLS}`} />
                                         </div>
                                         <div className="min-w-0">
-                                            <p className="text-sm text-slate-500 mb-0.5">Nama Pengguna</p>
-                                            <p className="font-medium text-slate-900 truncate">{user?.display_name || "-"}</p>
+                                            <p className={INFO_LABEL_CLS}>Nama Pengguna</p>
+                                            <p className={INFO_VALUE_CLS}>{user?.display_name || "-"}</p>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-3">
-                                        <div className="flex-shrink-0 w-11 h-11 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center">
-                                            <Mail className="w-5 h-5 text-blue-600" />
+                                        <div className={ICON_PILL_CLS}>
+                                            <Mail className={`w-5 h-5 ${INFO_ICON_COLOR_CLS}`} />
                                         </div>
                                         <div className="min-w-0">
-                                            <p className="text-sm text-slate-500 mb-0.5">Email</p>
-                                            <p className="font-medium text-slate-900 truncate">{user?.email || "-"}</p>
+                                            <p className={INFO_LABEL_CLS}>Email</p>
+                                            <p className={INFO_VALUE_CLS}>{user?.email || "-"}</p>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-3">
-                                        <div className="flex-shrink-0 w-11 h-11 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center">
-                                            <Briefcase className="w-5 h-5 text-blue-600" />
+                                        <div className={ICON_PILL_CLS}>
+                                            <Briefcase className={`w-5 h-5 ${INFO_ICON_COLOR_CLS}`} />
                                         </div>
                                         <div className="min-w-0">
-                                            <p className="text-sm text-slate-500 mb-0.5">Jabatan</p>
-                                            <p className="font-medium text-slate-900 truncate">{user?.jabatan_name || user?.jabatan || "-"}</p>
+                                            <p className={INFO_LABEL_CLS}>Jabatan</p>
+                                            <p className={INFO_VALUE_CLS}>{user?.jabatan_name || user?.jabatan || "-"}</p>
                                         </div>
                                     </div>
                                 </div>
@@ -451,47 +476,47 @@ export default function EditProfil({ defaultTab = "pengguna" }: EditProfilProps)
                                     initial={{ opacity: 0, y: 16 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ delay: 0.08 }}
-                                    className="bg-white/70 backdrop-blur-sm border border-white/60 rounded-2xl p-6 shadow-sm"
+                                    className={PANEL_CLS}
                                 >
                             <div className="flex items-center gap-2 mb-5">
-                                <UserCircle className="w-5 h-5 text-blue-600" />
-                                <h3 className="font-bold text-slate-900">Informasi Akun</h3>
+                                <UserCircle className={`w-5 h-5 ${INFO_ICON_COLOR_CLS}`} />
+                                <h3 className="font-bold text-[var(--dashboard-text)]">Informasi Akun</h3>
                             </div>
                             <form onSubmit={profileForm.handleSubmit((d) => profileMutation.mutate(d))} className="space-y-4">
                                 <div>
                                     <label className={LABEL_CLS}>Nama Pengguna</label>
                                     <div className="relative">
-                                        <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                        <User className={FIELD_ICON_CLS} />
                                         <input {...profileForm.register("display_name")} className={`${INPUT_CLS} pl-10`} />
                                     </div>
                                     {profileForm.formState.errors.display_name && (
-                                        <p className="text-red-500 text-xs mt-1">{profileForm.formState.errors.display_name.message}</p>
+                                        <p className={ERROR_TEXT_CLS}>{profileForm.formState.errors.display_name.message}</p>
                                     )}
                                 </div>
                                 <div>
                                     <label className={LABEL_CLS}>Email</label>
                                     <div className="relative">
-                                        <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                        <Mail className={FIELD_ICON_CLS} />
                                         <input {...profileForm.register("email")} type="email" className={`${INPUT_CLS} pl-10`} />
                                     </div>
                                     {profileForm.formState.errors.email && (
-                                        <p className="text-red-500 text-xs mt-1">{profileForm.formState.errors.email.message}</p>
+                                        <p className={ERROR_TEXT_CLS}>{profileForm.formState.errors.email.message}</p>
                                     )}
                                 </div>
                                 <div>
                                     <label className={LABEL_CLS}>Jabatan</label>
                                     <div className="relative">
-                                        <Briefcase className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                        <Briefcase className={FIELD_ICON_CLS} />
                                         <input {...profileForm.register("jabatan")} className={`${INPUT_CLS} pl-10`} placeholder="Jabatan atau peranan" />
                                     </div>
                                     {profileForm.formState.errors.jabatan && (
-                                        <p className="text-red-500 text-xs mt-1">{profileForm.formState.errors.jabatan.message}</p>
+                                        <p className={ERROR_TEXT_CLS}>{profileForm.formState.errors.jabatan.message}</p>
                                     )}
                                 </div>
                                 <button
                                     type="submit"
                                     disabled={profileMutation.isPending}
-                                    className="w-full py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold text-sm shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 hover:scale-[1.01] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                                    className={`${PRIMARY_BUTTON_CLS} w-full py-3`}
                                 >
                                     {profileMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                                     Perbarui Profil
@@ -506,16 +531,16 @@ export default function EditProfil({ defaultTab = "pengguna" }: EditProfilProps)
                         <motion.div
                             initial={{ opacity: 0, y: 16 }}
                             animate={{ opacity: 1, y: 0 }}
-                            className="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-200 relative mb-6"
+                            className={`${HERO_PANEL_CLS} mb-6`}
                         >
                             {/* Banner / Foto Perusahaan */}
                             <div
-                                className={`h-40 w-full bg-cover bg-center relative group overflow-hidden ${!perusahaan?.photo ? 'bg-gradient-to-r from-blue-100 to-indigo-100' : ''}`}
+                                className={`h-40 w-full bg-cover bg-center relative group overflow-hidden ${!perusahaan?.photo ? 'bg-gradient-to-r from-indigo-900/60 to-blue-900/60' : ''}`}
                                 style={{ backgroundImage: perusahaan?.photo ? `url(${getMediaUrl(perusahaan.photo)})` : undefined }}
                             >
                                 {isEditingPerusahaan && (
-                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                        <button onClick={() => perusahaanBannerInputRef.current?.click()} className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 backdrop-blur text-white text-sm font-medium rounded-xl transition-all">
+                                    <div className={HOVER_OVERLAY_CLS}>
+                                        <button onClick={() => perusahaanBannerInputRef.current?.click()} className={OVERLAY_UPLOAD_BUTTON_CLS}>
                                             <ImageIcon className="w-4 h-4" /> Ganti Foto/Banner Perusahaan
                                         </button>
                                     </div>
@@ -526,7 +551,7 @@ export default function EditProfil({ defaultTab = "pengguna" }: EditProfilProps)
                                 {!isEditingPerusahaan ? (
                                     <button 
                                         onClick={() => setIsEditingPerusahaan(true)}
-                                        className="flex items-center gap-2 px-4 py-2 bg-white/90 backdrop-blur hover:bg-white text-slate-700 text-sm font-semibold rounded-xl shadow-sm transition-all"
+                                        className={EDIT_BUTTON_CLS}
                                     >
                                         <Edit2 className="w-4 h-4" />
                                         Edit Data
@@ -534,7 +559,7 @@ export default function EditProfil({ defaultTab = "pengguna" }: EditProfilProps)
                                 ) : (
                                     <button 
                                         onClick={() => setIsEditingPerusahaan(false)}
-                                        className="flex items-center gap-2 px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 text-sm font-semibold rounded-xl shadow-sm transition-all"
+                                        className={DANGER_BUTTON_CLS}
                                     >
                                         <X className="w-4 h-4" />
                                         Batal
@@ -555,42 +580,42 @@ export default function EditProfil({ defaultTab = "pengguna" }: EditProfilProps)
                             {/* Info Area */}
                             <div className="px-6 pb-6 relative">
                                 <div className="pt-6">
-                                    <h2 className="font-bold text-slate-900 text-2xl">{perusahaan?.nama_perusahaan || "Nama Perusahaan"}</h2>
+                                    <h2 className="text-2xl font-bold text-[var(--dashboard-text)]">{perusahaan?.nama_perusahaan || "Nama Perusahaan"}</h2>
 
                                     <div className="flex flex-col gap-2 mt-3">
                                         <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
                                             {perusahaan?.email && (
-                                                <div className="flex items-center gap-1.5 text-slate-700">
-                                                    <Mail className="w-4 h-4 text-slate-400" />
+                                                <div className="flex items-center gap-1.5 text-[var(--dashboard-text-soft)]">
+                                                    <Mail className={META_ICON_CLS} />
                                                     <span className="font-medium">{perusahaan.email}</span>
                                                 </div>
                                             )}
 
                                             {perusahaan?.telepon && (
-                                                <div className="flex items-center gap-1.5 text-slate-700">
-                                                    <Phone className="w-4 h-4 text-slate-400" />
+                                                <div className="flex items-center gap-1.5 text-[var(--dashboard-text-soft)]">
+                                                    <Phone className={META_ICON_CLS} />
                                                     <span className="font-medium">{perusahaan.telepon}</span>
                                                 </div>
                                             )}
                                             
                                             {perusahaan?.website && (
-                                                <div className="flex items-center gap-1.5 text-slate-700">
-                                                    <Globe className="w-4 h-4 text-slate-400" />
-                                                    <a href={perusahaan.website.startsWith('http') ? perusahaan.website : `https://${perusahaan.website}`} target="_blank" rel="noreferrer" className="font-medium hover:text-blue-600 hover:underline">{perusahaan.website}</a>
+                                                <div className="flex items-center gap-1.5 text-[var(--dashboard-text-soft)]">
+                                                    <Globe className={META_ICON_CLS} />
+                                                    <a href={perusahaan.website.startsWith('http') ? perusahaan.website : `https://${perusahaan.website}`} target="_blank" rel="noreferrer" className={HERO_META_LINK_CLS}>{perusahaan.website}</a>
                                                 </div>
                                             )}
                                             
                                             {(perusahaan?.sub_sektor?.nama_sub_sektor || subSektors?.find((s:any) => s.id === perusahaan?.id_sub_sektor)?.nama_sub_sektor) && (
-                                                <div className="flex items-center gap-1.5 text-slate-700">
-                                                    <Briefcase className="w-4 h-4 text-slate-400" />
-                                                    <span className="font-medium text-blue-600">{perusahaan?.sub_sektor?.nama_sub_sektor || subSektors?.find((s:any) => s.id === perusahaan?.id_sub_sektor)?.nama_sub_sektor}</span>
+                                                <div className="flex items-center gap-1.5 text-[var(--dashboard-text-soft)]">
+                                                    <Briefcase className={META_ICON_CLS} />
+                                                    <span className="font-medium text-[var(--dashboard-info-soft-fg)]">{perusahaan?.sub_sektor?.nama_sub_sektor || subSektors?.find((s:any) => s.id === perusahaan?.id_sub_sektor)?.nama_sub_sektor}</span>
                                                 </div>
                                             )}
                                         </div>
                                     </div>
                                     {perusahaan?.alamat && (
-                                        <p className="text-sm text-slate-500 mt-3 flex items-start gap-1.5">
-                                            <MapPin className="w-4 h-4 text-slate-400 mt-0.5 shrink-0" />
+                                        <p className="mt-3 flex items-start gap-1.5 text-sm text-[var(--dashboard-text-muted)]">
+                                            <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[var(--dashboard-text-muted)]" />
                                             {perusahaan.alamat}
                                         </p>
                                     )}
@@ -604,64 +629,64 @@ export default function EditProfil({ defaultTab = "pengguna" }: EditProfilProps)
                                 initial={{ opacity: 0, y: 16 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: 0.1 }}
-                                className="bg-white/70 backdrop-blur-sm border border-white/60 rounded-2xl p-6 shadow-sm"
+                                className={PANEL_CLS}
                             >
-                                <div className="mb-6 pb-4 border-b border-slate-100">
-                                    <h3 className="font-bold text-slate-900 text-lg">Informasi Perusahaan</h3>
+                                <div className="dashboard-divider mb-6 border-b pb-4">
+                                    <h3 className="text-lg font-bold text-[var(--dashboard-text)]">Informasi Perusahaan</h3>
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-8">
                                     <div className="flex items-center gap-3">
-                                        <div className="flex-shrink-0 w-11 h-11 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center">
-                                            <Building2 className="w-5 h-5 text-blue-600" />
+                                        <div className={ICON_PILL_CLS}>
+                                            <Building2 className={`w-5 h-5 ${INFO_ICON_COLOR_CLS}`} />
                                         </div>
                                         <div className="min-w-0">
-                                            <p className="text-sm text-slate-500 mb-0.5">Nama Perusahaan</p>
-                                            <p className="font-medium text-slate-900 truncate">{perusahaan?.nama_perusahaan || "-"}</p>
+                                            <p className={INFO_LABEL_CLS}>Nama Perusahaan</p>
+                                            <p className={INFO_VALUE_CLS}>{perusahaan?.nama_perusahaan || "-"}</p>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-3">
-                                        <div className="flex-shrink-0 w-11 h-11 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center">
-                                            <MapPin className="w-5 h-5 text-blue-600" />
+                                        <div className={ICON_PILL_CLS}>
+                                            <MapPin className={`w-5 h-5 ${INFO_ICON_COLOR_CLS}`} />
                                         </div>
                                         <div className="min-w-0">
-                                            <p className="text-sm text-slate-500 mb-0.5">Alamat</p>
-                                            <p className="font-medium text-slate-900 truncate">{perusahaan?.alamat || "-"}</p>
+                                            <p className={INFO_LABEL_CLS}>Alamat</p>
+                                            <p className={INFO_VALUE_CLS}>{perusahaan?.alamat || "-"}</p>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-3">
-                                        <div className="flex-shrink-0 w-11 h-11 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center">
-                                            <Mail className="w-5 h-5 text-blue-600" />
+                                        <div className={ICON_PILL_CLS}>
+                                            <Mail className={`w-5 h-5 ${INFO_ICON_COLOR_CLS}`} />
                                         </div>
                                         <div className="min-w-0">
-                                            <p className="text-sm text-slate-500 mb-0.5">Email</p>
-                                            <p className="font-medium text-slate-900 truncate">{perusahaan?.email || "-"}</p>
+                                            <p className={INFO_LABEL_CLS}>Email</p>
+                                            <p className={INFO_VALUE_CLS}>{perusahaan?.email || "-"}</p>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-3">
-                                        <div className="flex-shrink-0 w-11 h-11 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center">
-                                            <Phone className="w-5 h-5 text-blue-600" />
+                                        <div className={ICON_PILL_CLS}>
+                                            <Phone className={`w-5 h-5 ${INFO_ICON_COLOR_CLS}`} />
                                         </div>
                                         <div className="min-w-0">
-                                            <p className="text-sm text-slate-500 mb-0.5">Telepon</p>
-                                            <p className="font-medium text-slate-900 truncate">{perusahaan?.telepon || "-"}</p>
+                                            <p className={INFO_LABEL_CLS}>Telepon</p>
+                                            <p className={INFO_VALUE_CLS}>{perusahaan?.telepon || "-"}</p>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-3">
-                                        <div className="flex-shrink-0 w-11 h-11 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center">
-                                            <Globe className="w-5 h-5 text-blue-600" />
+                                        <div className={ICON_PILL_CLS}>
+                                            <Globe className={`w-5 h-5 ${INFO_ICON_COLOR_CLS}`} />
                                         </div>
                                         <div className="min-w-0">
-                                            <p className="text-sm text-slate-500 mb-0.5">Website</p>
-                                            <p className="font-medium text-slate-900 truncate">{perusahaan?.website || "-"}</p>
+                                            <p className={INFO_LABEL_CLS}>Website</p>
+                                            <p className={INFO_VALUE_CLS}>{perusahaan?.website || "-"}</p>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-3">
-                                        <div className="flex-shrink-0 w-11 h-11 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center">
-                                            <Briefcase className="w-5 h-5 text-blue-600" />
+                                        <div className={ICON_PILL_CLS}>
+                                            <Briefcase className={`w-5 h-5 ${INFO_ICON_COLOR_CLS}`} />
                                         </div>
                                         <div className="min-w-0">
-                                            <p className="text-sm text-slate-500 mb-0.5">Sektor</p>
-                                            <p className="font-medium text-slate-900 truncate">{perusahaan?.sub_sektor?.nama_sub_sektor || subSektors?.find((s:any) => s.id === perusahaan?.id_sub_sektor)?.nama_sub_sektor || "-"}</p>
+                                            <p className={INFO_LABEL_CLS}>Sektor</p>
+                                            <p className={INFO_VALUE_CLS}>{perusahaan?.sub_sektor?.nama_sub_sektor || subSektors?.find((s:any) => s.id === perusahaan?.id_sub_sektor)?.nama_sub_sektor || "-"}</p>
                                         </div>
                                     </div>
                                 </div>
@@ -673,28 +698,28 @@ export default function EditProfil({ defaultTab = "pengguna" }: EditProfilProps)
                             initial={{ opacity: 0, y: 16 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: 0.1 }}
-                            className="bg-white/70 backdrop-blur-sm border border-white/60 rounded-2xl p-6 shadow-sm mb-6"
+                            className={`${PANEL_CLS} mb-6`}
                         >
                             <div className="flex items-center gap-2 mb-5">
-                                <Building2 className="w-5 h-5 text-blue-600" />
-                                <h3 className="font-bold text-slate-900">Informasi Perusahaan</h3>
+                                <Building2 className={`w-5 h-5 ${INFO_ICON_COLOR_CLS}`} />
+                                <h3 className="font-bold text-[var(--dashboard-text)]">Informasi Perusahaan</h3>
                             </div>
                             <form onSubmit={perusahaanForm.handleSubmit((d) => perusahaanMutation.mutate(d))} className="space-y-4">
                                 <div>
                                     <label className={LABEL_CLS}>Nama Perusahaan</label>
                                     <div className="relative">
-                                        <Building2 className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                                        <input {...perusahaanForm.register("nama_perusahaan")} readOnly className={`${INPUT_CLS} pl-10 bg-slate-50 cursor-not-allowed text-slate-600`} placeholder="Nama Perusahaan" />
+                                        <Building2 className={FIELD_ICON_CLS} />
+                                        <input {...perusahaanForm.register("nama_perusahaan")} readOnly className={`${INPUT_CLS} cursor-not-allowed bg-[var(--dashboard-section-muted)] pl-10 text-[var(--dashboard-text-muted)]`} placeholder="Nama Perusahaan" />
                                     </div>
                                     {perusahaanForm.formState.errors.nama_perusahaan && (
-                                        <p className="text-red-500 text-xs mt-1">{perusahaanForm.formState.errors.nama_perusahaan.message}</p>
+                                        <p className={ERROR_TEXT_CLS}>{perusahaanForm.formState.errors.nama_perusahaan.message}</p>
                                     )}
                                 </div>
 
                                 <div>
                                     <label className={LABEL_CLS}>Alamat</label>
                                     <div className="relative">
-                                        <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                        <MapPin className={FIELD_ICON_CLS} />
                                         <input {...perusahaanForm.register("alamat")} className={`${INPUT_CLS} pl-10`} placeholder="Alamat Perusahaan" />
                                     </div>
                                 </div>
@@ -703,14 +728,14 @@ export default function EditProfil({ defaultTab = "pengguna" }: EditProfilProps)
                                     <div>
                                         <label className={LABEL_CLS}>Email</label>
                                         <div className="relative">
-                                            <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                            <Mail className={FIELD_ICON_CLS} />
                                             <input {...perusahaanForm.register("email")} type="email" className={`${INPUT_CLS} pl-10`} placeholder="email@perusahaan.com" />
                                         </div>
                                     </div>
                                     <div>
                                         <label className={LABEL_CLS}>Telepon</label>
                                         <div className="relative">
-                                            <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                            <Phone className={FIELD_ICON_CLS} />
                                             <input {...perusahaanForm.register("telepon")} className={`${INPUT_CLS} pl-10`} placeholder="021-xxxxxxx" />
                                         </div>
                                     </div>
@@ -720,7 +745,7 @@ export default function EditProfil({ defaultTab = "pengguna" }: EditProfilProps)
                                     <div>
                                         <label className={LABEL_CLS}>Website</label>
                                         <div className="relative">
-                                            <Globe className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                            <Globe className={FIELD_ICON_CLS} />
                                             <input {...perusahaanForm.register("website")} className={`${INPUT_CLS} pl-10`} placeholder="https://www.perusahaan.com" />
                                         </div>
                                     </div>
@@ -744,7 +769,7 @@ export default function EditProfil({ defaultTab = "pengguna" }: EditProfilProps)
                                 <button
                                     type="submit"
                                     disabled={perusahaanMutation.isPending}
-                                    className="w-full py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold text-sm shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 hover:scale-[1.01] transition-all disabled:opacity-50 flex items-center justify-center gap-2 mt-4"
+                                    className={`${PRIMARY_BUTTON_CLS} mt-4 w-full py-3`}
                                 >
                                     {perusahaanMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                                     Simpan Perusahaan
@@ -758,14 +783,14 @@ export default function EditProfil({ defaultTab = "pengguna" }: EditProfilProps)
                             initial={{ opacity: 0, y: 16 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: 0.15 }}
-                            className="bg-white/70 backdrop-blur-sm border border-white/60 rounded-2xl overflow-hidden shadow-sm mt-6"
+                            className={`${HERO_PANEL_CLS} mt-6`}
                         >
-                            <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                <h3 className="font-bold text-slate-900 text-lg">Daftar PIC (Person in Charge)</h3>
+                            <div className="dashboard-table-divider flex flex-col gap-4 border-b p-6 sm:flex-row sm:items-center sm:justify-between">
+                                <h3 className="text-lg font-bold text-[var(--dashboard-text)]">Daftar PIC (Person in Charge)</h3>
                                 {isEditingPerusahaan && (
                                     <button
                                         onClick={() => { setEditingPic(undefined); setShowPicModal(true); }}
-                                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl shadow-sm transition-all"
+                                        className={PRIMARY_BUTTON_CLS}
                                         disabled={!perusahaanId}
                                     >
                                         <Plus className="w-4 h-4" />
@@ -774,8 +799,8 @@ export default function EditProfil({ defaultTab = "pengguna" }: EditProfilProps)
                                 )}
                             </div>
                                 <div className="overflow-x-auto">
-                                    <table className="w-full text-left text-sm text-slate-600 whitespace-nowrap">
-                                        <thead className="bg-slate-50 text-xs uppercase font-extrabold text-slate-500 tracking-wider border-b border-slate-100">
+                                    <table className={PIC_TABLE_CLS}>
+                                        <thead className={PIC_TABLE_HEAD_CLS}>
                                             <tr>
                                                 <th className="px-6 py-4">Nama</th>
                                                 <th className="px-6 py-4">Email</th>
@@ -783,24 +808,24 @@ export default function EditProfil({ defaultTab = "pengguna" }: EditProfilProps)
                                                 {isEditingPerusahaan && <th className="px-6 py-4 text-center">Aksi</th>}
                                             </tr>
                                         </thead>
-                                        <tbody className="divide-y divide-slate-100">
+                                        <tbody className={PIC_TABLE_BODY_CLS}>
                                             {isLoadingPics ? (
-                                                <tr><td colSpan={isEditingPerusahaan ? 4 : 3} className="px-6 py-8 text-center text-slate-400"><Loader2 className="w-5 h-5 animate-spin mx-auto" /></td></tr>
+                                                <tr><td colSpan={isEditingPerusahaan ? 4 : 3} className="px-6 py-8 text-center text-[var(--dashboard-text-muted)]"><Loader2 className="mx-auto h-5 w-5 animate-spin" /></td></tr>
                                             ) : pics.length === 0 ? (
-                                                <tr><td colSpan={isEditingPerusahaan ? 4 : 3} className="px-6 py-8 text-center text-slate-400 font-medium">Belum ada data PIC</td></tr>
+                                                <tr><td colSpan={isEditingPerusahaan ? 4 : 3} className="px-6 py-8 text-center font-medium text-[var(--dashboard-text-muted)]">Belum ada data PIC</td></tr>
                                             ) : (
                                                 pics.map((p) => (
-                                                    <tr key={p.id} className="hover:bg-slate-50/50 transition-colors">
-                                                        <td className="px-6 py-4 font-bold text-slate-800">{p.nama}</td>
+                                                    <tr key={p.id} className={PIC_TABLE_ROW_CLS}>
+                                                        <td className="px-6 py-4 font-bold text-[var(--dashboard-text)]">{p.nama}</td>
                                                         <td className="px-6 py-4">{p.email}</td>
                                                         <td className="px-6 py-4">{p.telepon}</td>
                                                         {isEditingPerusahaan && (
                                                             <td className="px-6 py-4">
                                                                 <div className="flex items-center justify-center gap-2">
-                                                                    <button onClick={() => { setEditingPic(p); setShowPicModal(true); }} className="p-2 text-blue-600 bg-blue-50 rounded-xl hover:bg-blue-100 transition-colors tooltip" title="Edit">
+                                                                    <button onClick={() => { setEditingPic(p); setShowPicModal(true); }} className={`${GHOST_ICON_BUTTON_CLS} bg-[var(--dashboard-warning-soft-bg)] text-[var(--dashboard-warning-soft-fg)] hover:brightness-95 tooltip`} title="Edit">
                                                                         <Edit2 className="w-4 h-4" />
                                                                     </button>
-                                                                    <button onClick={() => handleDeletePic(p.id, p.nama)} className="p-2 text-red-600 bg-red-50 rounded-xl hover:bg-red-100 transition-colors tooltip" title="Hapus">
+                                                                    <button onClick={() => handleDeletePic(p.id, p.nama)} className={`${GHOST_ICON_BUTTON_CLS} bg-[var(--dashboard-danger-soft-bg)] text-[var(--dashboard-danger-soft-fg)] hover:brightness-95 tooltip`} title="Hapus">
                                                                         <Trash2 className="w-4 h-4" />
                                                                     </button>
                                                                 </div>

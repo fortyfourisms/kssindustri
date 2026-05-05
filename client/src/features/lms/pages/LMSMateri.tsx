@@ -100,7 +100,7 @@ export default function LMS() {
                     </p>
                 </div>
                 <div className="hidden sm:flex items-center gap-2 text-sm text-slate-500">
-                    <span className="font-medium text-blue-600 hover:underline cursor-pointer">Dashboards</span>
+                    <span className="font-medium text-blue-600 hover:underline cursor-pointer">Dashboard</span>
                     <ChevronRight className="w-3.5 h-3.5" />
                     <span className="font-semibold text-slate-900">Materi</span>
                 </div>
@@ -153,7 +153,7 @@ export default function LMS() {
                                 </h3>
 
                                 <div className="absolute bottom-4 right-4 z-10">
-                                    <span className="text-[11px] italic font-medium text-slate-600 font-serif">Learn with the expert</span>
+                                    <span className="text-[11px] italic font-medium text-slate-600 font-serif">Belajar bersama ahlinya</span>
                                 </div>
                             </div>
 

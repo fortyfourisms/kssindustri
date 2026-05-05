@@ -34,8 +34,9 @@ interface NotificationsState {
     isConnected: boolean;
     isLoading: boolean;
     hasLoaded: boolean;
+    isAvailable: boolean;
     setConnected: (connected: boolean) => void;
-    fetchNotifications: () => Promise<void>;
+    fetchNotifications: () => Promise<boolean>;
     addNotification: (notification: NotificationItem) => boolean;
     markAsRead: (id: string) => Promise<void>;
     markAllAsRead: () => Promise<void>;
@@ -47,6 +48,7 @@ export const useNotificationsStore = create<NotificationsState>()((set, get) => 
     isConnected: false,
     isLoading: false,
     hasLoaded: false,
+    isAvailable: true,
 
     setConnected: (connected) => set({ isConnected: connected }),
 
@@ -64,9 +66,28 @@ export const useNotificationsStore = create<NotificationsState>()((set, get) => 
                         : limited.filter((item) => !item.read).length,
                 isLoading: false,
                 hasLoaded: true,
+                isAvailable: true,
             });
-        } catch {
+            return true;
+        } catch (error) {
+            const status = typeof error === "object" && error !== null && "status" in error
+                ? Number((error as { status?: unknown }).status)
+                : undefined;
+
+            if (status === 403) {
+                set({
+                    notifications: [],
+                    unreadCount: 0,
+                    isConnected: false,
+                    isLoading: false,
+                    hasLoaded: true,
+                    isAvailable: false,
+                });
+                return false;
+            }
+
             set({ isLoading: false });
+            return true;
         }
     },
 

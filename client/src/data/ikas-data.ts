@@ -20,7 +20,7 @@ export const ikasDataStatic = {
         anomali_peristiwa: 2.51,
         pemantauan_berkelanjutan: 2.51,
     },
-    tanggulih: {
+    gulih: {
         perencanaan_pemulihan: 2.51,
         analisis_pelaporan: 2.51,
         pelaksanaan_pemulihan: 2.51,

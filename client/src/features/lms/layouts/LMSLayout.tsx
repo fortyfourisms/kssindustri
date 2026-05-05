@@ -34,11 +34,11 @@ export function LMSLayout() {
                 <LMSSidebar mobileOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
                 {/* Main area - flush (padding applied per page) */}
-                <div className="flex-1 flex flex-col min-w-0 relative z-10 h-screen">
+                <div className="flex-1 flex min-h-screen min-w-0 flex-col relative z-10">
                     {/* Topbar height is roughly 4rem (h-16) */}
-                    <Topbar title={title} onMenuClick={() => setSidebarOpen(true)} />
+                    <Topbar title={title} onMenuClick={() => setSidebarOpen(true)} hideThemeToggle />
                     
-                    <main className="flex-1 overflow-hidden relative">
+                    <main className="relative flex-1 min-h-0 overflow-x-hidden overflow-y-auto">
                         <Outlet />
                     </main>
                 </div>

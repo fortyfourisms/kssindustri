@@ -45,25 +45,38 @@ const YEAR_PALETTE = [
 ];
 
 const TARGET = 2.51;
+const PANEL_CLS = "dashboard-table-surface rounded-2xl border p-6 shadow-sm";
+const EMPTY_PANEL_CLS = "dashboard-table-surface rounded-2xl border p-10 shadow-sm";
+const GRID_STROKE = "var(--dashboard-table-divider)";
+const AXIS_STROKE = "var(--dashboard-text-muted)";
+const LABEL_STROKE = "var(--dashboard-text-soft)";
+const TARGET_STROKE = "var(--dashboard-status-danger)";
 
 // ─── Custom Tooltip ──────────────────────────────────────────────────────────
 const CustomBarTooltip = ({ active, payload, label }: any) => {
     if (!active || !payload?.length) return null;
     return (
-        <div className="bg-white border border-slate-200 rounded-xl shadow-xl p-3 text-sm min-w-[160px]">
-            <p className="font-bold text-slate-800 mb-2 border-b border-slate-100 pb-1">{label}</p>
+        <div
+            className="min-w-[160px] rounded-xl border p-3 text-sm shadow-xl"
+            style={{
+                background: "var(--dashboard-chart-tooltip-bg)",
+                borderColor: "var(--dashboard-chart-tooltip-border)",
+                color: "var(--dashboard-text)",
+            }}
+        >
+            <p className="mb-2 border-b pb-1 font-bold" style={{ color: "var(--dashboard-text)", borderColor: "var(--dashboard-border)" }}>{label}</p>
             {payload.map((p: any, i: number) => (
                 <div key={i} className="flex items-center justify-between gap-4 py-0.5">
-                    <span className="flex items-center gap-1.5 text-slate-600">
+                    <span className="flex items-center gap-1.5" style={{ color: "var(--dashboard-text-soft)" }}>
                         <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: p.fill || p.color }} />
                         {p.name}
                     </span>
-                    <span className="font-bold text-slate-800">{Number(p.value).toFixed(2)}</span>
+                    <span className="font-bold" style={{ color: "var(--dashboard-text)" }}>{Number(p.value).toFixed(2)}</span>
                 </div>
             ))}
-            <div className="flex items-center justify-between gap-4 py-0.5 border-t border-slate-100 mt-1">
-                <span className="text-slate-400 text-xs">Target</span>
-                <span className="font-semibold text-red-500 text-xs">{TARGET}</span>
+            <div className="mt-1 flex items-center justify-between gap-4 border-t py-0.5" style={{ borderColor: "var(--dashboard-border)" }}>
+                <span className="text-xs" style={{ color: "var(--dashboard-text-muted)" }}>Target</span>
+                <span className="text-xs font-semibold" style={{ color: TARGET_STROKE }}>{TARGET}</span>
             </div>
         </div>
     );
@@ -72,15 +85,22 @@ const CustomBarTooltip = ({ active, payload, label }: any) => {
 const CustomLineTooltip = ({ active, payload, label }: any) => {
     if (!active || !payload?.length) return null;
     return (
-        <div className="bg-white border border-slate-200 rounded-xl shadow-xl p-3 text-sm min-w-[150px]">
-            <p className="font-bold text-slate-800 mb-2 border-b border-slate-100 pb-1">Tahun {label}</p>
+        <div
+            className="min-w-[150px] rounded-xl border p-3 text-sm shadow-xl"
+            style={{
+                background: "var(--dashboard-chart-tooltip-bg)",
+                borderColor: "var(--dashboard-chart-tooltip-border)",
+                color: "var(--dashboard-text)",
+            }}
+        >
+            <p className="mb-2 border-b pb-1 font-bold" style={{ color: "var(--dashboard-text)", borderColor: "var(--dashboard-border)" }}>Tahun {label}</p>
             {payload.map((p: any, i: number) => (
                 <div key={i} className="flex items-center justify-between gap-4 py-0.5">
-                    <span className="flex items-center gap-1.5 text-slate-600">
+                    <span className="flex items-center gap-1.5" style={{ color: "var(--dashboard-text-soft)" }}>
                         <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ background: p.color }} />
                         {p.name}
                     </span>
-                    <span className="font-bold text-slate-800">{Number(p.value).toFixed(2)}</span>
+                    <span className="font-bold" style={{ color: "var(--dashboard-text)" }}>{Number(p.value).toFixed(2)}</span>
                 </div>
             ))}
         </div>
@@ -147,42 +167,42 @@ export function IkasYearComparisonChart({ ikasList, availableYears }: Props) {
         <div className="space-y-4">
             {/* ── Section header ── */}
             <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center shadow-md">
-                    <TrendingUp className="w-5 h-5 text-white" />
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl shadow-md" style={{ background: "var(--dashboard-primary-button)", color: "var(--text-primary-action)" }}>
+                    <TrendingUp className="w-5 h-5" />
                 </div>
                 <div>
-                    <h2 className="font-black text-slate-800 text-base">Perbandingan Data Antar Tahun</h2>
-                    <p className="text-xs text-slate-500">Visualisasi tren nilai kematangan keamanan siber</p>
+                    <h2 className="text-base font-black" style={{ color: "var(--dashboard-text)" }}>Perbandingan Data Antar Tahun</h2>
+                    <p className="text-xs" style={{ color: "var(--dashboard-text-muted)" }}>Visualisasi tren nilai kematangan keamanan siber</p>
                 </div>
             </div>
 
             {/* ── Empty state ── */}
             {!hasData ? (
-                <div className="bg-white/80 backdrop-blur-md border border-slate-200/70 rounded-2xl p-10 shadow-sm flex flex-col items-center justify-center gap-3 text-center">
-                    <div className="w-14 h-14 rounded-2xl bg-indigo-50 flex items-center justify-center">
-                        <BarChart3 className="w-7 h-7 text-indigo-300" />
+                <div className={`${EMPTY_PANEL_CLS} flex flex-col items-center justify-center gap-3 text-center`}>
+                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl" style={{ background: "var(--dashboard-card-chip)" }}>
+                        <BarChart3 className="w-7 h-7" style={{ color: "var(--dashboard-info-soft-fg)" }} />
                     </div>
-                    <p className="font-bold text-slate-600 text-sm">Belum ada data untuk perbandingan</p>
+                    <p className="text-sm font-bold" style={{ color: "var(--dashboard-text-soft)" }}>Belum ada data untuk perbandingan</p>
                 </div>
             ) : !hasMultiYear ? (
                 /* ── Hanya 1 tahun: tampilkan bar tunggal per domain ── */
-                <div className="bg-white/80 backdrop-blur-md border border-slate-200/70 rounded-2xl p-6 shadow-sm">
+                <div className={PANEL_CLS}>
                     <div className="flex items-center gap-2 mb-4">
-                        <BarChart2 className="w-4 h-4 text-slate-400" />
-                        <span className="text-sm font-bold text-slate-600">
+                        <BarChart2 className="w-4 h-4" style={{ color: "var(--dashboard-info-soft-fg)" }} />
+                        <span className="text-sm font-bold" style={{ color: "var(--dashboard-text-soft)" }}>
                             Nilai per Domain — {availableYears[0]}
                         </span>
-                        <span className="text-xs text-slate-400 ml-auto">Data hanya tersedia untuk 1 tahun. Tambahkan data tahun lain untuk melihat perbandingan.</span>
+                        <span className="ml-auto text-xs" style={{ color: "var(--dashboard-text-muted)" }}>Data hanya tersedia untuk 1 tahun. Tambahkan data tahun lain untuk melihat perbandingan.</span>
                     </div>
                     <div className="h-64">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={domainTrendData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                                <XAxis dataKey="domain" tick={{ fontSize: 12, fontWeight: 600, fill: "#475569" }} />
-                                <YAxis domain={[0, 5]} tick={{ fontSize: 11, fill: "#94a3b8" }} tickCount={6} />
+                                <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE} />
+                                <XAxis dataKey="domain" tick={{ fontSize: 12, fontWeight: 600, fill: LABEL_STROKE }} />
+                                <YAxis domain={[0, 5]} tick={{ fontSize: 11, fill: AXIS_STROKE }} tickCount={6} />
                                 <Tooltip content={<CustomBarTooltip />} />
-                                <ReferenceLine y={TARGET} stroke="#ef4444" strokeDasharray="4 2" strokeWidth={1.5}
-                                    label={{ value: `Target ${TARGET}`, position: "insideTopRight", fontSize: 10, fill: "#ef4444" }} />
+                                <ReferenceLine y={TARGET} stroke={TARGET_STROKE} strokeDasharray="4 2" strokeWidth={1.5}
+                                    label={{ value: `Target ${TARGET}`, position: "insideTopRight", fontSize: 10, fill: TARGET_STROKE }} />
                                 <Bar dataKey={String(availableYears[0])} radius={[6, 6, 0, 0]}>
                                     {domainTrendData.map((_, i) => (
                                         <Cell key={i} fill={Object.values(DOMAIN_COLORS)[i]} />
@@ -197,22 +217,22 @@ export function IkasYearComparisonChart({ ikasList, availableYears }: Props) {
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
 
                     {/* Chart 1: Bar grouped per domain per tahun */}
-                    <div className="bg-white/80 backdrop-blur-md border border-slate-200/70 rounded-2xl p-6 shadow-sm">
+                    <div className={PANEL_CLS}>
                         <div className="flex items-center gap-2 mb-4">
-                            <BarChart2 className="w-4 h-4 text-indigo-500" />
-                            <span className="text-sm font-bold text-slate-700">Nilai per Domain per Tahun</span>
+                            <BarChart2 className="w-4 h-4" style={{ color: "var(--dashboard-info-soft-fg)" }} />
+                            <span className="text-sm font-bold" style={{ color: "var(--dashboard-text-soft)" }}>Nilai per Domain per Tahun</span>
                         </div>
                         <div className="h-72">
                             <ResponsiveContainer width="100%" height="100%">
                                 <BarChart data={barData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}
                                     barCategoryGap="25%" barGap={2}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                                    <XAxis dataKey="tahun" tick={{ fontSize: 12, fontWeight: 700, fill: "#475569" }} />
-                                    <YAxis domain={[0, 5]} tick={{ fontSize: 11, fill: "#94a3b8" }} tickCount={6} />
+                                    <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE} />
+                                    <XAxis dataKey="tahun" tick={{ fontSize: 12, fontWeight: 700, fill: LABEL_STROKE }} />
+                                    <YAxis domain={[0, 5]} tick={{ fontSize: 11, fill: AXIS_STROKE }} tickCount={6} />
                                     <Tooltip content={<CustomBarTooltip />} />
-                                    <ReferenceLine y={TARGET} stroke="#ef4444" strokeDasharray="4 2" strokeWidth={1.5}
-                                        label={{ value: `Target ${TARGET}`, position: "insideTopRight", fontSize: 10, fill: "#ef4444" }} />
-                                    <Legend wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
+                                    <ReferenceLine y={TARGET} stroke={TARGET_STROKE} strokeDasharray="4 2" strokeWidth={1.5}
+                                        label={{ value: `Target ${TARGET}`, position: "insideTopRight", fontSize: 10, fill: TARGET_STROKE }} />
+                                    <Legend wrapperStyle={{ fontSize: 11, paddingTop: 8, color: "var(--dashboard-text-soft)" }} />
                                     <Bar dataKey="Identifikasi" fill={DOMAIN_COLORS.identifikasi} radius={[4, 4, 0, 0]} />
                                     <Bar dataKey="Proteksi" fill={DOMAIN_COLORS.proteksi} radius={[4, 4, 0, 0]} />
                                     <Bar dataKey="Deteksi" fill={DOMAIN_COLORS.deteksi} radius={[4, 4, 0, 0]} />
@@ -223,27 +243,27 @@ export function IkasYearComparisonChart({ ikasList, availableYears }: Props) {
                     </div>
 
                     {/* Chart 2: Line tren total nilai kematangan */}
-                    <div className="bg-white/80 backdrop-blur-md border border-slate-200/70 rounded-2xl p-6 shadow-sm">
+                    <div className={PANEL_CLS}>
                         <div className="flex items-center gap-2 mb-4">
-                            <TrendingUp className="w-4 h-4 text-emerald-500" />
-                            <span className="text-sm font-bold text-slate-700">Tren Total Nilai Kematangan</span>
+                            <TrendingUp className="w-4 h-4" style={{ color: "var(--dashboard-success-soft-fg)" }} />
+                            <span className="text-sm font-bold" style={{ color: "var(--dashboard-text-soft)" }}>Tren Total Nilai Kematangan</span>
                         </div>
                         <div className="h-72">
                             <ResponsiveContainer width="100%" height="100%">
                                 <LineChart data={lineData} margin={{ top: 8, right: 24, left: 0, bottom: 0 }}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                                    <XAxis dataKey="tahun" tick={{ fontSize: 12, fontWeight: 700, fill: "#475569" }} />
-                                    <YAxis domain={[0, 5]} tick={{ fontSize: 11, fill: "#94a3b8" }} tickCount={6} />
+                                    <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE} />
+                                    <XAxis dataKey="tahun" tick={{ fontSize: 12, fontWeight: 700, fill: LABEL_STROKE }} />
+                                    <YAxis domain={[0, 5]} tick={{ fontSize: 11, fill: AXIS_STROKE }} tickCount={6} />
                                     <Tooltip content={<CustomLineTooltip />} />
-                                    <ReferenceLine y={TARGET} stroke="#ef4444" strokeDasharray="4 2" strokeWidth={1.5}
-                                        label={{ value: `Target ${TARGET}`, position: "insideTopRight", fontSize: 10, fill: "#ef4444" }} />
-                                    <Legend wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
+                                    <ReferenceLine y={TARGET} stroke={TARGET_STROKE} strokeDasharray="4 2" strokeWidth={1.5}
+                                        label={{ value: `Target ${TARGET}`, position: "insideTopRight", fontSize: 10, fill: TARGET_STROKE }} />
+                                    <Legend wrapperStyle={{ fontSize: 11, paddingTop: 8, color: "var(--dashboard-text-soft)" }} />
                                     <Line
                                         type="monotone"
                                         dataKey="Nilai Kematangan"
                                         stroke="#3b82f6"
                                         strokeWidth={2.5}
-                                        dot={{ r: 5, fill: "#3b82f6", strokeWidth: 2, stroke: "#fff" }}
+                                        dot={{ r: 5, fill: "#3b82f6", strokeWidth: 2, stroke: "var(--dashboard-surface-strong)" }}
                                         activeDot={{ r: 7 }}
                                         connectNulls={false}
                                     />
@@ -253,22 +273,22 @@ export function IkasYearComparisonChart({ ikasList, availableYears }: Props) {
                     </div>
 
                     {/* Chart 3 (full width): Bar per domain, grouped by year */}
-                    <div className="bg-white/80 backdrop-blur-md border border-slate-200/70 rounded-2xl p-6 shadow-sm xl:col-span-2">
+                    <div className={`${PANEL_CLS} xl:col-span-2`}>
                         <div className="flex items-center gap-2 mb-4">
-                            <BarChart2 className="w-4 h-4 text-purple-500" />
-                            <span className="text-sm font-bold text-slate-700">Perbandingan per Domain (semua tahun)</span>
+                            <BarChart2 className="w-4 h-4" style={{ color: "var(--dashboard-selection-text)" }} />
+                            <span className="text-sm font-bold" style={{ color: "var(--dashboard-text-soft)" }}>Perbandingan per Domain (semua tahun)</span>
                         </div>
                         <div className="h-72">
                             <ResponsiveContainer width="100%" height="100%">
                                 <BarChart data={domainTrendData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}
                                     barCategoryGap="30%" barGap={2}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                                    <XAxis dataKey="domain" tick={{ fontSize: 12, fontWeight: 600, fill: "#475569" }} />
-                                    <YAxis domain={[0, 5]} tick={{ fontSize: 11, fill: "#94a3b8" }} tickCount={6} />
+                                    <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE} />
+                                    <XAxis dataKey="domain" tick={{ fontSize: 12, fontWeight: 600, fill: LABEL_STROKE }} />
+                                    <YAxis domain={[0, 5]} tick={{ fontSize: 11, fill: AXIS_STROKE }} tickCount={6} />
                                     <Tooltip content={<CustomBarTooltip />} />
-                                    <ReferenceLine y={TARGET} stroke="#ef4444" strokeDasharray="4 2" strokeWidth={1.5}
-                                        label={{ value: `Target ${TARGET}`, position: "insideTopRight", fontSize: 10, fill: "#ef4444" }} />
-                                    <Legend wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
+                                    <ReferenceLine y={TARGET} stroke={TARGET_STROKE} strokeDasharray="4 2" strokeWidth={1.5}
+                                        label={{ value: `Target ${TARGET}`, position: "insideTopRight", fontSize: 10, fill: TARGET_STROKE }} />
+                                    <Legend wrapperStyle={{ fontSize: 11, paddingTop: 8, color: "var(--dashboard-text-soft)" }} />
                                     {availableYears.slice().reverse().map((year, i) => (
                                         <Bar
                                             key={year}

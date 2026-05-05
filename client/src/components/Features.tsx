@@ -19,8 +19,8 @@ const itemVariants = {
 };
 
 const FeatureHeader = () => (
-  <div className="mb-12">
-    <h2 className="text-5xl md:text-6xl font-display font-medium text-slate-900 tracking-tight leading-tight">
+  <div className="mb-10 sm:mb-12">
+    <h2 className="font-display text-[clamp(2.2rem,7vw,4.75rem)] font-medium leading-[1.02] tracking-tight text-slate-900">
       Layanan & <br />
       <span className="text-slate-400">Ketahanan Siber</span>
     </h2>
@@ -85,7 +85,7 @@ export function Features() {
   const navigate = useNavigate();
 
   return (
-    <section id="features" className="py-16 md:py-32 bg-white relative overflow-hidden">
+    <section id="features" className="relative overflow-hidden bg-white py-16 sm:py-20 md:py-24 lg:py-32">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
         <FeatureHeader />
 
@@ -101,7 +101,7 @@ export function Features() {
             {/* Feature 1: IKAS */}
             <FeatureCard
               variants={itemVariants}
-              className="md:col-span-1 p-8"
+              className="p-6 sm:p-8 md:col-span-1"
             >
               <div className="relative z-10 flex flex-col h-full pointer-events-none">
                 <span className="text-xs font-semibold text-primary uppercase tracking-widest mb-6 block group-hover:text-white transition-colors">Survei</span>
@@ -120,11 +120,11 @@ export function Features() {
             {/* Feature 2: KSE (Large) */}
             <FeatureCard
               variants={itemVariants}
-              className="md:col-span-2 p-8 bg-slate-50/30"
+              className="bg-slate-50/30 p-6 sm:p-8 md:col-span-2"
             >
               <div className="relative z-10 max-w-sm pointer-events-none">
                 <span className="text-xs font-semibold text-primary uppercase tracking-widest mb-6 block group-hover:text-white transition-colors">KSE</span>
-                <h3 className="text-2xl font-bold text-slate-900 mb-4 group-hover:text-white transition-colors">
+                <h3 className="mb-4 text-xl font-bold text-slate-900 transition-colors group-hover:text-white sm:text-2xl">
                   Kategorisasi Sistem Elektronik
                 </h3>
                 <p className="text-slate-500 text-sm leading-relaxed group-hover:text-white/80 transition-colors">
@@ -151,7 +151,7 @@ export function Features() {
             {/* Visual Decorative Element */}
             <FeatureCard
               variants={itemVariants}
-              className="md:col-span-1 flex items-center justify-center p-8 bg-white"
+              className="flex items-center justify-center bg-white p-6 sm:p-8 md:col-span-1"
             >
               <svg width="100%" height="100%" viewBox="0 0 200 200" className="text-slate-200 group-hover:text-white/40 transition-colors duration-700 pointer-events-none relative z-10">
                 {[...Array(8)].map((_, i) => (
@@ -181,14 +181,14 @@ export function Features() {
             {/* Feature: Main Statement / Results */}
             <FeatureCard
               variants={itemVariants}
-              className="md:col-span-2 p-6 md:p-12 bg-white pointer-events-auto"
+                className="pointer-events-auto bg-white p-6 sm:p-8 md:col-span-2 md:p-12"
             >
               <div className="relative z-10 pointer-events-none">
                 <span className="text-xs font-semibold text-primary uppercase tracking-widest mb-6 block group-hover:text-white transition-colors">IKAS</span>
-                <h3 className="text-4xl md:text-5xl font-bold text-slate-900 mb-6 tracking-tight leading-tight group-hover:text-white transition-colors">
+                <h3 className="mb-5 text-[clamp(2rem,6vw,3.25rem)] font-bold leading-[1.05] tracking-tight text-slate-900 transition-colors group-hover:text-white md:mb-6">
                   Instrumen Penilaian<br />Kematangan Keamanan Siber
                 </h3>
-                <p className="text-slate-500 text-lg leading-relaxed max-w-xl mb-8 group-hover:text-white/80 transition-colors">
+                <p className="mb-8 max-w-xl text-base leading-relaxed text-slate-500 transition-colors group-hover:text-white/80 sm:text-lg">
                   Evaluasi mandiri untuk mengukur tingkat kematangan keamanan siber organisasi sesuai standar nasional.
                 </p>
               </div>
@@ -205,10 +205,10 @@ export function Features() {
             {/* Feature 4: CSIRT (Wide) */}
             <FeatureCard
               variants={itemVariants}
-              className="md:col-span-2 p-6 md:p-12 bg-white"
+              className="bg-white p-6 sm:p-8 md:col-span-2 md:p-12"
             >
               <div className="relative z-10 max-w-md pointer-events-none">
-                <h3 className="text-3xl font-bold text-slate-900 mb-4 group-hover:text-white transition-colors">CSIRT Services</h3>
+                <h3 className="mb-4 text-[clamp(1.75rem,5vw,2.5rem)] font-bold text-slate-900 transition-colors group-hover:text-white">CSIRT Services</h3>
                 <p className="text-slate-500 text-base leading-relaxed mb-6 group-hover:text-white/80 transition-colors">
                   Infrastruktur untuk koordinasi tim tanggap insiden siber dalam menangani ancaman secara efektif dan sistematis.
                 </p>
@@ -234,7 +234,7 @@ export function Features() {
             <FeatureCard
               variants={itemVariants}
               inverted
-              className="md:col-span-1 p-8 flex flex-col justify-center text-white"
+              className="flex flex-col justify-center p-6 text-white sm:p-8 md:col-span-1"
             >
               <div className="absolute inset-0 opacity-20 pointer-events-none transition-opacity duration-500 group-hover:opacity-10">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-primary blur-3xl rounded-full translate-x-1/2 -translate-y-1/2" />

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { useUpcomingEvents } from "@/hooks/useEvents";
+import { useScrollToTop } from "@/hooks/useScrollToTop";
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("id-ID", {
@@ -17,6 +18,18 @@ function formatDate(value: string) {
 export default function Events() {
   const navigate = useNavigate();
   const { data, isLoading, isError } = useUpcomingEvents();
+  useScrollToTop();
+
+  const handleOpenDetail = (eventId: string) => {
+    navigate(`/events/${eventId}`);
+  };
+
+  const handleCardKeyDown = (eventKey: React.KeyboardEvent<HTMLElement>, eventId: string) => {
+    if (eventKey.key === "Enter" || eventKey.key === " ") {
+      eventKey.preventDefault();
+      handleOpenDetail(eventId);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background font-sans selection:bg-primary selection:text-white">
@@ -37,9 +50,6 @@ export default function Events() {
                 workshop, briefing, dan simulation
               </span>
             </h1>
-            <p className="mt-5 max-w-3xl text-base md:text-lg leading-relaxed text-slate-600">
-              Halaman ini menjadi destination dari tombol Show More pada landing page. Pengguna dapat meninjau seluruh event upcoming lalu masuk ke halaman detail untuk RSVP.
-            </p>
           </div>
 
           <div className="mt-12">
@@ -58,7 +68,11 @@ export default function Events() {
                 {data?.map((event) => (
                   <article
                     key={event.id}
-                    className="group relative overflow-hidden rounded-[2rem] border border-white/60 bg-white/90 p-6 shadow-[0_20px_80px_rgba(31,60,136,0.10)] backdrop-blur-sm transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_28px_100px_rgba(31,60,136,0.16)]"
+                    role="link"
+                    tabIndex={0}
+                    onClick={() => handleOpenDetail(event.id)}
+                    onKeyDown={(eventKey) => handleCardKeyDown(eventKey, event.id)}
+                    className="group relative cursor-pointer overflow-hidden rounded-[2rem] border border-white/60 bg-white/90 p-6 shadow-[0_20px_80px_rgba(31,60,136,0.10)] backdrop-blur-sm transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_28px_100px_rgba(31,60,136,0.16)] focus:outline-none focus:ring-2 focus:ring-[#0061ff]/30 focus:ring-offset-2"
                   >
                     <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(96,239,255,0.12),transparent_42%)] opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
                     <div className="relative">
@@ -67,7 +81,7 @@ export default function Events() {
                           {event.coverLabel}
                         </span>
                         <span className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">
-                          {event.format}
+                          {event.statusLabel}
                         </span>
                       </div>
 
@@ -87,7 +101,7 @@ export default function Events() {
 
                       <div className="mt-8">
                         <button
-                          onClick={() => navigate(`/events/${event.id}`)}
+                          onClick={() => handleOpenDetail(event.id)}
                           className="inline-flex items-center gap-2 rounded-full bg-[#0061ff] px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-blue-500/20 transition hover:bg-blue-700"
                         >
                           Join Event

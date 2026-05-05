@@ -20,4 +20,3 @@ export async function bootstrapApp(): Promise<void> {
     // bootstrapSession() tidak pernah throw \u2014 error ditangani secara internal.
     await store.bootstrapSession();
 }
-

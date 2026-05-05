@@ -6,11 +6,13 @@ import { getCoursesRoute, getCourseRoute } from "@/features/lms/lib/lms-routes";
 import {
     buildLmsCourseInsight,
     getCertificateCourseIds,
-    inferLmsCategory,
     isPublishedCourse,
+    LMS_CATEGORY_OPTIONS,
 } from "@/features/lms/lib/lms-dashboard";
 import { lmsService } from "@/features/lms/services/lms.service";
 import { useLmsStore } from "@/features/lms/stores/lms.store";
+import { GuidedTour } from "@/components/tour/GuidedTour";
+import { LMS_DASHBOARD_TOUR_STEPS } from "@/features/lms/lib/lms-tour";
 import { useAuthStore } from "@/stores/auth.store";
 import { cn } from "@/lib/utils";
 import type { LmsCourseInsight } from "@/features/lms/lib/lms-dashboard";
@@ -31,8 +33,9 @@ export function LMSDashboard() {
     const navigate = useNavigate();
     const { courses, isLoadingCourses, coursesError, fetchCourses } = useLmsStore();
     const currentUser = useAuthStore((state) => state.currentUser);
-    const [selectedCategory, setSelectedCategory] = useState("All");
-    const userDisplayName = currentUser?.displayName || currentUser?.name || currentUser?.username || "User";
+    const [selectedCategory, setSelectedCategory] = useState("Semua");
+    const userDisplayName = currentUser?.displayName || currentUser?.name || currentUser?.username || "Pengguna";
+    const tourStorageKey = `lms-dashboard-tour-completed:${currentUser?.id ?? currentUser?.username ?? "guest"}`;
 
     useEffect(() => {
         fetchCourses();
@@ -66,19 +69,19 @@ export function LMSDashboard() {
     );
 
     const categoryOptions = useMemo(
-        () => ["All", ...Array.from(new Set(baseCourseInsights.map((item, index) => inferLmsCategory(item.title, index))))],
-        [baseCourseInsights]
+        () => ["Semua", ...LMS_CATEGORY_OPTIONS],
+        []
     );
-    const safeSelectedCategory = categoryOptions.includes(selectedCategory) ? selectedCategory : "All";
+    const safeSelectedCategory = categoryOptions.includes(selectedCategory) ? selectedCategory : "Semua";
     const filteredBaseCourses = useMemo(
-        () => safeSelectedCategory === "All"
+        () => safeSelectedCategory === "Semua"
             ? baseCourseInsights
             : baseCourseInsights.filter((item) => item.category === safeSelectedCategory),
         [baseCourseInsights, safeSelectedCategory]
     );
     const detailCourseIds = useMemo(
-        () => filteredBaseCourses.slice(0, 5).map((course) => course.id),
-        [filteredBaseCourses]
+        () => baseCourseInsights.slice(0, 5).map((course) => course.id),
+        [baseCourseInsights]
     );
     const courseDetailQueries = useQueries({
         queries: detailCourseIds.map((courseId) => ({
@@ -126,9 +129,33 @@ export function LMSDashboard() {
             }),
         [filteredBaseCourses, detailedCourseMap, publishedCourses, certificateCourseIds]
     );
+    const allCoursesWithDetails = useMemo(
+        () =>
+            baseCourseInsights.map((course, index) => {
+                const detail = detailedCourseMap[course.id];
+                if (!detail) return course;
+
+                return buildLmsCourseInsight({
+                    course: publishedCourses.find((item) => item.id === course.id) ?? {
+                        id: course.id,
+                        judul: course.title,
+                        deskripsi: course.description,
+                        status: "published",
+                        created_by: "",
+                        created_at: "",
+                        updated_at: "",
+                    },
+                    materi: detail.materi,
+                    completedIds: detail.completedIds,
+                    hasCertificate: certificateCourseIds.has(String(course.id)),
+                    index,
+                });
+            }),
+        [baseCourseInsights, detailedCourseMap, publishedCourses, certificateCourseIds]
+    );
     const featuredCourses = filteredCourses.slice(0, 3);
     const lessonRows = filteredCourses.slice(0, 5);
-    const learningItems = filteredCourses
+    const learningItems = allCoursesWithDetails
         .filter((item) => item.started || item.passed)
         .slice(0, 3)
         .map((item) => ({
@@ -136,35 +163,35 @@ export function LMSDashboard() {
             label: item.category,
             value: item.progress,
         }));
-    const suggestedCourse = filteredCourses.find((item) => !item.started) ?? featuredCourses[0];
+    const suggestedCourse = allCoursesWithDetails.find((item) => !item.started) ?? allCoursesWithDetails[0];
     const featuredCourseSlots: Array<LmsCourseInsight | null> = isLoadingCourses ? Array.from({ length: 3 }, () => null) : featuredCourses;
     const lessonRowSlots: Array<LmsCourseInsight | null> = isLoadingCourses ? Array.from({ length: 5 }, () => null) : lessonRows;
 
     useEffect(() => {
         if (!categoryOptions.includes(selectedCategory)) {
-            setSelectedCategory("All");
+            setSelectedCategory("Semua");
         }
     }, [categoryOptions, selectedCategory]);
 
     return (
         <div className="h-full overflow-y-auto bg-[#f8fafc]">
-            <div className="mx-auto max-w-[1480px] px-6 py-6">
-                <div className="flex gap-8 xl:gap-10">
+            <div className="mx-auto max-w-[1480px] px-4 py-4 sm:px-6 sm:py-6">
+                <div className="flex flex-col gap-6 lg:flex-row lg:gap-8 xl:gap-10">
                     <div className="min-w-0 flex-1">
-                        <div className="mb-6 rounded-3xl bg-white px-6 py-5 shadow-sm ring-1 ring-slate-200">
-                            <p className="text-sm font-medium text-slate-500">Dashboard LMS</p>
+                        <div data-tour-id="lms-dashboard-hero" className="mb-6 rounded-3xl bg-white px-6 py-5 shadow-sm ring-1 ring-slate-200">
+                            <p className="text-sm font-medium text-slate-500">Beranda LMS</p>
                             <h1 className="mt-1 text-2xl font-black tracking-tight text-slate-950">
                                 Selamat datang {userDisplayName}
                             </h1>
                         </div>
 
-                        <div className="mb-6 flex flex-wrap gap-2">
+                        <div data-tour-id="lms-dashboard-categories" className="mb-6 flex flex-wrap gap-2">
                             {categoryOptions.map((cat, i) => (
                                 <button
                                     key={cat}
                                     onClick={() => setSelectedCategory(cat)}
                                     className={cn(
-                                        "rounded-full px-5 py-2 text-sm font-semibold transition-all",
+                                        "rounded-full px-3 py-1.5 text-xs font-semibold transition-all sm:px-5 sm:py-2 sm:text-sm",
                                         cat === safeSelectedCategory
                                             ? "bg-slate-900 text-white shadow-md"
                                             : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-100"
@@ -183,11 +210,11 @@ export function LMSDashboard() {
 
                         {!isLoadingCourses && !coursesError && filteredCourses.length === 0 && (
                             <div className="mb-5 rounded-2xl border border-dashed border-slate-200 bg-white px-5 py-8 text-center text-sm text-slate-500">
-                                Belum ada kelas pada kategori <span className="font-bold text-slate-700">{safeSelectedCategory}</span>.
+                                Belum ada kelas pada kategori ini.
                             </div>
                         )}
 
-                        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                             {featuredCourseSlots.map((course, index) => {
                                 if (!course) {
                                     return (
@@ -205,39 +232,40 @@ export function LMSDashboard() {
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ duration: 0.4, delay: index * 0.07 }}
                                         onClick={() => navigate(getCourseRoute(course.id))}
+                                        data-tour-id={index === 0 ? "lms-dashboard-course-card" : undefined}
                                         className={cn(
-                                            "group flex min-h-[220px] flex-col rounded-2xl p-5 text-left transition-all hover:-translate-y-1 hover:shadow-lg",
+                                            "group flex min-h-[180px] flex-col overflow-hidden rounded-2xl p-4 text-left transition-all hover:-translate-y-1 hover:shadow-lg sm:min-h-[210px] sm:p-5",
                                             theme.bg,
                                             theme.text
                                         )}
                                     >
-                                        <div className="flex items-start justify-between gap-3">
-                                            <span className={cn("inline-flex w-fit rounded-full px-3 py-1.5 text-xs font-bold", TAG_THEMES[index % TAG_THEMES.length])}>
+                                        <div className="flex flex-wrap items-center gap-1.5">
+                                            <span className={cn("inline-flex whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-bold sm:px-3 sm:py-1.5", TAG_THEMES[index % TAG_THEMES.length])}>
                                                 {course.category}
                                             </span>
-                                            <span className="rounded-full bg-white/70 px-3 py-1 text-[11px] font-bold text-slate-700">
+                                            <span className="whitespace-nowrap rounded-full bg-white/70 px-2 py-1 text-[10px] font-bold text-slate-700 sm:px-3 sm:text-[11px]">
                                                 {course.statusLabel}
                                             </span>
                                         </div>
                                         <div className="mt-auto">
-                                            <h2 className="mt-4 text-lg font-black leading-tight tracking-tight text-slate-950">
+                                            <h2 className="mt-3 text-base font-black leading-tight tracking-tight text-slate-950 sm:mt-4 sm:text-lg">
                                                 {course.title}
                                             </h2>
-                                            <p className="mt-2 line-clamp-3 text-sm leading-relaxed text-slate-600">
+                                            <p className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-slate-600 sm:mt-2 sm:line-clamp-3 sm:text-sm">
                                                 {course.description}
                                             </p>
-                                            <div className="mt-4 grid grid-cols-3 gap-2 text-xs font-semibold text-slate-700">
-                                                <div className="rounded-xl bg-white/70 px-3 py-2">
-                                                    <div className="text-[10px] uppercase tracking-wider text-slate-500">Materi</div>
-                                                    <div className="mt-1 text-sm font-black">{course.totalMateri}</div>
+                                            <div className="mt-3 grid grid-cols-3 gap-1 sm:mt-4 sm:gap-1.5">
+                                                <div className="min-w-0 overflow-hidden rounded-lg bg-white/70 px-1.5 py-1.5 sm:px-2 sm:py-2">
+                                                    <div className="text-[8px] uppercase tracking-wide text-slate-500 sm:text-[9px]">Materi</div>
+                                                    <div className="mt-0.5 text-xs font-black text-slate-700 sm:mt-1">{course.totalMateri}</div>
                                                 </div>
-                                                <div className="rounded-xl bg-white/70 px-3 py-2">
-                                                    <div className="text-[10px] uppercase tracking-wider text-slate-500">Selesai</div>
-                                                    <div className="mt-1 text-sm font-black">{course.completedMateri}</div>
+                                                <div className="min-w-0 overflow-hidden rounded-lg bg-white/70 px-1.5 py-1.5 sm:px-2 sm:py-2">
+                                                    <div className="text-[8px] uppercase tracking-wide text-slate-500 sm:text-[9px]">Selesai</div>
+                                                    <div className="mt-0.5 text-xs font-black text-slate-700 sm:mt-1">{course.completedMateri}</div>
                                                 </div>
-                                                <div className="rounded-xl bg-white/70 px-3 py-2">
-                                                    <div className="text-[10px] uppercase tracking-wider text-slate-500">Progress</div>
-                                                    <div className="mt-1 text-sm font-black">{course.progress}%</div>
+                                                <div className="min-w-0 overflow-hidden rounded-lg bg-white/70 px-1.5 py-1.5 sm:px-2 sm:py-2">
+                                                    <div className="text-[8px] uppercase tracking-wide text-slate-500 sm:text-[9px]">Progress</div>
+                                                    <div className="mt-0.5 text-xs font-black text-slate-700 sm:mt-1">{course.progress}%</div>
                                                 </div>
                                             </div>
                                         </div>
@@ -246,76 +274,134 @@ export function LMSDashboard() {
                             })}
                         </div>
 
-                        <div className="mt-10">
+                        <div data-tour-id="lms-dashboard-materials" className="mt-10">
                             <div className="mb-4 flex items-center justify-between">
-                                <h2 className="text-xl font-black tracking-tight text-slate-950">My lessons</h2>
+                                <h2 className="text-xl font-black tracking-tight text-slate-950">Materi Saya</h2>
                                 <button
                                     onClick={() => navigate(getCoursesRoute())}
                                     className="text-sm font-medium text-slate-500 transition hover:text-[#4f46e5]"
                                 >
-                                    View all lessons
+                                    Lihat semua materi
                                 </button>
                             </div>
 
-                            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-                                <div className="grid grid-cols-[1fr,140px,140px,120px] border-b border-slate-100 px-6 py-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
+                            <div className="space-y-3 md:hidden">
+                                {!isLoadingCourses && !coursesError && lessonRowSlots.length === 0 ? (
+                                    <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-5 py-8 text-center text-sm text-slate-500">
+                                        Belum ada materi pada kelas ini.
+                                    </div>
+                                ) : (
+                                    lessonRowSlots.map((course, index) => {
+                                        if (!course) {
+                                            return (
+                                                <div key={`msk-${index}`} className="rounded-2xl border border-slate-200 bg-white p-4">
+                                                    <div className="h-5 w-1/2 animate-pulse rounded bg-slate-100" />
+                                                    <div className="mt-4 h-4 w-full animate-pulse rounded bg-slate-100" />
+                                                    <div className="mt-2 h-4 w-4/5 animate-pulse rounded bg-slate-100" />
+                                                </div>
+                                            );
+                                        }
+
+                                        return (
+                                            <button
+                                                key={course.id}
+                                                onClick={() => navigate(getCourseRoute(course.id))}
+                                                className="w-full rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+                                            >
+                                                <div className="flex items-start gap-3">
+                                                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-900 text-xs font-black text-white">
+                                                        {String(index + 1).padStart(2, "0")}
+                                                    </div>
+                                                    <div className="min-w-0 flex-1">
+                                                        <span className="block text-sm font-semibold text-slate-900">{course.title}</span>
+                                                        <span className="mt-1 block text-xs text-slate-500">{course.lastItemLabel}</span>
+                                                    </div>
+                                                </div>
+                                                <div className="mt-4 grid grid-cols-3 gap-2 text-left">
+                                                    <div className="rounded-xl bg-slate-50 px-3 py-2">
+                                                        <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Materi</div>
+                                                        <div className="mt-1 text-sm font-bold text-slate-900">{course.completedMateri}/{course.totalMateri}</div>
+                                                    </div>
+                                                    <div className="rounded-xl bg-slate-50 px-3 py-2">
+                                                        <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Durasi</div>
+                                                        <div className="mt-1 text-sm font-bold text-slate-900">{course.totalDurationLabel}</div>
+                                                    </div>
+                                                    <div className="rounded-xl bg-slate-50 px-3 py-2">
+                                                        <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Progress</div>
+                                                        <div className="mt-1 text-sm font-bold text-slate-900">{course.progress}%</div>
+                                                    </div>
+                                                </div>
+                                            </button>
+                                        );
+                                    })
+                                )}
+                            </div>
+
+                            <div className="hidden overflow-hidden rounded-2xl border border-slate-200 bg-white md:block">
+                                <div className="grid grid-cols-[1fr,100px,100px,90px] border-b border-slate-100 px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-400 lg:grid-cols-[1fr,140px,140px,120px] lg:px-6">
                                     <span>Kelas</span>
                                     <span>Materi</span>
                                     <span>Durasi</span>
                                     <span className="text-right">Progress</span>
                                 </div>
 
-                                {lessonRowSlots.map((course, index) => {
-                                    if (!course) {
+                                {!isLoadingCourses && !coursesError && lessonRowSlots.length === 0 ? (
+                                    <div className="px-6 py-8 text-center text-sm text-slate-500">
+                                        Belum ada materi pada kelas ini.
+                                    </div>
+                                ) : (
+                                    lessonRowSlots.map((course, index) => {
+                                        if (!course) {
+                                            return (
+                                                <div key={`lsk-${index}`} className="grid grid-cols-[1fr,100px,100px,90px] border-b border-slate-100 px-4 py-4 last:border-b-0 lg:grid-cols-[1fr,140px,140px,120px] lg:px-6">
+                                                    <div className="h-9 w-3/4 animate-pulse rounded-xl bg-slate-100" />
+                                                    <div className="h-9 w-16 animate-pulse rounded-xl bg-slate-100" />
+                                                    <div className="h-9 w-16 animate-pulse rounded-xl bg-slate-100" />
+                                                    <div className="ml-auto h-9 w-12 animate-pulse rounded-xl bg-slate-100" />
+                                                </div>
+                                            );
+                                        }
                                         return (
-                                            <div key={`lsk-${index}`} className="grid grid-cols-[1fr,140px,140px,120px] border-b border-slate-100 px-6 py-4 last:border-b-0">
-                                                <div className="h-9 w-3/4 animate-pulse rounded-xl bg-slate-100" />
-                                                <div className="h-9 w-20 animate-pulse rounded-xl bg-slate-100" />
-                                                <div className="h-9 w-20 animate-pulse rounded-xl bg-slate-100" />
-                                                <div className="ml-auto h-9 w-16 animate-pulse rounded-xl bg-slate-100" />
-                                            </div>
+                                            <button
+                                                key={course.id}
+                                                onClick={() => navigate(getCourseRoute(course.id))}
+                                                className="grid w-full grid-cols-[1fr,100px,100px,90px] items-center border-b border-slate-100 px-4 py-4 text-left transition hover:bg-slate-50 last:border-b-0 lg:grid-cols-[1fr,140px,140px,120px] lg:px-6"
+                                            >
+                                                <div className="flex min-w-0 items-center gap-2 lg:gap-3">
+                                                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-900 text-xs font-black text-white lg:h-10 lg:w-10">
+                                                        {String(index + 1).padStart(2, "0")}
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <span className="block truncate text-sm font-medium text-slate-900">{course.title}</span>
+                                                        <span className="block truncate text-xs text-slate-500">{course.lastItemLabel}</span>
+                                                    </div>
+                                                </div>
+                                                <div className="text-xs font-medium text-slate-700 lg:text-sm">
+                                                    {course.completedMateri}/{course.totalMateri}
+                                                </div>
+                                                <div className="text-xs font-medium text-slate-700 lg:text-sm">
+                                                    {course.totalDurationLabel}
+                                                </div>
+                                                <div className="text-right text-xs font-bold text-slate-900 lg:text-sm">
+                                                    {course.progress}%
+                                                </div>
+                                            </button>
                                         );
-                                    }
-                                    return (
-                                        <button
-                                            key={course.id}
-                                            onClick={() => navigate(getCourseRoute(course.id))}
-                                            className="grid w-full grid-cols-[1fr,140px,140px,120px] items-center border-b border-slate-100 px-6 py-4 text-left transition hover:bg-slate-50 last:border-b-0"
-                                        >
-                                            <div className="flex min-w-0 items-center gap-3">
-                                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-900 text-xs font-black text-white">
-                                                    {String(index + 1).padStart(2, "0")}
-                                                </div>
-                                                <div className="min-w-0">
-                                                    <span className="block truncate text-sm font-medium text-slate-900">{course.title}</span>
-                                                    <span className="block truncate text-xs text-slate-500">{course.lastItemLabel}</span>
-                                                </div>
-                                            </div>
-                                            <div className="text-sm font-medium text-slate-700">
-                                                {course.completedMateri}/{course.totalMateri}
-                                            </div>
-                                            <div className="text-sm font-medium text-slate-700">
-                                                {course.totalDurationLabel}
-                                            </div>
-                                            <div className="text-right text-sm font-bold text-slate-900">
-                                                {course.progress}%
-                                            </div>
-                                        </button>
-                                    );
-                                })}
+                                    })
+                                )}
                             </div>
                         </div>
                     </div>
 
-                    <aside className="hidden w-[320px] shrink-0 space-y-8 xl:block">
-                        <section>
+                    <aside className="space-y-8 lg:w-[280px] lg:shrink-0 xl:w-[320px]">
+                        <section data-tour-id="lms-dashboard-progress">
                             <div className="mb-4 flex items-center justify-between">
-                                <h2 className="text-lg font-black tracking-tight text-slate-950">Learning process</h2>
+                                <h2 className="text-lg font-black tracking-tight text-slate-950">Proses Belajar</h2>
                                 <button
                                     onClick={() => navigate("/lms/progress")}
                                     className="text-sm font-medium text-slate-400 transition hover:text-[#4f46e5]"
                                 >
-                                    See all
+                                    Lihat semua
                                 </button>
                             </div>
 
@@ -351,14 +437,14 @@ export function LMSDashboard() {
                             </div>
                         </section>
 
-                        <section>
+                        <section data-tour-id="lms-dashboard-recommendation">
                             <div className="mb-4 flex items-center justify-between">
-                                <h2 className="text-lg font-black tracking-tight text-slate-950">You might like it</h2>
+                                <h2 className="text-lg font-black tracking-tight text-slate-950">Rekomendasi Untuk Anda</h2>
                                 <button
                                     onClick={() => navigate(getCoursesRoute())}
                                     className="text-sm font-medium text-slate-400 transition hover:text-[#4f46e5]"
                                 >
-                                    See all
+                                    Lihat semua
                                 </button>
                             </div>
 
@@ -378,21 +464,21 @@ export function LMSDashboard() {
                                     <p className="mt-3 text-sm leading-relaxed text-white/80">
                                         {suggestedCourse?.description
                                             ? `${suggestedCourse.description.slice(0, 100)}...`
-                                            : "Jelajahi kelas pilihan yang dirancang agar proses belajar terasa lebih terarah dan engaging."}
+                                            : "Jelajahi kelas pilihan yang dirancang agar proses belajar terasa lebih terarah dan menarik."}
                                     </p>
 
-                                    <div className="mt-6 grid grid-cols-3 gap-2 text-xs text-white/80">
-                                        <div className="rounded-xl bg-white/10 px-3 py-2">
-                                            <div className="text-[10px] uppercase tracking-wider text-white/60">Materi</div>
-                                            <div className="mt-1 font-black text-white">{suggestedCourse?.totalMateri ?? 0}</div>
+                                    <div className="mt-4 grid grid-cols-3 gap-1.5 text-xs text-white/80 sm:mt-6 sm:gap-2">
+                                        <div className="rounded-lg bg-white/10 px-2 py-1.5 sm:rounded-xl sm:px-3 sm:py-2">
+                                            <div className="text-[9px] uppercase tracking-wider text-white/60 sm:text-[10px]">Materi</div>
+                                            <div className="mt-0.5 font-black text-white sm:mt-1">{suggestedCourse?.totalMateri ?? 0}</div>
                                         </div>
-                                        <div className="rounded-xl bg-white/10 px-3 py-2">
-                                            <div className="text-[10px] uppercase tracking-wider text-white/60">Durasi</div>
-                                            <div className="mt-1 font-black text-white">{suggestedCourse?.totalDurationLabel ?? "0 min"}</div>
+                                        <div className="rounded-lg bg-white/10 px-2 py-1.5 sm:rounded-xl sm:px-3 sm:py-2">
+                                            <div className="text-[9px] uppercase tracking-wider text-white/60 sm:text-[10px]">Durasi</div>
+                                            <div className="mt-0.5 truncate font-black text-white sm:mt-1">{suggestedCourse?.totalDurationLabel ?? "0 menit"}</div>
                                         </div>
-                                        <div className="rounded-xl bg-white/10 px-3 py-2">
-                                            <div className="text-[10px] uppercase tracking-wider text-white/60">Status</div>
-                                            <div className="mt-1 font-black text-white">{suggestedCourse?.statusLabel ?? "-"}</div>
+                                        <div className="rounded-lg bg-white/10 px-2 py-1.5 sm:rounded-xl sm:px-3 sm:py-2">
+                                            <div className="text-[9px] uppercase tracking-wider text-white/60 sm:text-[10px]">Status</div>
+                                            <div className="mt-0.5 truncate font-black text-white sm:mt-1">{suggestedCourse?.statusLabel ?? "-"}</div>
                                         </div>
                                     </div>
 
@@ -403,7 +489,7 @@ export function LMSDashboard() {
                                         }}
                                         className="mt-5 w-full rounded-xl bg-white py-3 text-sm font-bold text-slate-900 transition hover:bg-slate-50 active:scale-[0.98]"
                                     >
-                                        Learn more
+                                        Lihat Detail
                                     </button>
                                 </div>
                             </div>
@@ -411,6 +497,11 @@ export function LMSDashboard() {
                     </aside>
                 </div>
             </div>
+            <GuidedTour
+                steps={LMS_DASHBOARD_TOUR_STEPS}
+                storageKey={tourStorageKey}
+                enabled={Boolean(currentUser) && !isLoadingCourses}
+            />
         </div>
     );
 }
