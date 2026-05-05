@@ -28,6 +28,7 @@ export default function Login() {
     const turnstileRef = useRef<TurnstileWidgetHandle>(null);
     const turnstileSiteKey =
         window._env_?.TURNSTILE_SITE_KEY || import.meta.env.VITE_TURNSTILE_SITE_KEY || "";
+    const allowManualTurnstileToken = import.meta.env.VITE_TURNSTILE_MANUAL_TOKEN === "true";
 
     if (isAuthenticated) {
         return <Navigate to="/dashboard" replace />;
@@ -59,8 +60,14 @@ export default function Login() {
         setTurnstileVerified(false);
     };
 
+    const setManualTurnstileToken = (value: string) => {
+        const nextToken = value.trim();
+        setTurnstileToken(nextToken);
+        setTurnstileVerified(nextToken.length > 0);
+    };
+
     const onSubmit = async (data: LoginForm) => {
-        if (!turnstileSiteKey) {
+        if (!allowManualTurnstileToken && !turnstileSiteKey) {
             toast({
                 title: "Turnstile unavailable",
                 description: "Login is temporarily unavailable. Please try again later.",
@@ -110,7 +117,7 @@ export default function Login() {
         <div
             ref={containerRef}
             onMouseMove={handleMouseMove}
-            className="min-h-screen grid lg:grid-cols-2 relative selection:bg-blue-100 font-sans overflow-hidden bg-white"
+            className="min-h-screen grid lg:grid-cols-2 relative selection:bg-blue-100 font-sans overflow-x-hidden bg-white"
         >
             {/* Interactive Mouse-Following Gradient Background */}
             <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
@@ -187,7 +194,7 @@ export default function Login() {
             </div>
 
             {/* Right Side: Form */}
-            <div className="flex flex-col justify-center p-8 sm:p-12 lg:p-16 relative z-10 bg-white lg:rounded-l-[3rem] lg:shadow-[-20px_0_40px_rgba(0,0,0,0.3)]">
+            <div className="relative z-10 flex min-h-screen flex-col justify-center overflow-y-auto bg-white px-6 py-10 sm:px-10 sm:py-12 lg:min-h-0 lg:rounded-l-[3rem] lg:px-16 lg:py-16 lg:shadow-[-20px_0_40px_rgba(0,0,0,0.3)]">
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -209,7 +216,7 @@ export default function Login() {
                     </div>
 
                     <div className="mb-10 text-center lg:text-left">
-                        <h1 className="text-3xl lg:text-4xl font-black text-slate-900 tracking-tight mb-2">Log In</h1>
+                        <h1 className="text-3xl font-black text-slate-900 tracking-tight sm:text-4xl mb-2">Log In</h1>
                         <p className="text-slate-500 text-sm">Enter your username and password to access the dashboard.</p>
                     </div>
 
@@ -247,26 +254,43 @@ export default function Login() {
                             )}
                         </div>
 
-                        <TurnstileWidget
-                            ref={turnstileRef}
-                            siteKey={turnstileSiteKey}
-                            onVerify={(token) => {
-                                setTurnstileToken(token);
-                                setTurnstileVerified(true);
-                            }}
-                            onExpire={clearTurnstileState}
-                            onError={clearTurnstileState}
-                            onTimeout={clearTurnstileState}
-                            theme="light"
-                            size="flexible"
-                            retry="auto"
-                            retryInterval={8000}
-                        />
+                        {allowManualTurnstileToken ? (
+                            <div className="space-y-2">
+                                <textarea
+                                    value={turnstileToken}
+                                    onChange={(event) => setManualTurnstileToken(event.target.value)}
+                                    rows={4}
+                                    placeholder="Paste a fresh Turnstile token from the online site"
+                                    className="w-full px-5 py-4 rounded-2xl bg-amber-50 border border-amber-200 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:bg-white transition-all shadow-sm resize-y"
+                                />
+                                <p className="text-xs text-amber-700">
+                                    Manual token mode is enabled for local development. Tokens expire quickly and can only be used once.
+                                </p>
+                            </div>
+                        ) : (
+                            <>
+                                <TurnstileWidget
+                                    ref={turnstileRef}
+                                    siteKey={turnstileSiteKey}
+                                    onVerify={(token) => {
+                                        setTurnstileToken(token);
+                                        setTurnstileVerified(true);
+                                    }}
+                                    onExpire={clearTurnstileState}
+                                    onError={clearTurnstileState}
+                                    onTimeout={clearTurnstileState}
+                                    theme="light"
+                                    size="flexible"
+                                    retry="auto"
+                                    retryInterval={8000}
+                                />
 
-                        {!turnstileVerified && (
-                            <p className="text-xs text-slate-500">
-                                Complete the Cloudflare Turnstile check before login is enabled.
-                            </p>
+                                {!turnstileVerified && (
+                                    <p className="text-xs text-slate-500">
+                                        Complete the Cloudflare Turnstile check before login is enabled.
+                                    </p>
+                                )}
+                            </>
                         )}
 
                         <button

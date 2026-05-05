@@ -19,6 +19,7 @@ import { useLmsStore } from "@/features/lms/stores/lms.store";
 import { lmsService } from "@/features/lms/services/lms.service";
 import { toast } from "sonner";
 import { getCourseRoute } from "@/features/lms/lib/lms-routes";
+import { useAuthStore } from "@/stores/auth.store";
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
@@ -26,6 +27,7 @@ export default function LMSCertificate() {
     const navigate = useNavigate();
     const { courseId } = useParams<{ courseId: string }>();
     const [generating, setGenerating] = useState(false);
+    const currentUser = useAuthStore((state) => state.currentUser);
 
     const {
         activeCourse,
@@ -48,7 +50,10 @@ export default function LMSCertificate() {
     const handleGenerate = async () => {
         if (!courseId) return;
         setGenerating(true);
-        const result = await generateCertificate(courseId);
+        const result = await generateCertificate(
+            courseId,
+            currentUser?.display_name || currentUser?.displayName || currentUser?.name || currentUser?.username || ""
+        );
         setGenerating(false);
         if (result.success) {
             toast.success("Sertifikat berhasil dibuat!");
@@ -136,9 +141,9 @@ export default function LMSCertificate() {
                                 {activeCourse?.judul ?? courseCertificate.nama_kelas ?? "Kelas"}
                             </h2>
 
-                            {courseCertificate.nama_peserta && (
+                            {(courseCertificate.nama_peserta || currentUser?.display_name || currentUser?.displayName) && (
                                 <p className="text-amber-100 font-medium text-base mb-4">
-                                    Diberikan kepada: <span className="font-black text-white">{courseCertificate.nama_peserta}</span>
+                                    Diberikan kepada: <span className="font-black text-white">{courseCertificate.nama_peserta || currentUser?.display_name || currentUser?.displayName || currentUser?.name || currentUser?.username}</span>
                                 </p>
                             )}
 

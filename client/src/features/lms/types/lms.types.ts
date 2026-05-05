@@ -131,9 +131,9 @@ export interface DiskusiItem {
     updated_at: string;
 }
 
-// ── catatan_pribadi ───────────────────────────────────────────────────────────
+// ── feedback ──────────────────────────────────────────────────────────────────
 
-export interface CatatanPribadi {
+export interface FeedbackItem {
     id: string;
     id_materi: string;
     id_user: string;
@@ -166,6 +166,10 @@ export interface JawabanPayload {
 export interface SubmitKuisPayload {
     answers: JawabanPayload[];
     jawaban?: JawabanPayload[];
+}
+
+export interface GenerateSertifikatPayload {
+    nama_peserta?: string;
 }
 
 export interface PostDiskusiPayload {

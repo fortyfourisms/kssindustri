@@ -14,6 +14,7 @@ import {
     Clock3,
 } from "lucide-react";
 import {
+    getFinalQuizzes,
     getNextCourseStep,
     isQuizAccessible,
     sortMateriByOrder,
@@ -21,7 +22,9 @@ import {
 } from "@/features/lms/stores/lms.store";
 import { toast } from "sonner";
 import type { JawabanPayload, SoalWithPilihan } from "@/features/lms/types/lms.types";
-import { getCourseLearnRoute, getCourseQuizRoute, getCourseRoute } from "@/features/lms/lib/lms-routes";
+import { getCourseCertificateRoute, getCourseLearnRoute, getCourseQuizRoute, getCourseRoute } from "@/features/lms/lib/lms-routes";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useAuthStore } from "@/stores/auth.store";
 
 type Stage = "start" | "questions" | "submitting" | "result";
 const QUIZ_CONTENT_MAX_WIDTH = "max-w-5xl";
@@ -211,6 +214,9 @@ function ResultScreen({
     isPassed,
     totalBenar,
     totalSoal,
+    certificateId,
+    showCertificateAction,
+    onOpenCertificate,
     onRetry,
     onBack,
 }: {
@@ -218,6 +224,9 @@ function ResultScreen({
     isPassed: boolean;
     totalBenar: number;
     totalSoal: number;
+    certificateId?: string | null;
+    showCertificateAction?: boolean;
+    onOpenCertificate?: () => void;
     onRetry: () => void;
     onBack: () => void;
 }) {
@@ -290,6 +299,15 @@ function ResultScreen({
             )}
 
             <div className="flex w-full flex-col gap-3 sm:flex-row">
+                {showCertificateAction && certificateId && onOpenCertificate && (
+                    <button
+                        onClick={onOpenCertificate}
+                        className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 px-6 py-3 font-bold text-white shadow-lg transition-all hover:scale-[1.01]"
+                    >
+                        Lihat Sertifikat
+                        <ChevronRight className="h-4 w-4" />
+                    </button>
+                )}
                 <button
                     onClick={onRetry}
                     className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-slate-200 px-6 py-3 font-bold text-slate-600 transition-colors hover:bg-slate-50"
@@ -314,7 +332,9 @@ export default function LMSQuiz() {
     const { courseId, quizId } = useParams<{ courseId: string; quizId: string }>();
     const [stage, setStage] = useState<Stage>("start");
     const [answers, setAnswers] = useState<Record<string, string>>({});
+    const [passedQuizModalOpen, setPassedQuizModalOpen] = useState(false);
     const pageRef = useRef<HTMLDivElement | null>(null);
+    const currentUser = useAuthStore((state) => state.currentUser);
 
     const {
         activeCourse,
@@ -325,14 +345,20 @@ export default function LMSQuiz() {
         kuisAttempt,
         kuisSoal,
         kuisResult,
+        courseCertificate,
         isLoadingKuis,
         kuisError,
         startKuis,
         submitKuis,
         fetchKuisResult,
+        fetchCertificate,
+        fetchCourseById,
+        fetchCourseQuizzes,
+        generateCertificate,
         updateQuizProgress,
         resetKuis,
     } = useLmsStore();
+    const [finalCertificateId, setFinalCertificateId] = useState<string | null>(null);
 
     useEffect(() => {
         return () => {
@@ -343,6 +369,7 @@ export default function LMSQuiz() {
 
     const kuisInfo = courseQuizzes.find((k) => k.id === quizId);
     const sortedMateri = sortMateriByOrder(courseMateri);
+    const quizPassed = quizId ? quizProgressById[quizId]?.isPassed === true : false;
     const isAccessible = kuisInfo
         ? isQuizAccessible(kuisInfo, sortedMateri, completedMateriIds, courseQuizzes, quizProgressById)
         : false;
@@ -384,6 +411,35 @@ export default function LMSQuiz() {
 
     const handleStart = async () => {
         if (!quizId || !isAccessible) return;
+        if (quizPassed) {
+            setPassedQuizModalOpen(true);
+            return;
+        }
+
+        if (courseId && kuisInfo?.is_final) {
+            await fetchCourseById(courseId);
+            await fetchCourseQuizzes(courseId);
+
+            const {
+                courseMateri: syncedMateri,
+                courseQuizzes: syncedQuizzes,
+                completedMateriIds: syncedCompletedIds,
+                quizProgressById: syncedQuizProgress,
+            } = useLmsStore.getState();
+
+            const syncedSortedMateri = sortMateriByOrder(syncedMateri);
+            const syncedQuiz = getFinalQuizzes(syncedQuizzes).find((quiz) => quiz.id === quizId)
+                ?? syncedQuizzes.find((quiz) => quiz.id === quizId);
+            const canStartFinalQuiz = syncedQuiz
+                ? isQuizAccessible(syncedQuiz, syncedSortedMateri, syncedCompletedIds, syncedQuizzes, syncedQuizProgress)
+                : false;
+
+            if (!canStartFinalQuiz) {
+                toast.error("Selesaikan semua materi dan kuis yang terkait terlebih dahulu");
+                return;
+            }
+        }
+
         setAnswers({});
         const result = await startKuis(quizId);
         if (result.success) {
@@ -402,6 +458,23 @@ export default function LMSQuiz() {
             if (resultRes.success) {
                 if (quizId && resultRes.data) {
                     updateQuizProgress(quizId, resultRes.data);
+                }
+                if (courseId && kuisInfo?.is_final && resultRes.data?.is_passed) {
+                    const displayName = currentUser?.display_name || currentUser?.displayName || currentUser?.name || currentUser?.username || "";
+                    const existingCertificate = await fetchCertificate(courseId);
+                    if (existingCertificate) {
+                        setFinalCertificateId(existingCertificate.id);
+                    } else {
+                        const generated = await generateCertificate(courseId, displayName);
+                        if (generated.success && generated.data) {
+                            setFinalCertificateId(generated.data.id);
+                        } else {
+                            setFinalCertificateId(null);
+                            toast.error(generated.error ?? "Gagal membuat sertifikat");
+                        }
+                    }
+                } else {
+                    setFinalCertificateId(null);
                 }
                 setStage("result");
             } else {
@@ -437,6 +510,38 @@ export default function LMSQuiz() {
 
     return (
         <div ref={pageRef} className="flex w-full min-h-full flex-col px-4 pb-6 pt-4 sm:px-6 sm:pt-6 lg:px-8">
+            <Dialog
+                open={passedQuizModalOpen}
+                onOpenChange={(open) => {
+                    setPassedQuizModalOpen(open);
+                    if (!open && courseId) {
+                        navigate(getCourseRoute(courseId), { replace: true });
+                    }
+                }}
+            >
+                <DialogContent className="inset-auto left-1/2 top-1/2 h-auto max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg p-6">
+                    <DialogHeader>
+                        <DialogTitle>Anda sudah lulus kuis ini</DialogTitle>
+                        <DialogDescription>
+                            {kuisInfo?.judul ? `Kuis "${kuisInfo.judul}" sudah dinyatakan lulus.` : "Kuis ini sudah dinyatakan lulus."}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <button
+                            onClick={() => {
+                                setPassedQuizModalOpen(false);
+                                if (courseId) {
+                                    navigate(getCourseRoute(courseId), { replace: true });
+                                }
+                            }}
+                            className="inline-flex h-10 w-auto items-center justify-center self-end whitespace-nowrap rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+                        >
+                            Kembali ke kelas
+                        </button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
             <div className={`mx-auto w-full ${QUIZ_CONTENT_MAX_WIDTH}`}>
                 <div className="mb-8 overflow-hidden rounded-[2rem] border border-white/70 bg-white/75 shadow-[0_20px_80px_rgba(15,23,42,0.06)] backdrop-blur-xl">
                     <div className="relative overflow-hidden bg-gradient-to-r from-[#1f3c88] via-[#0061ff] to-[#60efff] p-6 lg:p-8">
@@ -519,6 +624,9 @@ export default function LMSQuiz() {
                             isPassed={kuisResult.is_passed}
                             totalBenar={kuisResult.total_benar}
                             totalSoal={kuisResult.total_soal}
+                            certificateId={finalCertificateId ?? courseCertificate?.id ?? null}
+                            showCertificateAction={Boolean(kuisInfo?.is_final && kuisResult.is_passed)}
+                            onOpenCertificate={() => navigate(getCourseCertificateRoute(courseId!))}
                             onRetry={handleRetry}
                             onBack={() => navigate(getCourseRoute(courseId!))}
                         />

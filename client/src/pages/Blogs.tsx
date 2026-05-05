@@ -2,11 +2,12 @@ import { ArrowRight, CalendarDays, Tag } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
-import { blogArticles } from "@/data/blog";
+import { useBlogs } from "@/hooks/useBlogs";
 import { useScrollToTop } from "@/hooks/useScrollToTop";
 
 export default function Blogs() {
   const navigate = useNavigate();
+  const { data: blogArticles = [], isLoading, isError } = useBlogs();
   useScrollToTop();
 
   return (
@@ -31,61 +32,94 @@ export default function Blogs() {
           </div>
 
           <div className="mt-12 grid grid-cols-1 gap-6 xl:grid-cols-3">
-            {blogArticles.map((article) => (
-              <article
-                key={article.slug}
-                className="group relative overflow-hidden rounded-[2rem] border border-white/60 bg-white/90 shadow-[0_20px_80px_rgba(31,60,136,0.10)] backdrop-blur-sm transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_28px_100px_rgba(31,60,136,0.16)]"
-              >
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(96,239,255,0.12),transparent_42%)] opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
-                <div className="relative border-b border-slate-100 p-6 md:p-7">
-                  <div className="flex flex-wrap items-center gap-3">
-                    <span className="inline-flex rounded-full bg-slate-900 px-3 py-1.5 text-xs font-bold text-white">
-                      {article.category}
-                    </span>
-                    <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">
-                      <CalendarDays className="h-3.5 w-3.5 text-[#0061ff]" />
-                      {article.publishedAt}
-                    </span>
+            {isLoading
+              ? Array.from({ length: 6 }).map((_, index) => (
+                  <div
+                    key={`blog-list-skeleton-${index}`}
+                    className="overflow-hidden rounded-[2rem] border border-white/60 bg-white/90 p-6 shadow-[0_20px_80px_rgba(31,60,136,0.08)]"
+                  >
+                    <div className="h-5 w-24 rounded-full bg-slate-200" />
+                    <div className="mt-6 h-4 w-32 rounded-full bg-slate-100" />
+                    <div className="mt-4 h-8 w-4/5 rounded-xl bg-slate-200" />
+                    <div className="mt-4 space-y-3">
+                      <div className="h-4 rounded-full bg-slate-100" />
+                      <div className="h-4 w-11/12 rounded-full bg-slate-100" />
+                      <div className="h-4 w-3/4 rounded-full bg-slate-100" />
+                    </div>
                   </div>
+                ))
+              : null}
 
-                  <div className="mt-6">
-                    <p className="text-xs font-semibold uppercase tracking-[0.26em] text-slate-400">
-                      {article.coverLabel}
-                    </p>
-                    <h2 className="mt-3 text-2xl font-bold leading-tight text-slate-900 md:text-3xl">
-                      {article.title}
-                    </h2>
-                    <p className="mt-4 text-base leading-relaxed text-slate-600">{article.excerpt}</p>
-                  </div>
-                </div>
+            {!isLoading && isError ? (
+              <div className="xl:col-span-3 rounded-[2rem] border border-red-100 bg-white/90 p-6 text-sm text-slate-600 shadow-[0_20px_80px_rgba(31,60,136,0.08)]">
+                Data berita belum dapat dimuat dari server.
+              </div>
+            ) : null}
 
-                <div className="relative p-6 md:p-7">
-                  <div className="flex flex-wrap gap-2">
-                    {article.tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className="inline-flex items-center gap-2 rounded-full border border-[#0061ff]/15 bg-[#eff6ff] px-3 py-1 text-xs font-semibold text-[#1f3c88]"
-                      >
-                        <Tag className="h-3 w-3" />
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
+            {!isLoading && !isError && blogArticles.length === 0 ? (
+              <div className="xl:col-span-3 rounded-[2rem] border border-slate-200 bg-white/90 p-6 text-sm text-slate-600 shadow-[0_20px_80px_rgba(31,60,136,0.08)]">
+                Belum ada berita yang tersedia.
+              </div>
+            ) : null}
 
-                  <div className="mt-6 flex items-center justify-between gap-4">
-                    <p className="text-sm font-medium text-slate-500">Oleh {article.author}</p>
-                    <button
-                      type="button"
-                      onClick={() => navigate(`/blog/${article.slug}`)}
-                      className="inline-flex items-center gap-2 text-sm font-bold text-[#0061ff] transition-transform duration-300 group-hover:translate-x-1"
-                    >
-                      Baca artikel
-                      <ArrowRight className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
-              </article>
-            ))}
+            {!isLoading && !isError
+              ? blogArticles.map((article) => (
+                  <article
+                    key={article.slug}
+                    className="group relative overflow-hidden rounded-[2rem] border border-white/60 bg-white/90 shadow-[0_20px_80px_rgba(31,60,136,0.10)] backdrop-blur-sm transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_28px_100px_rgba(31,60,136,0.16)]"
+                  >
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(96,239,255,0.12),transparent_42%)] opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
+                    <div className="relative border-b border-slate-100 p-6 md:p-7">
+                      <div className="flex flex-wrap items-center gap-3">
+                        <span className="inline-flex rounded-full bg-slate-900 px-3 py-1.5 text-xs font-bold text-white">
+                          {article.category}
+                        </span>
+                        <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">
+                          <CalendarDays className="h-3.5 w-3.5 text-[#0061ff]" />
+                          {article.publishedAt}
+                        </span>
+                      </div>
+
+                      <div className="mt-6">
+                        <p className="text-xs font-semibold uppercase tracking-[0.26em] text-slate-400">
+                          {article.coverLabel}
+                        </p>
+                        <h2 className="mt-3 text-2xl font-bold leading-tight text-slate-900 md:text-3xl">
+                          {article.title}
+                        </h2>
+                        <p className="mt-4 text-base leading-relaxed text-slate-600">{article.excerpt}</p>
+                      </div>
+                    </div>
+
+                    <div className="relative p-6 md:p-7">
+                      <div className="flex flex-wrap gap-2">
+                        <span className="inline-flex items-center gap-2 rounded-full border border-[#0061ff]/15 bg-[#eff6ff] px-3 py-1 text-xs font-semibold text-[#1f3c88]">
+                          <Tag className="h-3 w-3" />
+                          ID {article.id}
+                        </span>
+                        {article.updatedAt ? (
+                          <span className="inline-flex items-center gap-2 rounded-full border border-[#0061ff]/15 bg-[#eff6ff] px-3 py-1 text-xs font-semibold text-[#1f3c88]">
+                            <Tag className="h-3 w-3" />
+                            Diperbarui
+                          </span>
+                        ) : null}
+                      </div>
+
+                      <div className="mt-6 flex items-center justify-between gap-4">
+                        <p className="text-sm font-medium text-slate-500">Oleh {article.authorLabel}</p>
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/blog/${article.slug}`)}
+                          className="inline-flex items-center gap-2 text-sm font-bold text-[#0061ff] transition-transform duration-300 group-hover:translate-x-1"
+                        >
+                          Baca artikel
+                          <ArrowRight className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </article>
+                ))
+              : null}
           </div>
         </section>
 

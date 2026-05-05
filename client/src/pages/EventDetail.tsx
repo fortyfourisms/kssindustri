@@ -76,7 +76,7 @@ export default function EventDetail() {
                 </div>
 
                 <aside className="rounded-[2rem] border border-white/60 bg-white/85 p-6 shadow-[0_24px_80px_rgba(31,60,136,0.10)] backdrop-blur-xl">
-                  <p className="text-sm font-semibold uppercase tracking-[0.22em] text-slate-400">Event Detail / RSVP</p>
+                  <p className="text-sm font-semibold uppercase tracking-[0.22em] text-slate-400">Event Detail</p>
                   <div className="mt-6 space-y-4">
                     <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
                       <div className="flex items-center gap-2 text-sm font-semibold text-slate-500">

@@ -1,31 +1,29 @@
 import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
-import { blogArticles, getBlogArticleBySlug } from "@/data/blog";
+import { useBlogDetail, useBlogs } from "@/hooks/useBlogs";
 import { motion } from "framer-motion";
 import {
   ArrowLeft,
-  ArrowRight,
-  BookOpen,
   CalendarDays,
   Tag,
 } from "lucide-react";
-import { useMemo } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { useScrollToTop } from "@/hooks/useScrollToTop";
 
 export default function BlogArticle() {
   const navigate = useNavigate();
   const { slug } = useParams<{ slug: string }>();
-
-  const article = useMemo(() => (slug ? getBlogArticleBySlug(slug) : undefined), [slug]);
-  const relatedArticles = useMemo(
-    () => blogArticles.filter((item) => item.slug !== slug).slice(0, 2),
-    [slug]
-  );
+  const { data: article, isLoading, isError } = useBlogDetail(slug);
+  const { data: blogs = [] } = useBlogs();
+  const relatedArticles = blogs.filter((item) => item.slug !== slug).slice(0, 2);
   useScrollToTop(slug);
 
-  if (!article) {
+  if (!slug) {
     return <Navigate to="/" replace />;
+  }
+
+  if (!isLoading && isError) {
+    return <Navigate to="/blog" replace />;
   }
 
   return (
@@ -55,73 +53,78 @@ export default function BlogArticle() {
             transition={{ duration: 0.6 }}
             className="mt-6 overflow-hidden rounded-[2rem] border border-white/60 bg-white/85 shadow-[0_24px_100px_rgba(31,60,136,0.10)] backdrop-blur-xl"
           >
-            <div className="p-6 md:p-8">
-              <div>
-                <div className="flex flex-wrap items-center gap-3">
-                  <span className="inline-flex rounded-full bg-slate-900 px-3 py-1.5 text-xs font-bold text-white">
-                    {article.category}
-                  </span>
-                  <span className="inline-flex items-center gap-2 rounded-full border border-[#0061ff]/15 bg-[#eff6ff] px-3 py-1 text-xs font-semibold text-[#1f3c88]">
-                    <CalendarDays className="h-3.5 w-3.5" />
-                    {article.publishedAt}
-                  </span>
+            <div className="p-6 md:p-10">
+              {isLoading || !article ? (
+                <div>
+                  <div className="h-6 w-28 rounded-full bg-slate-200" />
+                  <div className="mt-5 h-12 w-full max-w-5xl rounded-2xl bg-slate-200" />
+                  <div className="mt-3 h-12 w-3/4 rounded-2xl bg-slate-100" />
+                  <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                    <div className="h-24 rounded-[1.5rem] bg-slate-100" />
+                    <div className="h-24 rounded-[1.5rem] bg-slate-100" />
+                    <div className="h-24 rounded-[1.5rem] bg-slate-100" />
+                  </div>
                 </div>
-                <h1 className="mt-5 text-3xl md:text-5xl font-display font-semibold tracking-tight text-slate-900 leading-tight">
-                  {article.title}
-                </h1>
-                <div className="mt-5 space-y-4 text-sm text-slate-600">
-                    <div>
-                      <p className="font-semibold text-slate-900">Penulis</p>
-                      <p className="mt-1">{article.author}</p>
+              ) : (
+                <div className="max-w-6xl">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span className="inline-flex rounded-full bg-slate-900 px-3 py-1.5 text-xs font-bold text-white">
+                      {article.category}
+                    </span>
+                    <span className="inline-flex items-center gap-2 rounded-full border border-[#0061ff]/15 bg-[#eff6ff] px-3 py-1 text-xs font-semibold text-[#1f3c88]">
+                      <CalendarDays className="h-3.5 w-3.5" />
+                      {article.publishedAt}
+                    </span>
+                  </div>
+                  <h1 className="mt-6 max-w-5xl text-3xl font-display font-semibold tracking-tight text-slate-900 leading-[1.05] md:text-5xl xl:text-6xl">
+                    {article.title}
+                  </h1>
+                  <p className="mt-5 max-w-3xl text-base leading-relaxed text-slate-600 md:text-lg">
+                    {article.excerpt}
+                  </p>
+                  <div className="mt-8 grid gap-4 text-sm text-slate-600 md:grid-cols-2 xl:grid-cols-[minmax(0,220px)_minmax(0,1fr)]">
+                    <div className="rounded-[1.5rem] border border-slate-200/80 bg-slate-50/80 p-5">
+                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Penulis</p>
+                      <p className="mt-3 text-base font-semibold text-slate-900">{article.authorLabel}</p>
                     </div>
-                    <div>
-                      <p className="font-semibold text-slate-900">Topik</p>
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        {article.tags.map((tag) => (
-                          <span
-                            key={tag}
-                            className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600"
-                          >
+                    <div className="rounded-[1.5rem] border border-slate-200/80 bg-slate-50/80 p-5">
+                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Referensi</p>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">
+                          <Tag className="h-3 w-3 text-[#0061ff]" />
+                          ID {article.id}
+                        </span>
+                        {article.updatedAt ? (
+                          <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">
                             <Tag className="h-3 w-3 text-[#0061ff]" />
-                            {tag}
+                            Sudah diperbarui
                           </span>
-                        ))}
+                        ) : null}
                       </div>
                     </div>
                   </div>
-              </div>
+                </div>
+              )}
             </div>
           </motion.section>
 
           <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
             <div className="space-y-8">
               <section className="rounded-[2rem] border border-white/60 bg-white/85 p-6 md:p-8 shadow-[0_20px_80px_rgba(31,60,136,0.08)] backdrop-blur-xl">
-                <div className="space-y-8">
-                  {article.sections.map((section) => (
-                    <article key={section.heading}>
-                      <h2 className="text-2xl font-bold text-slate-900">{section.heading}</h2>
-                      <div className="mt-4 space-y-4 text-base leading-relaxed text-slate-600">
-                        {section.paragraphs.map((paragraph) => (
-                          <p key={paragraph}>{paragraph}</p>
-                        ))}
-                      </div>
-
-                      {section.bullets && (
-                        <ul className="mt-5 space-y-3">
-                          {section.bullets.map((bullet) => (
-                            <li
-                              key={bullet}
-                              className="flex items-start gap-3 rounded-[1.25rem] border border-slate-200 bg-slate-50 px-4 py-4 text-sm leading-relaxed text-slate-600"
-                            >
-                              <span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-[#0061ff]" />
-                              <span>{bullet}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </article>
-                  ))}
-                </div>
+                {isLoading || !article ? (
+                  <div className="space-y-4">
+                    <div className="h-5 w-40 rounded-full bg-slate-200" />
+                    <div className="h-4 rounded-full bg-slate-100" />
+                    <div className="h-4 w-11/12 rounded-full bg-slate-100" />
+                    <div className="h-4 w-5/6 rounded-full bg-slate-100" />
+                    <div className="h-4 w-10/12 rounded-full bg-slate-100" />
+                  </div>
+                ) : (
+                  <div
+                    className="prose prose-slate max-w-none text-base leading-relaxed prose-headings:font-display prose-headings:text-slate-900 prose-p:text-slate-600"
+                    dangerouslySetInnerHTML={{ __html: article.descriptionHtml }}
+                  />
+                )}
               </section>
             </div>
 
@@ -129,6 +132,10 @@ export default function BlogArticle() {
               <div className="rounded-[1.75rem] border border-white/60 bg-white/85 p-6 shadow-[0_20px_80px_rgba(31,60,136,0.08)] backdrop-blur-xl">
                 <h3 className="text-lg font-bold text-slate-900">Artikel terkait</h3>
                 <div className="mt-5 space-y-4">
+                  {relatedArticles.length === 0 && !isLoading ? (
+                    <p className="text-sm text-slate-600">Belum ada artikel terkait lainnya.</p>
+                  ) : null}
+
                   {relatedArticles.map((item) => (
                     <button
                       key={item.slug}

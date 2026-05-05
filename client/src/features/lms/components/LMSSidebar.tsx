@@ -30,6 +30,7 @@ import {
     useLmsStore,
 } from "@/features/lms/stores/lms.store";
 import { getCourseLearnRoute, getCourseQuizRoute, getCoursesRoute } from "@/features/lms/lib/lms-routes";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface LMSSidebarProps {
     mobileOpen?: boolean;
@@ -38,6 +39,8 @@ interface LMSSidebarProps {
 
 export function LMSSidebar({ mobileOpen = false, onClose }: LMSSidebarProps) {
     const [collapsed, setCollapsed] = useState(false);
+    const [passedQuizModalOpen, setPassedQuizModalOpen] = useState(false);
+    const [selectedQuizTitle, setSelectedQuizTitle] = useState("");
     const location = useLocation();
     const logout = useLogout();
     const navigate = useNavigate();
@@ -53,6 +56,11 @@ export function LMSSidebar({ mobileOpen = false, onClose }: LMSSidebarProps) {
     const isCoursePlayerRoute = (location.pathname.startsWith("/lms/materi/") || location.pathname.startsWith("/course/")) && !collapsed;
     const sortedMateri = useMemo(() => sortMateriByOrder(courseMateri), [courseMateri]);
     const desktopSidebarWidth = isCoursePlayerRoute ? "w-[320px]" : "w-64";
+
+    const openPassedQuizModal = (quizTitle: string) => {
+        setSelectedQuizTitle(quizTitle);
+        setPassedQuizModalOpen(true);
+    };
 
     const NavContent = ({ forMobile = false }: { forMobile?: boolean }) => (
         <>
@@ -198,12 +206,15 @@ export function LMSSidebar({ mobileOpen = false, onClose }: LMSSidebarProps) {
                                                             <button
                                                                 key={kuis.id}
                                                                 onClick={() => {
-                                                                    if (canAccessQuiz) {
-                                                                        navigate(getCourseQuizRoute(kuis.id_kelas, kuis.id));
-                                                                        if (forMobile) onClose?.();
+                                                                    if (!canAccessQuiz) return;
+                                                                    if (quizPassed) {
+                                                                        openPassedQuizModal(kuis.judul);
+                                                                        return;
                                                                     }
+
+                                                                    navigate(getCourseQuizRoute(kuis.id_kelas, kuis.id));
+                                                                    if (forMobile) onClose?.();
                                                                 }}
-                                                                disabled={!canAccessQuiz}
                                                                 className={cn(
                                                                     "w-full flex items-center gap-3 px-2 py-2 ml-4 text-left transition-all group rounded-lg",
                                                                     !canAccessQuiz ? "opacity-50 cursor-not-allowed" : quizPassed ? "hover:bg-teal-50/70" : "hover:bg-amber-50/70"
@@ -233,12 +244,15 @@ export function LMSSidebar({ mobileOpen = false, onClose }: LMSSidebarProps) {
                                                             return (
                                                             <button
                                                                 key={kuis.id}
-                                                                disabled={isFinalLocked}
                                                                 onClick={() => {
-                                                                    if (!isFinalLocked) {
-                                                                        navigate(getCourseQuizRoute(kuis.id_kelas, kuis.id));
-                                                                        if (forMobile) onClose?.();
+                                                                    if (isFinalLocked) return;
+                                                                    if (quizPassed) {
+                                                                        openPassedQuizModal(kuis.judul);
+                                                                        return;
                                                                     }
+
+                                                                    navigate(getCourseQuizRoute(kuis.id_kelas, kuis.id));
+                                                                    if (forMobile) onClose?.();
                                                                 }}
                                                                 className={cn(
                                                                     "w-full flex items-center gap-3 px-2 py-2 text-left transition-all group rounded-lg",
@@ -299,6 +313,24 @@ export function LMSSidebar({ mobileOpen = false, onClose }: LMSSidebarProps) {
 
     return (
         <>
+            <Dialog open={passedQuizModalOpen} onOpenChange={setPassedQuizModalOpen}>
+                <DialogContent className="inset-auto left-1/2 top-1/2 h-auto max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg p-6">
+                    <DialogHeader>
+                        <DialogTitle>Anda sudah lulus kuis ini</DialogTitle>
+                        <DialogDescription>
+                            {selectedQuizTitle ? `Kuis "${selectedQuizTitle}" sudah dinyatakan lulus.` : "Kuis ini sudah dinyatakan lulus."}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <button
+                            onClick={() => setPassedQuizModalOpen(false)}
+                            className="inline-flex h-10 w-auto items-center justify-center self-end whitespace-nowrap rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+                        >
+                            Mengerti
+                        </button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
             {/* ── MOBILE DRAWER ── */}
             {/* Overlay backdrop */}
             {mobileOpen && (

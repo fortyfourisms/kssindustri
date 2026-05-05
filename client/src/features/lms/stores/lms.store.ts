@@ -7,7 +7,7 @@ import type {
     SoalWithPilihan,
     FilePendukung,
     DiskusiWithUser,
-    CatatanPribadi,
+    FeedbackItem,
     KuisAttempt,
     JawabanPayload,
     SertifikatItem,
@@ -52,7 +52,7 @@ interface LmsState {
     activeMateri: MateriItem | null;
     materiFiles: FilePendukung[];
     materiDiscussion: DiskusiWithUser[];
-    materiNotes: CatatanPribadi | null;
+    materiFeedback: FeedbackItem | null;
     isLoadingMateri: boolean;
     materiError: string | null;
 
@@ -78,20 +78,20 @@ interface LmsState {
     updateQuizProgress: (quizId: string, result: Pick<KuisAttempt, 'is_passed' | 'skor'>) => void;
 
     setActiveMateri: (materi: MateriItem) => void;
-    /** Track view materi lalu fetch files/diskusi/catatan */
+    /** Track view materi lalu fetch files/diskusi/feedback */
     loadMateriDetail: (materiId: string) => Promise<void>;
-    markMateriCompleted: (materiId: string) => Promise<void>;
+    markMateriCompleted: (materiId: string) => Promise<ActionResult<void>>;
 
     postDiscussion: (materiId: string, konten: string) => Promise<ActionResult<DiskusiWithUser>>;
-    saveNotes: (materiId: string, konten: string) => Promise<ActionResult<CatatanPribadi>>;
+    saveFeedback: (materiId: string, konten: string) => Promise<ActionResult<FeedbackItem>>;
 
     startKuis: (kuisId: string) => Promise<ActionResult<{ attempt: KuisAttempt; soal: SoalWithPilihan[] }>>;
     submitKuis: (attemptId: string, answers: JawabanPayload[]) => Promise<ActionResult<KuisAttempt>>;
     /** GET /api/kuis/attempt/{id}/result — panggil setelah submit berhasil */
     fetchKuisResult: (attemptId: string) => Promise<ActionResult<KuisAttempt>>;
 
-    fetchCertificate: (courseId: string) => Promise<void>;
-    generateCertificate: (courseId: string) => Promise<ActionResult<SertifikatItem>>;
+    fetchCertificate: (courseId: string) => Promise<SertifikatItem | null>;
+    generateCertificate: (courseId: string, namaPeserta?: string) => Promise<ActionResult<SertifikatItem>>;
     fetchMyCertificates: () => Promise<void>;
 
     resetKuis: () => void;
@@ -118,7 +118,7 @@ const initialState = {
     activeMateri: null as MateriItem | null,
     materiFiles: [] as FilePendukung[],
     materiDiscussion: [] as DiskusiWithUser[],
-    materiNotes: null as CatatanPribadi | null,
+    materiFeedback: null as FeedbackItem | null,
     isLoadingMateri: false,
     materiError: null as string | null,
 
@@ -148,7 +148,7 @@ function buildQuizProgressMap(quizzes: KuisItem[]): QuizProgressMap {
 
 // ─── Store ────────────────────────────────────────────────────────────────────
 
-export const useLmsStore = create<LmsState>()((set) => ({
+export const useLmsStore = create<LmsState>()((set, get) => ({
     ...initialState,
 
     // ── Course List ────────────────────────────────────────────────────────────
@@ -220,13 +220,13 @@ export const useLmsStore = create<LmsState>()((set) => ({
             const [files, discussion, notes] = await Promise.allSettled([
                 lmsService.getFiles(materiId),
                 lmsService.getDiscussion(materiId),
-                lmsService.getNotes(materiId),
+                lmsService.getFeedback(materiId),
             ]);
 
             set({
                 materiFiles:      files.status      === 'fulfilled' ? files.value      : [],
                 materiDiscussion: discussion.status === 'fulfilled' ? discussion.value : [],
-                materiNotes:      notes.status      === 'fulfilled' ? notes.value      : null,
+                materiFeedback:   notes.status      === 'fulfilled' ? notes.value      : null,
                 isLoadingMateri: false,
             });
         } catch (e: unknown) {
@@ -235,14 +235,18 @@ export const useLmsStore = create<LmsState>()((set) => ({
     },
 
     markMateriCompleted: async (materiId) => {
-        // Optimistic update
+        const previousCompletedIds = new Set<string>(Array.from(get().completedMateriIds));
+
+        // Optimistic update so UI feels responsive, but rollback if backend rejects it.
         set((state) => ({
             completedMateriIds: new Set<string>(Array.from(state.completedMateriIds).concat(materiId)),
         }));
         try {
             await lmsService.markMateriCompleted(materiId);
-        } catch (e) {
-            // Ignore for now
+            return { success: true };
+        } catch (e: unknown) {
+            set({ completedMateriIds: previousCompletedIds });
+            return { success: false, error: e instanceof Error ? e.message : 'Gagal menandai materi selesai' };
         }
     },
 
@@ -256,13 +260,13 @@ export const useLmsStore = create<LmsState>()((set) => ({
         }
     },
 
-    saveNotes: async (materiId, konten) => {
+    saveFeedback: async (materiId, konten) => {
         try {
-            const updated = await lmsService.saveNotes(materiId, konten);
-            set({ materiNotes: updated });
+            const updated = await lmsService.saveFeedback(materiId, konten);
+            set({ materiFeedback: updated });
             return { success: true, data: updated };
         } catch (e: unknown) {
-            return { success: false, error: e instanceof Error ? e.message : 'Gagal menyimpan catatan' };
+            return { success: false, error: e instanceof Error ? e.message : 'Gagal menyimpan feedback' };
         }
     },
 
@@ -316,15 +320,17 @@ export const useLmsStore = create<LmsState>()((set) => ({
         try {
             const cert = await lmsService.getCertificate(courseId);
             set({ courseCertificate: cert, isLoadingCertificate: false });
+            return cert;
         } catch (e: unknown) {
             set({ certificateError: e instanceof Error ? e.message : 'Gagal memuat sertifikat', isLoadingCertificate: false });
+            return null;
         }
     },
 
-    generateCertificate: async (courseId) => {
+    generateCertificate: async (courseId, namaPeserta) => {
         set({ isLoadingCertificate: true, certificateError: null });
         try {
-            const cert = await lmsService.generateCertificate(courseId);
+            const cert = await lmsService.generateCertificate(courseId, namaPeserta ? { nama_peserta: namaPeserta } : {});
             set({ courseCertificate: cert, isLoadingCertificate: false });
             return { success: true, data: cert };
         } catch (e: unknown) {
@@ -367,7 +373,7 @@ export const useLmsStore = create<LmsState>()((set) => ({
         activeMateri: null,
         materiFiles: [],
         materiDiscussion: [],
-        materiNotes: null,
+        materiFeedback: null,
         isLoadingMateri: false,
         materiError: null,
     }),

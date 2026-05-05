@@ -7,10 +7,11 @@ import type {
     FilePendukung,
     DiskusiWithUser,
     PostDiskusiPayload,
-    CatatanPribadi,
+    FeedbackItem,
     KuisAttempt,
     SubmitKuisPayload,
     SertifikatItem,
+    GenerateSertifikatPayload,
 } from '@/features/lms/types/lms.types';
 
 // ─── Normalize helpers ────────────────────────────────────────────────────────
@@ -45,8 +46,8 @@ export function buildYoutubeEmbed(youtubeId: string): string {
 //  GET  /api/materi/{id}/file-pendukung         → list file pendukung (PDF)
 //  GET  /api/materi/{id}/diskusi                → list diskusi per materi
 //  POST /api/materi/{id}/diskusi                → buat diskusi/reply
-//  GET  /api/materi/{id}/catatan                → get catatan pribadi
-//  PUT  /api/materi/{id}/catatan                → upsert catatan pribadi
+//  GET  /api/materi/{id}/feedback               → get feedback
+//  PUT  /api/materi/{id}/feedback               → upsert feedback
 //  GET  /api/kelas/{id}/kuis                    → list kuis dalam kelas
 //  POST /api/kuis/{id_kuis}/start               → mulai kuis
 //  POST /api/kuis/attempt/{attempt_id}/submit   → submit jawaban kuis
@@ -180,21 +181,21 @@ export const lmsService = {
         return normalizeOne<DiskusiWithUser>(res);
     },
 
-    // ── GET /api/materi/{id}/catatan ─────────────────────────────────────────
-    async getNotes(materiId: string): Promise<CatatanPribadi | null> {
+    // ── GET /api/materi/{id}/feedback ────────────────────────────────────────
+    async getFeedback(materiId: string): Promise<FeedbackItem | null> {
         try {
-            const res = await apiClient.get<any>(`/api/materi/${materiId}/catatan`);
+            const res = await apiClient.get<any>(`/api/materi/${materiId}/feedback`);
             if (!res) return null;
-            return normalizeOne<CatatanPribadi>(res);
+            return normalizeOne<FeedbackItem>(res);
         } catch {
             return null;
         }
     },
 
-    // ── PUT /api/materi/{id}/catatan ─────────────────────────────────────────
-    async saveNotes(materiId: string, konten: string): Promise<CatatanPribadi> {
-        const res = await apiClient.put<any>(`/api/materi/${materiId}/catatan`, { konten });
-        return normalizeOne<CatatanPribadi>(res);
+    // ── PUT /api/materi/{id}/feedback ────────────────────────────────────────
+    async saveFeedback(materiId: string, konten: string): Promise<FeedbackItem> {
+        const res = await apiClient.put<any>(`/api/materi/${materiId}/feedback`, { konten });
+        return normalizeOne<FeedbackItem>(res);
     },
 
     // ── POST /api/kuis/{id_kuis}/start ───────────────────────────────────────
@@ -250,8 +251,8 @@ export const lmsService = {
     },
 
     // ── POST /api/kelas/{id}/sertifikat/generate ─────────────────────────────
-    async generateCertificate(courseId: string): Promise<SertifikatItem> {
-        const res = await apiClient.post<any>(`/api/kelas/${courseId}/sertifikat/generate`, {});
+    async generateCertificate(courseId: string, payload: GenerateSertifikatPayload = {}): Promise<SertifikatItem> {
+        const res = await apiClient.post<any>(`/api/kelas/${courseId}/sertifikat/generate`, payload);
         return normalizeOne<SertifikatItem>(res);
     },
 

@@ -7,7 +7,7 @@ import type {
   EventRegistrationResult,
 } from "@/types/event.types";
 
-function normalizeList<T>(res: unknown): T[] {
+export function normalizeList<T>(res: unknown): T[] {
   if (Array.isArray(res)) return res as T[];
   if (!res || typeof res !== "object") return [];
 
@@ -26,7 +26,7 @@ function sortByLatestPastEvent(a: EventItem, b: EventItem) {
   return new Date(b.eventDate).getTime() - new Date(a.eventDate).getTime();
 }
 
-function decodeHtmlEntities(value: string) {
+export function decodeHtmlEntities(value: string) {
   if (typeof document === "undefined") {
     return value
       .replaceAll("&lt;", "<")
@@ -42,7 +42,7 @@ function decodeHtmlEntities(value: string) {
   return textarea.value;
 }
 
-function stripHtml(value: string) {
+export function stripHtml(value: string) {
   return value
     .replace(/<style[\s\S]*?<\/style>/gi, " ")
     .replace(/<script[\s\S]*?<\/script>/gi, " ")
