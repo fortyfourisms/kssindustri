@@ -14,7 +14,6 @@ import {
     Clock3,
 } from "lucide-react";
 import {
-    getFinalQuizzes,
     getNextCourseStep,
     isQuizAccessible,
     sortMateriByOrder,
@@ -218,7 +217,8 @@ function ResultScreen({
     showCertificateAction,
     onOpenCertificate,
     onRetry,
-    onBack,
+    onPrimaryAction,
+    primaryActionLabel,
 }: {
     skor: number;
     isPassed: boolean;
@@ -228,7 +228,8 @@ function ResultScreen({
     showCertificateAction?: boolean;
     onOpenCertificate?: () => void;
     onRetry: () => void;
-    onBack: () => void;
+    onPrimaryAction: () => void;
+    primaryActionLabel: string;
 }) {
     return (
         <motion.div
@@ -316,10 +317,10 @@ function ResultScreen({
                     Ulangi Kuis
                 </button>
                 <button
-                    onClick={onBack}
+                    onClick={onPrimaryAction}
                     className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-3 font-bold text-white shadow-lg transition-all hover:scale-[1.01]"
                 >
-                    Kembali ke Kelas
+                    {primaryActionLabel}
                     <ChevronRight className="h-4 w-4" />
                 </button>
             </div>
@@ -352,8 +353,6 @@ export default function LMSQuiz() {
         submitKuis,
         fetchKuisResult,
         fetchCertificate,
-        fetchCourseById,
-        fetchCourseQuizzes,
         generateCertificate,
         updateQuizProgress,
         resetKuis,
@@ -416,34 +415,13 @@ export default function LMSQuiz() {
             return;
         }
 
-        if (courseId && kuisInfo?.is_final) {
-            await fetchCourseById(courseId);
-            await fetchCourseQuizzes(courseId);
-
-            const {
-                courseMateri: syncedMateri,
-                courseQuizzes: syncedQuizzes,
-                completedMateriIds: syncedCompletedIds,
-                quizProgressById: syncedQuizProgress,
-            } = useLmsStore.getState();
-
-            const syncedSortedMateri = sortMateriByOrder(syncedMateri);
-            const syncedQuiz = getFinalQuizzes(syncedQuizzes).find((quiz) => quiz.id === quizId)
-                ?? syncedQuizzes.find((quiz) => quiz.id === quizId);
-            const canStartFinalQuiz = syncedQuiz
-                ? isQuizAccessible(syncedQuiz, syncedSortedMateri, syncedCompletedIds, syncedQuizzes, syncedQuizProgress)
-                : false;
-
-            if (!canStartFinalQuiz) {
-                toast.error("Selesaikan semua materi dan kuis yang terkait terlebih dahulu");
-                return;
-            }
-        }
-
         setAnswers({});
         const result = await startKuis(quizId);
-        if (result.success) {
+        const questionCount = result.data?.soal?.length ?? 0;
+        if (result.success && questionCount > 0) {
             setStage("questions");
+        } else if (result.success) {
+            toast.error("Soal kuis tidak tersedia");
         } else {
             toast.error(result.error ?? "Gagal memulai kuis");
         }
@@ -499,6 +477,33 @@ export default function LMSQuiz() {
 
     const allAnswered = kuisSoal.length > 0 && kuisSoal.every((q) => answers[q.id] !== undefined);
     const answeredCount = Object.keys(answers).length;
+    const nextStep = getNextCourseStep(sortedMateri, courseQuizzes, completedMateriIds, quizProgressById);
+
+    const resultPrimaryAction = () => {
+        if (!courseId) return;
+
+        if (kuisResult?.is_passed) {
+            if (nextStep?.type === "materi") {
+                navigate(getCourseLearnRoute(courseId, nextStep.id));
+                return;
+            }
+
+            if (nextStep?.type === "quiz") {
+                navigate(getCourseQuizRoute(courseId, nextStep.id));
+                return;
+            }
+        }
+
+        navigate(getCourseRoute(courseId));
+    };
+
+    const resultPrimaryLabel = kuisResult?.is_passed
+        ? nextStep?.type === "materi"
+            ? "Lanjut ke Materi Berikutnya"
+            : nextStep?.type === "quiz"
+                ? "Lanjut ke Kuis Berikutnya"
+                : "Kembali ke Kelas"
+        : "Kembali ke Kelas";
 
     const handleSubmitAnswers = () => {
         const payload: JawabanPayload[] = kuisSoal.map((q) => ({
@@ -617,6 +622,13 @@ export default function LMSQuiz() {
                     </motion.div>
                 )}
 
+                {stage === "questions" && kuisSoal.length === 0 && (
+                    <motion.div key="questions-empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="mx-auto w-full max-w-2xl rounded-3xl border border-amber-200 bg-amber-50 p-6 text-center text-amber-800">
+                        <p className="font-bold">Soal kuis belum terbaca.</p>
+                        <p className="mt-1 text-sm">Silakan coba muat ulang atau buka kuis ini lagi.</p>
+                    </motion.div>
+                )}
+
                 {stage === "result" && kuisResult && (
                     <motion.div key="result" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                         <ResultScreen
@@ -628,7 +640,8 @@ export default function LMSQuiz() {
                             showCertificateAction={Boolean(kuisInfo?.is_final && kuisResult.is_passed)}
                             onOpenCertificate={() => navigate(getCourseCertificateRoute(courseId!))}
                             onRetry={handleRetry}
-                            onBack={() => navigate(getCourseRoute(courseId!))}
+                            onPrimaryAction={resultPrimaryAction}
+                            primaryActionLabel={resultPrimaryLabel}
                         />
                     </motion.div>
                 )}

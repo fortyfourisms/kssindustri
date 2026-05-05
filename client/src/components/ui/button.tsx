@@ -1,4 +1,5 @@
 import { cva } from "class-variance-authority";
+import * as React from "react";
 
 import { AppButton, type AppButtonProps } from "@/ui/components/button";
 
@@ -61,8 +62,18 @@ export interface ButtonProps
   size?: LegacySize;
 }
 
-function Button({ variant, size, ...props }: ButtonProps) {
-  return <AppButton variant={mapVariant(variant)} size={mapSize(size)} {...props} />;
-}
+const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
+  ({ variant, size, ...props }, ref) => {
+    return (
+      <AppButton
+        ref={ref}
+        variant={mapVariant(variant)}
+        size={mapSize(size)}
+        {...props}
+      />
+    );
+  }
+);
+Button.displayName = "Button";
 
 export { Button, buttonVariants };

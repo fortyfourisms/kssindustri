@@ -29,7 +29,7 @@ import {
     sortMateriByOrder,
     useLmsStore,
 } from "@/features/lms/stores/lms.store";
-import { getCourseLearnRoute, getCourseQuizRoute, getCoursesRoute } from "@/features/lms/lib/lms-routes";
+import { getCourseCertificateRoute, getCourseLearnRoute, getCourseQuizRoute, getCoursesRoute } from "@/features/lms/lib/lms-routes";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface LMSSidebarProps {
@@ -247,7 +247,8 @@ export function LMSSidebar({ mobileOpen = false, onClose }: LMSSidebarProps) {
                                                                 onClick={() => {
                                                                     if (isFinalLocked) return;
                                                                     if (quizPassed) {
-                                                                        openPassedQuizModal(kuis.judul);
+                                                                        navigate(getCourseCertificateRoute(kuis.id_kelas));
+                                                                        if (forMobile) onClose?.();
                                                                         return;
                                                                     }
 

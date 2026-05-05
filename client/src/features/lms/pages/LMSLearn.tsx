@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -87,18 +87,10 @@ function FilesTab() {
 }
 
 function FeedbackTab({ materiId }: { materiId: string }) {
-  const { materiFeedback, saveFeedback } = useLmsStore();
+  const { saveFeedback } = useLmsStore();
   const [feedback, setFeedback] = useState("");
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
-  const initialized = useRef(false);
-
-  useEffect(() => {
-    if (materiFeedback && !initialized.current) {
-      setFeedback(materiFeedback.konten);
-      initialized.current = true;
-    }
-  }, [materiFeedback]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -118,6 +110,9 @@ function FeedbackTab({ materiId }: { materiId: string }) {
         <p className="text-sm text-slate-500 font-medium">Tulis feedback Anda tentang materi ini</p>
         {dirty && <span className="text-xs text-amber-600 font-semibold bg-amber-50 px-2 py-1 rounded-lg">Belum tersimpan</span>}
       </div>
+      <p className="text-xs text-slate-400">
+        Feedback disimpan saat Anda menekan tombol simpan.
+      </p>
       <textarea
         value={feedback}
         onChange={(e) => {
@@ -156,7 +151,6 @@ export default function LMSLearn() {
     activeMateri,
     isLoadingMateri,
     materiError,
-    fetchCourseById,
     setActiveMateri,
     loadMateriDetail,
     markMateriCompleted,
@@ -229,9 +223,6 @@ export default function LMSLearn() {
       if (!completedResult.success) {
         toast.error(completedResult.error ?? "Gagal menandai materi selesai");
         return;
-      }
-      if (courseId) {
-        await fetchCourseById(courseId);
       }
       completedAfterAction.add(materiId);
       toast.success("Materi ditandai selesai");
@@ -415,7 +406,7 @@ export default function LMSLearn() {
                 disabled={!isCompleted}
                 className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-bold text-slate-700 border border-slate-200 shadow-sm hover:border-blue-200 hover:text-blue-700 disabled:text-slate-300 disabled:border-slate-100 transition-colors"
               >
-                Lanjut ke tahap berikutnya
+                Berikutnya
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>

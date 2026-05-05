@@ -120,13 +120,18 @@ async function request<T>(
 ): Promise<T> {
     const isFormData = init.body instanceof FormData;
 
-    const res = await fetch(`${API_BASE_URL}${path}`, {
-        ...init,
-        credentials: 'include', // HTTP-only cookie auth
-        headers: isFormData
-            ? (init.headers ?? {}) // let browser set multipart boundary
-            : { 'Content-Type': 'application/json', ...(init.headers ?? {}) },
-    });
+    let res: Response;
+    try {
+        res = await fetch(`${API_BASE_URL}${path}`, {
+            ...init,
+            credentials: 'include', // HTTP-only cookie auth
+            headers: isFormData
+                ? (init.headers ?? {}) // let browser set multipart boundary
+                : { 'Content-Type': 'application/json', ...(init.headers ?? {}) },
+        });
+    } catch {
+        throw new Error('Tidak dapat terhubung ke server. Silakan coba lagi.');
+    }
 
     // ── 401 Interceptor ──────────────────────────────────────────────────────
     // Jika respons 401 dan bukan endpoint auth → coba refresh token dulu.

@@ -6,7 +6,6 @@ import type {
     KuisItem,
     SoalWithPilihan,
     FilePendukung,
-    DiskusiWithUser,
     FeedbackItem,
     KuisAttempt,
     JawabanPayload,
@@ -51,8 +50,6 @@ interface LmsState {
     // ── Active Materi Detail ──────────────────────────────────────────────────
     activeMateri: MateriItem | null;
     materiFiles: FilePendukung[];
-    materiDiscussion: DiskusiWithUser[];
-    materiFeedback: FeedbackItem | null;
     isLoadingMateri: boolean;
     materiError: string | null;
 
@@ -78,11 +75,10 @@ interface LmsState {
     updateQuizProgress: (quizId: string, result: Pick<KuisAttempt, 'is_passed' | 'skor'>) => void;
 
     setActiveMateri: (materi: MateriItem) => void;
-    /** Track view materi lalu fetch files/diskusi/feedback */
+    /** Track view materi lalu fetch file pendukung */
     loadMateriDetail: (materiId: string) => Promise<void>;
     markMateriCompleted: (materiId: string) => Promise<ActionResult<void>>;
 
-    postDiscussion: (materiId: string, konten: string) => Promise<ActionResult<DiskusiWithUser>>;
     saveFeedback: (materiId: string, konten: string) => Promise<ActionResult<FeedbackItem>>;
 
     startKuis: (kuisId: string) => Promise<ActionResult<{ attempt: KuisAttempt; soal: SoalWithPilihan[] }>>;
@@ -117,8 +113,6 @@ const initialState = {
 
     activeMateri: null as MateriItem | null,
     materiFiles: [] as FilePendukung[],
-    materiDiscussion: [] as DiskusiWithUser[],
-    materiFeedback: null as FeedbackItem | null,
     isLoadingMateri: false,
     materiError: null as string | null,
 
@@ -217,16 +211,12 @@ export const useLmsStore = create<LmsState>()((set, get) => ({
             // Track kunjungan materi tanpa langsung menandainya selesai.
             lmsService.trackProgress(materiId, { is_completed: false }).catch(() => undefined);
 
-            const [files, discussion, notes] = await Promise.allSettled([
+            const [files] = await Promise.allSettled([
                 lmsService.getFiles(materiId),
-                lmsService.getDiscussion(materiId),
-                lmsService.getFeedback(materiId),
             ]);
 
             set({
-                materiFiles:      files.status      === 'fulfilled' ? files.value      : [],
-                materiDiscussion: discussion.status === 'fulfilled' ? discussion.value : [],
-                materiFeedback:   notes.status      === 'fulfilled' ? notes.value      : null,
+                materiFiles: files.status === 'fulfilled' ? files.value : [],
                 isLoadingMateri: false,
             });
         } catch (e: unknown) {
@@ -250,21 +240,10 @@ export const useLmsStore = create<LmsState>()((set, get) => ({
         }
     },
 
-    postDiscussion: async (materiId, konten) => {
-        try {
-            const item = await lmsService.postDiscussion(materiId, { konten });
-            set((state) => ({ materiDiscussion: [item, ...state.materiDiscussion] }));
-            return { success: true, data: item };
-        } catch (e: unknown) {
-            return { success: false, error: e instanceof Error ? e.message : 'Gagal mengirim diskusi' };
-        }
-    },
-
     saveFeedback: async (materiId, konten) => {
         try {
-            const updated = await lmsService.saveFeedback(materiId, konten);
-            set({ materiFeedback: updated });
-            return { success: true, data: updated };
+            const data = await lmsService.saveFeedback(materiId, konten);
+            return { success: true, data };
         } catch (e: unknown) {
             return { success: false, error: e instanceof Error ? e.message : 'Gagal menyimpan feedback' };
         }
@@ -372,8 +351,6 @@ export const useLmsStore = create<LmsState>()((set, get) => ({
     resetMateri: () => set({
         activeMateri: null,
         materiFiles: [],
-        materiDiscussion: [],
-        materiFeedback: null,
         isLoadingMateri: false,
         materiError: null,
     }),
