@@ -26,9 +26,21 @@ const respondentSchema = z.object({
     responden: z.string().min(1, "Nama responden wajib diisi"),
     jabatan: z.string().min(1, "Jabatan wajib diisi"),
     tanggal: z.string().min(1, "Tanggal wajib diisi"),
-    target_nilai: z.coerce.number().min(0, "Target nilai wajib diisi"),
+    target_nilai: z.preprocess(
+        (value) => {
+            if (value === "" || value === null || value === undefined) return undefined;
+            return Number(value);
+        },
+        z.number({
+            required_error: "Target nilai wajib diisi",
+            invalid_type_error: "Target nilai wajib diisi",
+        }).min(0, "Target nilai wajib diisi")
+    ),
     kategori_kematangan_keamanan_siber: z.string().min(1, "Kategori kematangan keamanan siber wajib diisi"),
-    telepon: z.string().min(1, "Nomor telepon wajib diisi")
+    telepon: z.string()
+        .min(1, "Nomor telepon wajib diisi")
+        .regex(/^\d+$/, "Nomor telepon hanya boleh berisi angka")
+        .max(15, "Nomor telepon maksimal 15 digit")
 });
 
 type RespondentFormValues = z.infer<typeof respondentSchema>;
@@ -136,7 +148,7 @@ export default function FormIkas() {
         defaultValues: {
             responden: respondentProfile()?.responden || "",
             telepon: respondentProfile()?.telepon || "",
-            target_nilai: respondentProfile()?.target_nilai || 0,
+            target_nilai: respondentProfile()?.target_nilai ?? undefined,
             tanggal: respondentProfile()?.tanggal || new Date().toISOString().split('T')[0],
             jabatan: respondentProfile()?.jabatan || "",
             kategori_kematangan_keamanan_siber: respondentProfile()?.kategori_kematangan_keamanan_siber || "",
@@ -205,6 +217,7 @@ export default function FormIkas() {
     const isEditBlockedByApproval = !!activeIkasRecord
         && activeVerificationStatus === "Terverifikasi"
         && activeEditRequestStatus !== "approved";
+    const shouldLoadAssessment = step === 2;
 
     const {
         assessmentData,
@@ -212,19 +225,19 @@ export default function FormIkas() {
         jawabanIdMap,
         hasExistingAnswers,
         isLoading: setupLoading,
-    } = useIkasAssessmentSetup(activeIkasId);
+    } = useIkasAssessmentSetup(activeIkasId, { enabled: shouldLoadAssessment });
 
     useEffect(() => {
-        if (assessmentData) {
+        if (shouldLoadAssessment && assessmentData) {
             setAssessmentStructure(assessmentData);
         }
-    }, [assessmentData, setAssessmentStructure]);
+    }, [assessmentData, setAssessmentStructure, shouldLoadAssessment]);
 
     useEffect(() => {
-        if (!setupLoading) {
+        if (shouldLoadAssessment && !setupLoading) {
             hydrateAnswers(answerMap);
         }
-    }, [answerMap, hydrateAnswers, setupLoading]);
+    }, [answerMap, hydrateAnswers, setupLoading, shouldLoadAssessment]);
 
     // ── Detect existing record → set existingIkasId ────────────────────────────
     useEffect(() => {
@@ -248,7 +261,7 @@ export default function FormIkas() {
         reset({
             responden: sourceRecord.responden ?? "",
             telepon: sourceRecord.telepon ?? "",
-            target_nilai: sourceRecord.target_nilai ?? 0,
+            target_nilai: sourceRecord.target_nilai ?? undefined,
             tanggal: normalizeDateInput(sourceRecord.tanggal),
             jabatan: sourceRecord.jabatan ?? "",
             kategori_kematangan_keamanan_siber: sourceRecord.kategori_kematangan_keamanan_siber ?? "",
@@ -259,10 +272,10 @@ export default function FormIkas() {
 
     // ── If existing answers found in DB, also mark respondent saved ───────────
     useEffect(() => {
-        if (!setupLoading && hasExistingAnswers) {
+        if (shouldLoadAssessment && !setupLoading && hasExistingAnswers) {
             setRespondentSaved(true);
         }
-    }, [setupLoading, hasExistingAnswers, setRespondentSaved]);
+    }, [setupLoading, hasExistingAnswers, setRespondentSaved, shouldLoadAssessment]);
 
     // ── When form is dirty (user edited), reset respondentSaved ───────────────
     useEffect(() => {
@@ -465,6 +478,11 @@ export default function FormIkas() {
                                 type="tel"
                                 placeholder="0812345678"
                                 error={errors.telepon?.message}
+                                inputMode="numeric"
+                                maxLength={15}
+                                onInput={(event) => {
+                                    event.currentTarget.value = event.currentTarget.value.replace(/\D/g, "").slice(0, 15);
+                                }}
                                 {...register("telepon")}
                             />
 
@@ -481,7 +499,9 @@ export default function FormIkas() {
                                 step="0.01"
                                 placeholder="0"
                                 error={errors.target_nilai?.message}
-                                {...register("target_nilai")}
+                                {...register("target_nilai", {
+                                    setValueAs: (value) => value === "" ? undefined : Number(value),
+                                })}
                             />
 
                             <AppInput
@@ -588,6 +608,7 @@ export default function FormIkas() {
                             jawabanIdMap={jawabanIdMap}
                             canEditAnswers={!isEditBlockedByApproval}
                             editLockMessage={activeEditRequestMeta.description}
+                            isBootstrapping={setupLoading}
                         />
                     </motion.div>
                 )}

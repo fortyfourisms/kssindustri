@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useLmsStore } from "@/features/lms/stores/lms.store";
 import { getCourseRoute } from "@/features/lms/lib/lms-routes";
+import { SkeletonCard as BaseSkeletonCard } from "@/components/ui/skeleton";
 
 // ─── Blob color palette (cycles through courses) ──────────────────────────────
 const BLOB_PAIRS = [
@@ -20,18 +21,7 @@ const BLOB_PAIRS = [
 // ─── Skeleton Card ────────────────────────────────────────────────────────────
 function SkeletonCard() {
     return (
-        <div className="flex flex-col h-full bg-white border border-slate-100 rounded-3xl overflow-hidden shadow-sm animate-pulse">
-            <div className="h-[200px] bg-slate-100" />
-            <div className="p-6 flex flex-col gap-3">
-                <div className="h-3 w-16 bg-slate-200 rounded-full" />
-                <div className="h-4 w-full bg-slate-200 rounded-full" />
-                <div className="h-4 w-3/4 bg-slate-200 rounded-full" />
-                <div className="mt-auto space-y-2 pt-4">
-                    <div className="h-3 w-full bg-slate-100 rounded-full" />
-                    <div className="h-3 w-2/3 bg-slate-100 rounded-full" />
-                </div>
-            </div>
-        </div>
+        <BaseSkeletonCard className="h-full rounded-3xl border-slate-100 bg-white shadow-sm" thumbnailClassName="h-[200px]" textLines={4} />
     );
 }
 

@@ -22,6 +22,7 @@ import { lmsService } from "@/features/lms/services/lms.service";
 import { surveyService } from "@/services/survey.service";
 import type { IkasData } from "@/types/ikas.types";
 import type { SurveyProgress, SurveyRespondent } from "@/types/survey.types";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const moduleConfig = {
     IKAS: {
@@ -84,6 +85,40 @@ const HERO_PROGRESS_BG: Record<string, string> = {
     "LMS Kelas": "linear-gradient(90deg, #0ea5e9 0%, #22d3ee 100%)",
     Survei: "linear-gradient(90deg, #f59e0b 0%, #fb923c 100%)",
 };
+
+function HeroStatSkeleton({ label }: { label: string }) {
+    return (
+        <div
+            className="rounded-2xl p-4 flex flex-col gap-3 backdrop-blur-sm"
+            style={{ background: "var(--dashboard-card-chip)", border: "1px solid var(--dashboard-border)" }}
+        >
+            <p
+                className="text-[10px] font-black uppercase tracking-widest"
+                style={{ color: HERO_STAT_COLORS[label] ?? "var(--dashboard-selection-text)" }}
+            >
+                {label}
+            </p>
+            <Skeleton className="h-9 w-20 rounded-xl" />
+            <Skeleton className="h-4 w-28 rounded-lg" />
+        </div>
+    );
+}
+
+function HeroProgressSkeleton({ label }: { label: string }) {
+    return (
+        <div>
+            <div className="mb-2 flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--dashboard-text-muted)" }}>
+                    {label}
+                </span>
+                <Skeleton className="h-3 w-10 rounded-md" />
+            </div>
+            <div className="h-2 rounded-full overflow-hidden" style={{ background: "var(--dashboard-progress-track)" }}>
+                <Skeleton className="h-full w-1/3 rounded-full" />
+            </div>
+        </div>
+    );
+}
 
 function normalizeList<T>(data: unknown): T[] {
     if (Array.isArray(data)) return data as T[];
@@ -259,6 +294,7 @@ export default function Dashboard() {
         isPrimaryStageReady &&
         lmsCertificatesQuery.isFetched &&
         (!surveyRespondent?.id || surveyProgressQuery.isFetched);
+    const isHeroSummaryLoading = !isPrimaryStageReady;
 
     const ikasList = (myIkasData
         ? (Array.isArray(myIkasData) ? myIkasData : [myIkasData])
@@ -534,31 +570,35 @@ export default function Dashboard() {
 
                     {/* Stats chips */}
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                        {heroStats.map((stat) => (
-                            <div key={stat.label}
-                                className="rounded-2xl p-4 flex flex-col gap-1.5 backdrop-blur-sm"
-                                style={{ background: "var(--dashboard-card-chip)", border: "1px solid var(--dashboard-border)" }}
-                            >
-                                <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: HERO_STAT_COLORS[stat.label] ?? "var(--dashboard-selection-text)" }}>{stat.label}</p>
-                                <p className="text-2xl font-black leading-none" style={{ color: "var(--dashboard-text)" }}>{stat.value}</p>
-                                <p className="text-[11px] font-medium leading-tight" style={{ color: "var(--dashboard-text-muted)" }}>{stat.sub}</p>
-                            </div>
-                        ))}
+                        {isHeroSummaryLoading
+                            ? heroStats.map((stat) => <HeroStatSkeleton key={stat.label} label={stat.label} />)
+                            : heroStats.map((stat) => (
+                                <div key={stat.label}
+                                    className="rounded-2xl p-4 flex flex-col gap-1.5 backdrop-blur-sm"
+                                    style={{ background: "var(--dashboard-card-chip)", border: "1px solid var(--dashboard-border)" }}
+                                >
+                                    <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: HERO_STAT_COLORS[stat.label] ?? "var(--dashboard-selection-text)" }}>{stat.label}</p>
+                                    <p className="text-2xl font-black leading-none" style={{ color: "var(--dashboard-text)" }}>{stat.value}</p>
+                                    <p className="text-[11px] font-medium leading-tight" style={{ color: "var(--dashboard-text-muted)" }}>{stat.sub}</p>
+                                </div>
+                            ))}
                     </div>
 
                     {/* Progress bars */}
                     <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-4">
-                        {progressBars.map((bar) => (
-                            <div key={bar.label}>
-                                <div className="flex items-center justify-between mb-2">
-                                    <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--dashboard-text-muted)" }}>{bar.label}</span>
-                                    <span className="text-[10px] font-bold" style={{ color: "var(--dashboard-text-soft)" }}>{bar.value}</span>
+                        {isHeroSummaryLoading
+                            ? progressBars.map((bar) => <HeroProgressSkeleton key={bar.label} label={bar.label} />)
+                            : progressBars.map((bar) => (
+                                <div key={bar.label}>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--dashboard-text-muted)" }}>{bar.label}</span>
+                                        <span className="text-[10px] font-bold" style={{ color: "var(--dashboard-text-soft)" }}>{bar.value}</span>
+                                    </div>
+                                    <div className="h-2 rounded-full overflow-hidden dashboard-progress-track">
+                                        <div className="h-full rounded-full transition-all duration-1000" style={{ width: bar.width, background: HERO_PROGRESS_BG[bar.label] ?? HERO_PROGRESS_BG.IKAS }} />
+                                    </div>
                                 </div>
-                                <div className="h-2 rounded-full overflow-hidden dashboard-progress-track">
-                                    <div className="h-full rounded-full transition-all duration-1000" style={{ width: bar.width, background: HERO_PROGRESS_BG[bar.label] ?? HERO_PROGRESS_BG.IKAS }} />
-                                </div>
-                            </div>
-                        ))}
+                            ))}
                     </div>
                 </div>
             </motion.div>

@@ -31,6 +31,13 @@ const DOMAIN_COLORS: Record<string, string> = {
     gulih: '#27ae60',
 };
 
+const DOMAIN_ORDER: Record<string, number> = {
+    identifikasi: 0,
+    proteksi: 1,
+    deteksi: 2,
+    gulih: 3,
+};
+
 /** Map API nama_domain → internal slug used by the store */
 function toDomainSlug(namaDomain: string): string {
     const lower = namaDomain.toLowerCase();
@@ -67,7 +74,15 @@ function normalize(
         index3: q.index3 ?? '', index4: q.index4 ?? '', index5: q.index5 ?? '',
         ruang_lingkup: q.ruang_lingkup,
         sub_kategori: q.sub_kategori,
-    }));
+    })).sort((a, b) => {
+        const categoryOrder = a.sub_kategori.kategori.id - b.sub_kategori.kategori.id;
+        if (categoryOrder !== 0) return categoryOrder;
+
+        const subCategoryOrder = a.sub_kategori.id - b.sub_kategori.id;
+        if (subCategoryOrder !== 0) return subCategoryOrder;
+
+        return a.id - b.id;
+    });
 }
 
 function buildDomainTree(
@@ -110,15 +125,23 @@ function buildDomainTree(
     const domId = subId('domain', dominated[0]?.sub_kategori.kategori.domain.id ?? 0) || domainSlug;
 
     const categories: Category[] = [];
-    for (const { cat, subs } of Array.from(catMap.values())) {
+    const sortedCategoryEntries = Array.from(catMap.values()).sort((a, b) => a.cat.id - b.cat.id);
+
+    for (const { cat, subs } of sortedCategoryEntries) {
         const catStrId = subId('cat', cat.id);
         const subCategories: SubCategory[] = [];
-        for (const { sub, questions } of Array.from(subs.values())) {
+        const sortedSubEntries = Array.from(subs.values()).sort((a, b) => a.sub.id - b.sub.id);
+
+        for (const { sub, questions } of sortedSubEntries) {
             subCategories.push({
                 id: subId('sub', sub.id),
                 categoryId: catStrId,
                 name: sub.nama_sub_kategori,
-                questions,
+                questions: [...questions].sort((a, b) => {
+                    const aId = Number.parseInt(String(a.id).split('-').pop() ?? '0', 10);
+                    const bId = Number.parseInt(String(b.id).split('-').pop() ?? '0', 10);
+                    return aId - bId;
+                }),
             });
         }
         categories.push({
@@ -207,19 +230,29 @@ function buildJawabanIdMap(
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
-export function useIkasAssessmentSetup(scopedIkasId?: string | number | null) {
+interface UseIkasAssessmentSetupOptions {
+    enabled?: boolean;
+}
+
+export function useIkasAssessmentSetup(
+    scopedIkasId?: string | number | null,
+    options: UseIkasAssessmentSetupOptions = {},
+) {
+    const enabled = options.enabled ?? true;
+    const shouldLoadAnswers = enabled && !!scopedIkasId;
+
     const results = useQueries({
         queries: [
             // Questions
-            { queryKey: ['pertanyaan-identifikasi'], queryFn: () => ikasService.getPertanyaanIdentifikasi(), staleTime: 1000 * 60 * 10 },
-            { queryKey: ['pertanyaan-proteksi'],     queryFn: () => ikasService.getPertanyaanProteksi(),     staleTime: 1000 * 60 * 10 },
-            { queryKey: ['pertanyaan-deteksi'],      queryFn: () => ikasService.getPertanyaanDeteksi(),      staleTime: 1000 * 60 * 10 },
-            { queryKey: ['pertanyaan-gulih'],        queryFn: () => ikasService.getPertanyaanGulih(),        staleTime: 1000 * 60 * 10 },
+            { queryKey: ['pertanyaan-identifikasi'], queryFn: () => ikasService.getPertanyaanIdentifikasi(), staleTime: 1000 * 60 * 10, enabled },
+            { queryKey: ['pertanyaan-proteksi'],     queryFn: () => ikasService.getPertanyaanProteksi(),     staleTime: 1000 * 60 * 10, enabled },
+            { queryKey: ['pertanyaan-deteksi'],      queryFn: () => ikasService.getPertanyaanDeteksi(),      staleTime: 1000 * 60 * 10, enabled },
+            { queryKey: ['pertanyaan-gulih'],        queryFn: () => ikasService.getPertanyaanGulih(),        staleTime: 1000 * 60 * 10, enabled },
             // Answers
-            { queryKey: ['jawaban-identifikasi'], queryFn: () => ikasService.getJawabanIdentifikasi(), staleTime: 1000 * 60 * 2 },
-            { queryKey: ['jawaban-proteksi'],     queryFn: () => ikasService.getJawabanProteksi(),     staleTime: 1000 * 60 * 2 },
-            { queryKey: ['jawaban-deteksi'],      queryFn: () => ikasService.getJawabanDeteksi(),      staleTime: 1000 * 60 * 2 },
-            { queryKey: ['jawaban-gulih'],        queryFn: () => ikasService.getJawabanGulih(),        staleTime: 1000 * 60 * 2 },
+            { queryKey: ['jawaban-identifikasi'], queryFn: () => ikasService.getJawabanIdentifikasi(), staleTime: 1000 * 60 * 2, enabled: shouldLoadAnswers },
+            { queryKey: ['jawaban-proteksi'],     queryFn: () => ikasService.getJawabanProteksi(),     staleTime: 1000 * 60 * 2, enabled: shouldLoadAnswers },
+            { queryKey: ['jawaban-deteksi'],      queryFn: () => ikasService.getJawabanDeteksi(),      staleTime: 1000 * 60 * 2, enabled: shouldLoadAnswers },
+            { queryKey: ['jawaban-gulih'],        queryFn: () => ikasService.getJawabanGulih(),        staleTime: 1000 * 60 * 2, enabled: shouldLoadAnswers },
         ],
     });
 
@@ -254,6 +287,8 @@ export function useIkasAssessmentSetup(scopedIkasId?: string | number | null) {
         if (nP.length) domains.push(buildDomainTree(nP, 'proteksi'));
         if (nD.length) domains.push(buildDomainTree(nD, 'deteksi'));
         if (nG.length) domains.push(buildDomainTree(nG, 'gulih'));
+
+        domains.sort((a, b) => (DOMAIN_ORDER[a.id] ?? Number.MAX_SAFE_INTEGER) - (DOMAIN_ORDER[b.id] ?? Number.MAX_SAFE_INTEGER));
 
         return { domains };
     }, [qI.data, qP.data, qD.data, qG.data]);

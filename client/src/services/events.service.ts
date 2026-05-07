@@ -27,28 +27,137 @@ function sortByLatestPastEvent(a: EventItem, b: EventItem) {
 }
 
 export function decodeHtmlEntities(value: string) {
-  if (typeof document === "undefined") {
-    return value
-      .replaceAll("&lt;", "<")
-      .replaceAll("&gt;", ">")
-      .replaceAll("&quot;", '"')
-      .replaceAll("&#34;", '"')
-      .replaceAll("&#39;", "'")
-      .replaceAll("&amp;", "&");
-  }
+  const namedEntities: Record<string, string> = {
+    amp: "&",
+    apos: "'",
+    gt: ">",
+    lt: "<",
+    nbsp: "\u00A0",
+    quot: '"',
+  };
 
-  const textarea = document.createElement("textarea");
-  textarea.innerHTML = value;
-  return textarea.value;
+  return value.replace(/&(#(?:x[a-f0-9]+|\d+)|[a-z][a-z0-9]+);/gi, (entity, token: string) => {
+    if (token.startsWith("#")) {
+      const isHex = token[1]?.toLowerCase() === "x";
+      const rawNumber = isHex ? token.slice(2) : token.slice(1);
+      const codePoint = Number.parseInt(rawNumber, isHex ? 16 : 10);
+
+      if (!Number.isFinite(codePoint) || codePoint < 0 || codePoint > 0x10ffff) {
+        return entity;
+      }
+
+      try {
+        return String.fromCodePoint(codePoint);
+      } catch {
+        return entity;
+      }
+    }
+
+    return namedEntities[token.toLowerCase()] ?? entity;
+  });
 }
 
 export function stripHtml(value: string) {
-  return value
-    .replace(/<style[\s\S]*?<\/style>/gi, " ")
-    .replace(/<script[\s\S]*?<\/script>/gi, " ")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
+  let result = "";
+  let index = 0;
+  let ignoredTag: "script" | "style" | null = null;
+
+  const isWhitespace = (char: string) => /\s/.test(char);
+
+  const findTagEnd = (startIndex: number) => {
+    let quote: '"' | "'" | null = null;
+
+    for (let cursor = startIndex + 1; cursor < value.length; cursor += 1) {
+      const char = value[cursor];
+      if (quote) {
+        if (char === quote) quote = null;
+        continue;
+      }
+
+      if (char === '"' || char === "'") {
+        quote = char;
+        continue;
+      }
+
+      if (char === ">") {
+        return cursor;
+      }
+    }
+
+    return -1;
+  };
+
+  const readTag = (tagStart: number, tagEnd: number) => {
+    let cursor = tagStart + 1;
+
+    while (cursor < tagEnd && isWhitespace(value[cursor])) cursor += 1;
+
+    let isClosing = false;
+    if (value[cursor] === "/") {
+      isClosing = true;
+      cursor += 1;
+      while (cursor < tagEnd && isWhitespace(value[cursor])) cursor += 1;
+    }
+
+    const nameStart = cursor;
+    while (cursor < tagEnd) {
+      const char = value[cursor];
+      if (isWhitespace(char) || char === "/" || char === ">") break;
+      cursor += 1;
+    }
+
+    const name = value.slice(nameStart, cursor).toLowerCase();
+    return { isClosing, name };
+  };
+
+  while (index < value.length) {
+    const char = value[index];
+
+    if (char !== "<") {
+      if (!ignoredTag) result += char;
+      index += 1;
+      continue;
+    }
+
+    if (value.startsWith("<!--", index)) {
+      const commentEnd = value.indexOf("-->", index + 4);
+      index = commentEnd === -1 ? value.length : commentEnd + 3;
+      continue;
+    }
+
+    const tagEnd = findTagEnd(index);
+    if (tagEnd === -1) {
+      if (!ignoredTag) result += char;
+      index += 1;
+      continue;
+    }
+
+    const { isClosing, name } = readTag(index, tagEnd);
+    if (!name) {
+      if (!ignoredTag) result += " ";
+      index = tagEnd + 1;
+      continue;
+    }
+
+    if (ignoredTag) {
+      if (isClosing && name === ignoredTag) {
+        ignoredTag = null;
+      }
+      index = tagEnd + 1;
+      continue;
+    }
+
+    if (!isClosing && (name === "script" || name === "style")) {
+      ignoredTag = name;
+      index = tagEnd + 1;
+      continue;
+    }
+
+    result += " ";
+    index = tagEnd + 1;
+  }
+
+  return result.replace(/\s+/g, " ").trim();
 }
 
 function normalizeDescriptionHtml(value: string | undefined) {

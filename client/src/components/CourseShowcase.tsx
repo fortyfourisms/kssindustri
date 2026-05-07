@@ -3,6 +3,7 @@ import { ArrowRight, BookOpen, Shield, UserRound } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { publicCoursesService } from "@/services/publicCourses.service";
+import { SkeletonCard } from "@/components/ui/skeleton";
 
 const COURSE_PREVIEW_LIMIT = 3;
 const COURSE_ACCENTS = [
@@ -92,18 +93,10 @@ export function CourseShowcase() {
         >
           {isLoading
             ? Array.from({ length: COURSE_PREVIEW_LIMIT }).map((_, index) => (
-                <div
+                <SkeletonCard
                   key={`course-skeleton-${index}`}
-                  className="overflow-hidden rounded-[1.75rem] border border-white/60 bg-white/80 shadow-[0_20px_80px_rgba(31,60,136,0.08)] sm:rounded-[2rem]"
-                >
-                  <div className="h-40 animate-pulse bg-slate-200 sm:h-44" />
-                  <div className="space-y-4 p-5 sm:p-6">
-                    <div className="h-5 w-24 animate-pulse rounded bg-slate-200" />
-                    <div className="h-4 w-2/3 animate-pulse rounded bg-slate-200" />
-                    <div className="h-4 w-full animate-pulse rounded bg-slate-100" />
-                    <div className="h-4 w-5/6 animate-pulse rounded bg-slate-100" />
-                  </div>
-                </div>
+                  className="border-white/60 bg-white/80 shadow-[0_20px_80px_rgba(31,60,136,0.08)]"
+                />
               ))
             : previewCourses.map((course, index) => {
                 const accent = COURSE_ACCENTS[index % COURSE_ACCENTS.length];

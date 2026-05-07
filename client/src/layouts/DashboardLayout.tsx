@@ -3,6 +3,8 @@ import { Outlet, useMatches } from "react-router-dom";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Topbar } from "@/components/dashboard/Topbar";
 import { AuthGuard } from "@/components/ProtectedRoute";
+import { useUser } from "@/hooks/useAuth";
+import { useCompanyProfile } from "@/hooks/useCompanyProfile";
 import { useNotificationStream } from "@/hooks/useNotifications";
 import { useAppStore } from "@/stores/useAppStore";
 
@@ -23,6 +25,8 @@ function DashboardLayoutContent() {
     const matches = useMatches();
     const title = (matches.at(-1)?.handle as RouteHandle | undefined)?.title;
     const dashboardTheme = useAppStore((state) => state.dashboardTheme);
+    const { data: user } = useUser();
+    useCompanyProfile(user);
     useNotificationStream(true);
 
     return (

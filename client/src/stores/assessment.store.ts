@@ -195,10 +195,7 @@ export const useAssessmentStore = create<AssessmentState>()(
             getCurrentPageQuestions: () => {
                 const s = get().getCurrentSubCategory();
                 if (!s) return [];
-                const page = get().progress().currentPage;
-                const QUESTIONS_PER_PAGE = 1;
-                const startIndex = (page - 1) * QUESTIONS_PER_PAGE;
-                return s.questions.slice(startIndex, startIndex + QUESTIONS_PER_PAGE);
+                return s.questions;
             },
             getAnswer: (questionId: string) => {
                 const answers = get().answers();
@@ -220,9 +217,7 @@ export const useAssessmentStore = create<AssessmentState>()(
                 return total;
             },
             totalPagesInSubCategory: () => {
-                const s = get().getCurrentSubCategory();
-                if (!s) return 1;
-                return s.questions.length;
+                return 1;
             },
 
             // ── Actions ────────────────────────────────────────────────────────────
@@ -400,30 +395,22 @@ export const useAssessmentStore = create<AssessmentState>()(
 
             goToNextPage: () => {
                 const p = get().progress();
-                const s = get().getCurrentSubCategory();
                 const data = get().assessmentStructure;
-                if (!s) return;
-
-                const totalPages = get().totalPagesInSubCategory();
-                if (p.currentPage < totalPages) {
-                    get().updateProgress(p.currentDomainId, p.currentCategoryId, p.currentSubCategoryId, p.currentPage + 1);
-                } else {
-                    const d = data.domains.find((d: any) => d.id === p.currentDomainId);
-                    const c = d?.categories.find((c: any) => c.id === p.currentCategoryId);
-                    if (d && c) {
-                        const sIdx = c.subCategories.findIndex((sub: any) => sub.id === p.currentSubCategoryId);
-                        if (sIdx < c.subCategories.length - 1) {
-                            get().jumpTo(d.id, c.id, c.subCategories[sIdx + 1].id, 1);
+                const d = data.domains.find((d: any) => d.id === p.currentDomainId);
+                const c = d?.categories.find((c: any) => c.id === p.currentCategoryId);
+                if (d && c) {
+                    const sIdx = c.subCategories.findIndex((sub: any) => sub.id === p.currentSubCategoryId);
+                    if (sIdx < c.subCategories.length - 1) {
+                        get().jumpTo(d.id, c.id, c.subCategories[sIdx + 1].id, 1);
+                    } else {
+                        const cIdx = d.categories.findIndex((cat: any) => cat.id === p.currentCategoryId);
+                        if (cIdx < d.categories.length - 1) {
+                            get().jumpTo(d.id, d.categories[cIdx + 1].id, d.categories[cIdx + 1].subCategories[0].id, 1);
                         } else {
-                            const cIdx = d.categories.findIndex((cat: any) => cat.id === p.currentCategoryId);
-                            if (cIdx < d.categories.length - 1) {
-                                get().jumpTo(d.id, d.categories[cIdx + 1].id, d.categories[cIdx + 1].subCategories[0].id, 1);
-                            } else {
-                                const dIdx = data.domains.findIndex((dom: any) => dom.id === p.currentDomainId);
-                                if (dIdx < data.domains.length - 1) {
-                                    const nextD = data.domains[dIdx + 1];
-                                    get().jumpTo(nextD.id, nextD.categories[0].id, nextD.categories[0].subCategories[0].id, 1);
-                                }
+                            const dIdx = data.domains.findIndex((dom: any) => dom.id === p.currentDomainId);
+                            if (dIdx < data.domains.length - 1) {
+                                const nextD = data.domains[dIdx + 1];
+                                get().jumpTo(nextD.id, nextD.categories[0].id, nextD.categories[0].subCategories[0].id, 1);
                             }
                         }
                     }
@@ -433,30 +420,26 @@ export const useAssessmentStore = create<AssessmentState>()(
             goToPreviousPage: () => {
                 const p = get().progress();
                 const data = get().assessmentStructure;
-                if (p.currentPage > 1) {
-                    get().updateProgress(p.currentDomainId, p.currentCategoryId, p.currentSubCategoryId, p.currentPage - 1);
-                } else {
-                    const d = data.domains.find((d: any) => d.id === p.currentDomainId);
-                    const c = d?.categories.find((c: any) => c.id === p.currentCategoryId);
-                    if (d && c) {
-                        const sIdx = c.subCategories.findIndex((sub: any) => sub.id === p.currentSubCategoryId);
-                        if (sIdx > 0) {
-                            const prevS = c.subCategories[sIdx - 1];
-                            get().jumpTo(d.id, c.id, prevS.id, prevS.questions.length);
+                const d = data.domains.find((d: any) => d.id === p.currentDomainId);
+                const c = d?.categories.find((c: any) => c.id === p.currentCategoryId);
+                if (d && c) {
+                    const sIdx = c.subCategories.findIndex((sub: any) => sub.id === p.currentSubCategoryId);
+                    if (sIdx > 0) {
+                        const prevS = c.subCategories[sIdx - 1];
+                        get().jumpTo(d.id, c.id, prevS.id, 1);
+                    } else {
+                        const cIdx = d.categories.findIndex((cat: any) => cat.id === p.currentCategoryId);
+                        if (cIdx > 0) {
+                            const prevC = d.categories[cIdx - 1];
+                            const prevS = prevC.subCategories[prevC.subCategories.length - 1];
+                            get().jumpTo(d.id, prevC.id, prevS.id, 1);
                         } else {
-                            const cIdx = d.categories.findIndex((cat: any) => cat.id === p.currentCategoryId);
-                            if (cIdx > 0) {
-                                const prevC = d.categories[cIdx - 1];
+                            const dIdx = data.domains.findIndex((dom: any) => dom.id === p.currentDomainId);
+                            if (dIdx > 0) {
+                                const prevD = data.domains[dIdx - 1];
+                                const prevC = prevD.categories[prevD.categories.length - 1];
                                 const prevS = prevC.subCategories[prevC.subCategories.length - 1];
-                                get().jumpTo(d.id, prevC.id, prevS.id, prevS.questions.length);
-                            } else {
-                                const dIdx = data.domains.findIndex((dom: any) => dom.id === p.currentDomainId);
-                                if (dIdx > 0) {
-                                    const prevD = data.domains[dIdx - 1];
-                                    const prevC = prevD.categories[prevD.categories.length - 1];
-                                    const prevS = prevC.subCategories[prevC.subCategories.length - 1];
-                                    get().jumpTo(prevD.id, prevC.id, prevS.id, prevS.questions.length);
-                                }
+                                get().jumpTo(prevD.id, prevC.id, prevS.id, 1);
                             }
                         }
                     }

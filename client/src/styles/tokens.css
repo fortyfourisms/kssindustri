@@ -9,6 +9,11 @@
   --radius-lg: 1rem;
   --radius-xl: 1.25rem;
   --radius-2xl: 1.5rem;
+  --skeleton-radius: 8px;
+  --skeleton-shimmer-duration: 1.4s;
+  --skeleton-spacing-tight: var(--space-2);
+  --skeleton-spacing: var(--space-3);
+  --skeleton-spacing-loose: var(--space-4);
   --font-display: "Plus Jakarta Sans", sans-serif;
   --font-sans: "Inter", sans-serif;
   --font-size-xs: 0.75rem;

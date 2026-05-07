@@ -11,16 +11,20 @@ export function useCompanyProfile(providedUser?: CurrentUser | null) {
 
     const perusahaanId = user?.id_perusahaan || user?.perusahaan?.id;
     const embeddedPerusahaan = user?.perusahaan ?? null;
-    const shouldFetchPerusahaan = !!perusahaanId && !embeddedPerusahaan?.nama_perusahaan;
+    const shouldFetchPerusahaan = !!perusahaanId;
 
     const perusahaanQuery = useQuery({
         queryKey: ["perusahaan", perusahaanId],
         queryFn: () => perusahaanService.getById(String(perusahaanId)),
         enabled: shouldFetchPerusahaan,
-        initialData: embeddedPerusahaan || undefined,
-        initialDataUpdatedAt: embeddedPerusahaan ? Date.now() : undefined,
+        placeholderData: embeddedPerusahaan || undefined,
+        refetchOnMount: "always",
         staleTime: COMPANY_STALE_TIME,
     });
+    const isResolvingPerusahaan =
+        !!perusahaanId &&
+        !perusahaanQuery.isFetched &&
+        !perusahaanQuery.isError;
 
     return {
         user,
@@ -29,5 +33,6 @@ export function useCompanyProfile(providedUser?: CurrentUser | null) {
         perusahaan: perusahaanQuery.data ?? embeddedPerusahaan,
         perusahaanQuery,
         shouldFetchPerusahaan,
+        isResolvingPerusahaan,
     };
 }

@@ -18,11 +18,10 @@ export function RequireCompanyProfile({ children }: RequireCompanyProfileProps) 
         userQuery,
         perusahaanId,
         perusahaan,
-        perusahaanQuery,
-        shouldFetchPerusahaan,
+        isResolvingPerusahaan,
     } = useCompanyProfile();
 
-    if (userQuery.isLoading || (shouldFetchPerusahaan && perusahaanQuery.isLoading)) {
+    if (userQuery.isLoading || !userQuery.isFetched || isResolvingPerusahaan) {
         return <>{children}</>;
     }
 
