@@ -4,6 +4,7 @@ import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { useUpcomingEvents } from "@/hooks/useEvents";
 import { useScrollToTop } from "@/hooks/useScrollToTop";
+import { Skeleton, SkeletonText } from "@/components/ui/skeleton";
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("id-ID", {
@@ -56,7 +57,32 @@ export default function Events() {
             {isLoading ? (
               <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
                 {[0, 1, 2].map((item) => (
-                  <div key={item} className="h-80 animate-pulse rounded-[2rem] bg-slate-100" />
+                  <div
+                    key={item}
+                    className="flex min-h-80 flex-col rounded-[2rem] border border-white/60 bg-white/90 p-6 shadow-[0_20px_80px_rgba(31,60,136,0.10)]"
+                  >
+                    <div className="skeleton-stack-lg h-full">
+                      <div className="flex items-center gap-3">
+                        <Skeleton className="h-8 w-24 rounded-full" />
+                        <Skeleton className="h-8 w-28 rounded-full" />
+                      </div>
+                      <div className="skeleton-stack">
+                        <Skeleton className="skeleton-title" style={{ width: "65%" }} />
+                        <SkeletonText lines={2} size="md" />
+                      </div>
+                      <div className="skeleton-stack-sm">
+                        <div className="flex items-center gap-3">
+                          <Skeleton className="h-4 w-4 rounded-full" />
+                          <Skeleton className="skeleton-text-md w-40" />
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <Skeleton className="h-4 w-4 rounded-full" />
+                          <Skeleton className="skeleton-text-md w-32" />
+                        </div>
+                      </div>
+                      <Skeleton className="mt-auto h-10 w-32 rounded-full" />
+                    </div>
+                  </div>
                 ))}
               </div>
             ) : isError ? (

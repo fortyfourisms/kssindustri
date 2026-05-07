@@ -12,6 +12,7 @@ import {
 import { lmsService } from "@/features/lms/services/lms.service";
 import { useLmsStore } from "@/features/lms/stores/lms.store";
 import { cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // ── Stat Card — same style as dashboard's white cards ───────────────────────
 function StatCard({
@@ -239,9 +240,9 @@ export function LMSProgress() {
                             <div className="space-y-3">
                                 {Array.from({ length: 4 }).map((_, i) => (
                                     <div key={i} className="rounded-2xl border border-slate-200 bg-white p-5">
-                                        <div className="h-4 w-1/3 animate-pulse rounded-full bg-slate-100" />
-                                        <div className="mt-4 h-5 w-full animate-pulse rounded-sm bg-slate-100" />
-                                        <div className="mt-3 h-3 w-1/2 animate-pulse rounded-full bg-slate-100" />
+                                        <Skeleton className="h-4 w-1/3 rounded-full" />
+                                        <Skeleton className="mt-4 h-5 w-full rounded-sm" />
+                                        <Skeleton className="mt-3 h-3 w-1/2 rounded-full" />
                                     </div>
                                 ))}
                             </div>

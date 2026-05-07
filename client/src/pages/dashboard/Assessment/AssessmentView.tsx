@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAssessmentStore } from '@/stores/assessment.store';
 import QuestionCard from '@/components/assessment/QuestionCard';
 import ProgressBar from '@/components/assessment/ProgressBar';
@@ -7,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { ikasService } from '@/services/ikas.service';
 import type { DomainSlug } from '@/types/ikas.types';
 import type { JawabanIdMap } from '@/hooks/useIkasAssessmentSetup';
+import { Skeleton, SkeletonForm, SkeletonText } from '@/components/ui/skeleton';
 
 const SUCCESS_BUTTON_CLS = 'button-force-white inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-700 via-emerald-600 to-green-500 px-4 py-2.5 text-sm font-bold transition-all hover:-translate-y-0.5 hover:from-emerald-800 hover:via-emerald-700 hover:to-green-600 active:translate-y-0 disabled:opacity-50 disabled:hover:translate-y-0';
 
@@ -18,6 +20,7 @@ interface AssessmentViewProps {
   jawabanIdMap?: JawabanIdMap;
   canEditAnswers?: boolean;
   editLockMessage?: string;
+  isBootstrapping?: boolean;
 }
 
 export default function AssessmentView({
@@ -27,12 +30,22 @@ export default function AssessmentView({
   jawabanIdMap = {},
   canEditAnswers = true,
   editLockMessage,
+  isBootstrapping = false,
 }: AssessmentViewProps) {
   const store = useAssessmentStore();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const isAnswerEditingLocked = !canEditAnswers;
+  const savedJawabanIdMapRef = useRef<JawabanIdMap>({ ...jawabanIdMap });
+
+  useEffect(() => {
+    savedJawabanIdMapRef.current = {
+      ...savedJawabanIdMapRef.current,
+      ...jawabanIdMap,
+    };
+  }, [jawabanIdMap]);
 
   const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -137,6 +150,83 @@ export default function AssessmentView({
 
   const canGoNext = !isLastPage;
 
+  const buildSavableEntries = (questionIds?: string[]) => {
+    const answersMap = store.answers();
+    const syncedAnswers = store.syncedAnswers();
+    const questionIdSet = questionIds ? new Set(questionIds) : null;
+
+    return Object.values(answersMap)
+      .filter((ans) => !questionIdSet || questionIdSet.has(ans.questionId))
+      .map((ans) => {
+        const parts = ans.questionId.split('-');
+        const domainSlug = parts[0] as DomainSlug;
+        const pertanyaanId = parseInt(parts[1], 10);
+        const existingJawabanId = savedJawabanIdMapRef.current[ans.questionId] ?? null;
+
+        return {
+          answer: ans,
+          previous: syncedAnswers[ans.questionId],
+          domainSlug,
+          pertanyaanId,
+          existingJawabanId,
+        };
+      })
+      .filter((item) => item.pertanyaanId && !Number.isNaN(item.pertanyaanId));
+  };
+
+  const persistEntries = async (questionIds?: string[]) => {
+    const entries = buildSavableEntries(questionIds).sort((a, b) => {
+      if (a.domainSlug === b.domainSlug) return a.pertanyaanId - b.pertanyaanId;
+      return a.domainSlug.localeCompare(b.domainSlug);
+    });
+    const changedEntries = entries.filter((item) => (
+      !item.previous || item.previous.index !== item.answer.index
+    ));
+
+    for (const item of changedEntries) {
+      const saved = await persistAnswerWithThrottle(item.domainSlug, item.existingJawabanId, {
+        ikas_id: store.existingIkasId as string,
+        pertanyaan_id: item.pertanyaanId,
+        jawaban: item.answer.index,
+      });
+
+      const savedId = Number(saved?.id);
+      if (Number.isFinite(savedId) && savedId > 0) {
+        savedJawabanIdMapRef.current[item.answer.questionId] = savedId;
+      }
+
+      await sleep(180);
+    }
+
+    if (questionIds?.length) {
+      const latestAnswers = store.answers();
+      const scopedAnswers = Object.fromEntries(
+        questionIds
+          .filter((questionId) => latestAnswers[questionId] !== undefined)
+          .map((questionId) => [questionId, latestAnswers[questionId]])
+      );
+
+      store.markAnswersSynced({
+        ...store.syncedAnswers(),
+        ...scopedAnswers,
+      });
+    } else {
+      store.markAnswersSynced(store.answers());
+    }
+
+    return changedEntries.length;
+  };
+
+  const refreshIkasSummaryQueries = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['my-ikas'] }),
+      queryClient.invalidateQueries({ queryKey: ['jawaban-identifikasi'] }),
+      queryClient.invalidateQueries({ queryKey: ['jawaban-proteksi'] }),
+      queryClient.invalidateQueries({ queryKey: ['jawaban-deteksi'] }),
+      queryClient.invalidateQueries({ queryKey: ['jawaban-gulih'] }),
+    ]);
+  };
+
   /** Save all answers to the appropriate jawaban-{domain} endpoints */
   const handleSaveAction = async () => {
     if (isSaving) return;
@@ -157,50 +247,8 @@ export default function AssessmentView({
         throw new Error('Data responden IKAS belum tersimpan. Simpan data responden terlebih dahulu lalu coba lagi.');
       }
 
-      const answersMap = store.answers();
-      const syncedAnswers = store.syncedAnswers();
-      const resolvedJawabanIdMap: JawabanIdMap = { ...jawabanIdMap };
-      const entries = Object.values(answersMap)
-        .map((ans) => {
-          const parts = ans.questionId.split('-');
-          const domainSlug = parts[0] as DomainSlug;
-          const pertanyaanId = parseInt(parts[1], 10);
-          const existingJawabanId = resolvedJawabanIdMap[ans.questionId] ?? null;
-
-          return {
-            answer: ans,
-            domainSlug,
-            pertanyaanId,
-            existingJawabanId,
-          };
-        })
-        .filter((item) => item.pertanyaanId && !Number.isNaN(item.pertanyaanId))
-        .sort((a, b) => {
-          if (a.domainSlug === b.domainSlug) return a.pertanyaanId - b.pertanyaanId;
-          return a.domainSlug.localeCompare(b.domainSlug);
-        });
-      const changedEntries = entries.filter((item) => {
-        const previous = syncedAnswers[item.answer.questionId];
-        return !previous || previous.index !== item.answer.index;
-      });
-
-      for (const item of changedEntries) {
-        const saved = await persistAnswerWithThrottle(item.domainSlug, item.existingJawabanId, {
-          ikas_id: existingId,
-          pertanyaan_id: item.pertanyaanId,
-          jawaban: item.answer.index,
-        });
-
-        const savedId = Number(saved?.id);
-        if (Number.isFinite(savedId) && savedId > 0) {
-          resolvedJawabanIdMap[item.answer.questionId] = savedId;
-        }
-
-        // Pace write traffic so submit doesn't burst the API.
-        await sleep(180);
-      }
-
-      store.markAnswersSynced(answersMap);
+      await persistEntries();
+      await refreshIkasSummaryQueries();
       store.completeAssessment();
       toast({
         title: 'Berhasil',
@@ -212,6 +260,42 @@ export default function AssessmentView({
       setTimeout(() => onBack(), 1500);
     } catch (err: any) {
       const msg = err?.message || 'Gagal menyimpan data ke server';
+      toast({ title: 'Gagal Menyimpan', description: msg, variant: 'destructive' });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleSaveAndContinue = async () => {
+    if (isSaving) return;
+    if (isAnswerEditingLocked) {
+      toast({
+        title: 'Edit Assessment Terkunci',
+        description: editLockMessage ?? 'Data IKAS yang sudah tervalidasi hanya dapat diubah setelah pengajuan perubahan disetujui admin.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const existingId = store.existingIkasId;
+    if (!existingId) {
+      toast({
+        title: 'Data Responden Belum Tersimpan',
+        description: 'Simpan data responden terlebih dahulu lalu coba lagi.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const currentQuestionIds = currentPageQuestions.map((question: any) => question.id);
+
+    setIsSaving(true);
+    try {
+      await persistEntries(currentQuestionIds);
+      await refreshIkasSummaryQueries();
+      store.goToNextPage();
+    } catch (err: any) {
+      const msg = err?.message || 'Gagal menyimpan jawaban halaman ini';
       toast({ title: 'Gagal Menyimpan', description: msg, variant: 'destructive' });
     } finally {
       setIsSaving(false);
@@ -233,6 +317,9 @@ export default function AssessmentView({
 
   const allQuestionsAnswered = store.answeredQuestions() === store.totalQuestions();
   const isViewReadOnly = store.isLocked() || isAnswerEditingLocked;
+  const currentDomain = store.getCurrentDomain();
+  const currentCategory = store.getCurrentCategory();
+  const currentSubCategory = store.getCurrentSubCategory();
 
   // Build missing questions list for the last page warning
   let missingQuestionsList: Array<{ domain: string; category: string; sub: string; qNum: number }> = [];
@@ -254,9 +341,68 @@ export default function AssessmentView({
 
   const breadcrumbPath = store.getBreadcrumbPath();
   const currentPageQuestions = store.getCurrentPageQuestions();
+  const isAssessmentReady = assessmentData.domains.length > 0;
+  const showLoadingShell = isBootstrapping && !isAssessmentReady;
+  const currentQuestionOffset = (() => {
+    if (!currentDomain || !currentCategory || !currentSubCategory) return 0;
 
-  // Show loading state if no assessment structure loaded yet
-  if (assessmentData.domains.length === 0) {
+    let offset = 0;
+    for (const domain of assessmentData.domains) {
+      if (domain.id === currentDomain.id) {
+        for (const category of domain.categories) {
+          if (category.id === currentCategory.id) {
+            for (const subCategory of category.subCategories) {
+              if (subCategory.id === currentSubCategory.id) {
+                return offset;
+              }
+              offset += subCategory.questions.length;
+            }
+            return offset;
+          }
+          for (const subCategory of category.subCategories) {
+            offset += subCategory.questions.length;
+          }
+        }
+        return offset;
+      }
+
+      for (const category of domain.categories) {
+        for (const subCategory of category.subCategories) {
+          offset += subCategory.questions.length;
+        }
+      }
+    }
+
+    return offset;
+  })();
+
+  const renderSidebarSkeleton = () => (
+    <div className="flex flex-col gap-3 px-2">
+      {Array.from({ length: 4 }).map((_, index) => (
+        <div key={index} className="rounded-2xl border border-slate-100 bg-slate-50 p-3">
+          <Skeleton className="h-4 w-24" />
+          <div className="mt-3 space-y-2">
+            <Skeleton className="h-9 rounded-xl" />
+            <Skeleton className="h-9 rounded-xl" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+
+  const renderQuestionSkeleton = () => (
+    <div className="space-y-6 mb-8">
+      <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <Skeleton className="h-4 w-32" />
+        <div className="mt-4">
+          <SkeletonText lines={2} size="lg" />
+        </div>
+        <SkeletonForm className="mt-8" fields={4} showButton={false} />
+      </div>
+    </div>
+  );
+
+  if (!isAssessmentReady && !showLoadingShell) {
     return (
       <div className="flex flex-col items-center justify-center py-24 gap-4 text-slate-400">
         <i className="ri-loader-4-line text-4xl animate-spin" />
@@ -274,7 +420,7 @@ export default function AssessmentView({
             answered={store.answeredQuestions()}
             total={store.totalQuestions()}
             currentPage={store.progress().currentPage}
-            totalPages={store.totalPagesInSubCategory()}
+            totalPages={showLoadingShell ? 1 : store.totalPagesInSubCategory()}
             title="IKAS"
           />
         </div>
@@ -303,7 +449,12 @@ export default function AssessmentView({
             {/* Save Action Block */}
             {!sidebarCollapsed && (
               <div className="mb-8 px-2">
-                {!embedded ? (
+                {showLoadingShell ? (
+                  <div className="space-y-3">
+                    <Skeleton className="h-12 rounded-xl" />
+                    <Skeleton className="mx-auto h-4 w-28" />
+                  </div>
+                ) : !embedded ? (
                   !isViewReadOnly ? (
                     <button
                       className={`w-full ${allQuestionsAnswered
@@ -323,7 +474,7 @@ export default function AssessmentView({
                       disabled={isAnswerEditingLocked}
                     >
                       <i className="ri-edit-line text-lg" />
-                      Edit Responses
+                      Edit Data
                     </button>
                   )
                 ) : (
@@ -347,13 +498,13 @@ export default function AssessmentView({
                           disabled={isAnswerEditingLocked}
                         >
                           <i className="ri-edit-line text-lg" />
-                          Edit Data
+                          Edit Responden
                         </button>
                       )}
                     </>
                   ) : (
                     <button
-                      className="w-full py-3 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all bg-orange-500 hover:bg-orange-600 text-white shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
+                      className="button-force-white w-full py-3 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all bg-orange-500 hover:bg-orange-600 text-white shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
                       onClick={handleEditData}
                       disabled={isAnswerEditingLocked}
                     >
@@ -382,7 +533,7 @@ export default function AssessmentView({
             {/* Accordion List */}
             {!sidebarCollapsed && (
               <div className="flex flex-col gap-2 px-2">
-                {assessmentData.domains.map((domain) => (
+                {showLoadingShell ? renderSidebarSkeleton() : assessmentData.domains.map((domain) => (
                   <div key={domain.id} className="mb-2">
                     <button
                       className={`w-full text-left px-3 py-2 rounded-xl flex items-center transition-all ${isCurrentDomain(domain.id) ? 'bg-slate-100 dark:bg-slate-800' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'}`}
@@ -459,7 +610,7 @@ export default function AssessmentView({
 
             <div className="px-2 sm:px-8 pb-16">
               {/* Locked State Message */}
-              {isViewReadOnly && (
+              {isViewReadOnly && !showLoadingShell && (
                 <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 text-yellow-800 dark:text-yellow-200 rounded-xl p-4 mb-8 flex items-start shadow-sm mx-auto">
                   <i className="ri-lock-2-line text-2xl mr-4 mt-1 text-yellow-500" />
                   <div>
@@ -478,13 +629,29 @@ export default function AssessmentView({
               )}
 
               {/* Questions */}
-              {currentPageQuestions.length > 0 ? (
+              {showLoadingShell ? renderQuestionSkeleton() : currentPageQuestions.length > 0 ? (
                 <div className="space-y-6 mb-8">
+                  {currentCategory && currentSubCategory && (
+                    <div className="min-w-0 w-full overflow-visible rounded-2xl border border-slate-200 bg-slate-50/80 px-5 py-4 sm:px-6 sm:py-5">
+                      <p className="block w-full min-w-0 text-xs font-bold uppercase tracking-[0.24em] text-slate-500 whitespace-normal break-words">
+                        {currentDomain?.name}
+                      </p>
+                      <h3 className="block w-full min-w-0 mt-2 whitespace-normal break-words text-xl font-black leading-tight text-slate-900 sm:text-[1.75rem]">
+                        {currentCategory.name}
+                      </h3>
+                      <p
+                        className="block w-full min-w-0 mt-2 whitespace-normal text-sm font-medium leading-relaxed text-slate-600 sm:text-base"
+                        style={{ overflowWrap: 'anywhere', wordBreak: 'break-word', whiteSpace: 'normal' }}
+                      >
+                        {currentSubCategory.name}
+                      </p>
+                    </div>
+                  )}
                   {currentPageQuestions.map((question: any, index: number) => (
                     <QuestionCard
                       key={question.id}
                       question={question}
-                      questionNumber={(store.progress().currentPage - 1) * 5 + index + 1}
+                      questionNumber={currentQuestionOffset + index + 1}
                       selectedIndex={store.getAnswer(question.id)?.index}
                       readOnly={isViewReadOnly}
                       onAnswer={(questionId, val) => store.saveAnswer(questionId, val)}
@@ -502,7 +669,7 @@ export default function AssessmentView({
               )}
 
               {/* Missing Questions Warning */}
-              {isLastPage && !allQuestionsAnswered && missingQuestionsList.length > 0 && (
+              {!showLoadingShell && isLastPage && !allQuestionsAnswered && missingQuestionsList.length > 0 && (
                 <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-5 mb-8 shadow-sm">
                   <div className="flex items-start gap-4">
                     <div className="bg-red-100 w-10 h-10 rounded-full flex items-center justify-center text-red-600 shrink-0 mt-0.5">
@@ -531,14 +698,14 @@ export default function AssessmentView({
               {/* Pagination */}
               <PaginationControl
                 currentPage={store.progress().currentPage}
-                totalPages={store.totalPagesInSubCategory()}
-                canGoPrevious={canGoPrevious}
-                canGoNext={canGoNext}
+                totalPages={showLoadingShell ? 1 : store.totalPagesInSubCategory()}
+                canGoPrevious={!showLoadingShell && canGoPrevious && !isSaving}
+                canGoNext={!showLoadingShell && canGoNext && !isSaving}
                 onPrevious={() => store.goToPreviousPage()}
-                onNext={() => store.goToNextPage()}
-                isSubmitStep={isLastPage && allQuestionsAnswered}
+                onNext={handleSaveAndContinue}
+                isSubmitStep={!showLoadingShell && isLastPage && allQuestionsAnswered}
                 onSubmitStep={handleSaveAction}
-                isSubmitDisabled={isAnswerEditingLocked}
+                isSubmitDisabled={showLoadingShell || isAnswerEditingLocked || isSaving}
               />
             </div>
           </div>

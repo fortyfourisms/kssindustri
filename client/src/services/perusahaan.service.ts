@@ -1,6 +1,25 @@
 import { apiClient } from '@/services/apiClient';
 import type { Perusahaan, CreatePerusahaanPayload, CreatePerusahaanResponse } from '@/types/perusahaan.types';
 
+function normalizeList<T>(res: any): T[] {
+    if (Array.isArray(res)) return res;
+    if (res && Array.isArray(res.data)) return res.data;
+    if (res && typeof res === 'object') {
+        const arrVal = Object.values(res).find((value) => Array.isArray(value));
+        if (arrVal) return arrVal as T[];
+    }
+    return [];
+}
+
+function normalizeOne<T>(res: any): T | null {
+    if (!res) return null;
+    if (Array.isArray(res)) return (res[0] ?? null) as T | null;
+    if (res && res.data) {
+        return (Array.isArray(res.data) ? (res.data[0] ?? null) : res.data) as T | null;
+    }
+    return res as T;
+}
+
 /**
  * Perusahaan Service
  *
@@ -15,7 +34,8 @@ import type { Perusahaan, CreatePerusahaanPayload, CreatePerusahaanResponse } fr
 export const perusahaanService = {
     /** GET /api/perusahaan — List semua perusahaan */
     async getAll(): Promise<Perusahaan[]> {
-        return apiClient.get<Perusahaan[]>('/api/perusahaan');
+        const res = await apiClient.get<any>('/api/perusahaan');
+        return normalizeList<Perusahaan>(res);
     },
 
     /** POST /api/perusahaan — Tambah perusahaan baru */
@@ -35,13 +55,15 @@ export const perusahaanService = {
 
     /** GET /api/perusahaan/dropdown — List perusahaan untuk dropdown */
     async getDropdown(): Promise<Perusahaan[]> {
-        return apiClient.get<Perusahaan[]>('/api/perusahaan/dropdown');
+        const res = await apiClient.get<any>('/api/perusahaan/dropdown');
+        return normalizeList<Perusahaan>(res);
     },
 
     /** GET /api/perusahaan/{id} — Ambil perusahaan berdasarkan ID */
     async getById(id: string): Promise<Perusahaan | null> {
         try {
-            return await apiClient.get<Perusahaan>(`/api/perusahaan/${id}`);
+            const res = await apiClient.get<any>(`/api/perusahaan/${id}`);
+            return normalizeOne<Perusahaan>(res);
         } catch (error: any) {
             if (error?.status === 404 || error?.response?.status === 404) {
                 return null;

@@ -16,6 +16,7 @@ import { LMS_DASHBOARD_TOUR_STEPS } from "@/features/lms/lib/lms-tour";
 import { useAuthStore } from "@/stores/auth.store";
 import { cn } from "@/lib/utils";
 import type { LmsCourseInsight } from "@/features/lms/lib/lms-dashboard";
+import { SkeletonCard, SkeletonTable, SkeletonText } from "@/components/ui/skeleton";
 
 const CARD_THEMES = [
     { bg: "bg-[#b7f0ff]", text: "text-slate-900" },
@@ -218,9 +219,10 @@ export function LMSDashboard() {
                             {featuredCourseSlots.map((course, index) => {
                                 if (!course) {
                                     return (
-                                        <div
+                                        <SkeletonCard
                                             key={`sk-${index}`}
-                                            className="h-[220px] animate-pulse rounded-2xl bg-slate-100"
+                                            className="h-[220px] border-slate-200 bg-white"
+                                            thumbnailClassName="h-[96px] sm:h-[110px] rounded-none"
                                         />
                                     );
                                 }
@@ -295,9 +297,7 @@ export function LMSDashboard() {
                                         if (!course) {
                                             return (
                                                 <div key={`msk-${index}`} className="rounded-2xl border border-slate-200 bg-white p-4">
-                                                    <div className="h-5 w-1/2 animate-pulse rounded bg-slate-100" />
-                                                    <div className="mt-4 h-4 w-full animate-pulse rounded bg-slate-100" />
-                                                    <div className="mt-2 h-4 w-4/5 animate-pulse rounded bg-slate-100" />
+                                                    <SkeletonText lines={3} size="md" />
                                                 </div>
                                             );
                                         }
@@ -344,23 +344,20 @@ export function LMSDashboard() {
                                     <span>Durasi</span>
                                     <span className="text-right">Progress</span>
                                 </div>
-
                                 {!isLoadingCourses && !coursesError && lessonRowSlots.length === 0 ? (
                                     <div className="px-6 py-8 text-center text-sm text-slate-500">
                                         Belum ada materi pada kelas ini.
                                     </div>
+                                ) : isLoadingCourses ? (
+                                    <SkeletonTable
+                                        columns={4}
+                                        rows={6}
+                                        columnTemplate="minmax(0,1fr) 100px 100px 90px"
+                                        showHeader={false}
+                                        className="rounded-none border-0"
+                                    />
                                 ) : (
-                                    lessonRowSlots.map((course, index) => {
-                                        if (!course) {
-                                            return (
-                                                <div key={`lsk-${index}`} className="grid grid-cols-[1fr,100px,100px,90px] border-b border-slate-100 px-4 py-4 last:border-b-0 lg:grid-cols-[1fr,140px,140px,120px] lg:px-6">
-                                                    <div className="h-9 w-3/4 animate-pulse rounded-xl bg-slate-100" />
-                                                    <div className="h-9 w-16 animate-pulse rounded-xl bg-slate-100" />
-                                                    <div className="h-9 w-16 animate-pulse rounded-xl bg-slate-100" />
-                                                    <div className="ml-auto h-9 w-12 animate-pulse rounded-xl bg-slate-100" />
-                                                </div>
-                                            );
-                                        }
+                                    lessonRows.map((course, index) => {
                                         return (
                                             <button
                                                 key={course.id}

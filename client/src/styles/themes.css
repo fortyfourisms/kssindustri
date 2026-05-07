@@ -34,6 +34,8 @@
   --color-state-disabled-bg: rgba(147, 164, 184, 0.34);
   --color-state-disabled-text: rgba(255, 255, 255, 0.82);
   --color-state-overlay: rgba(15, 23, 42, 0.2);
+  --skeleton-base: #E5E7EB;
+  --skeleton-highlight: #F3F4F6;
 
   /* Semantic layer */
   --background: 210 33% 98%;
@@ -392,6 +394,8 @@ body[data-dashboard-theme="dark"] {
   --color-state-disabled-bg: rgba(148, 163, 184, 0.28);
   --color-state-disabled-text: rgba(255, 255, 255, 0.74);
   --color-state-overlay: rgba(2, 6, 23, 0.65);
+  --skeleton-base: #2A2A2A;
+  --skeleton-highlight: #3A3A3A;
 
   --background: 221 40% 12%;
   --foreground: 210 40% 98%;

@@ -2,6 +2,7 @@ import { useBlogs } from "@/hooks/useBlogs";
 import { motion } from "framer-motion";
 import { ArrowRight, CalendarDays, Tag } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { Skeleton, SkeletonText } from "@/components/ui/skeleton";
 
 const BLOG_PREVIEW_LIMIT = 5;
 
@@ -75,17 +76,24 @@ export function BlogSection() {
               <motion.div
                 key={`blog-skeleton-${index}`}
                 variants={itemVariants}
-                className={`overflow-hidden rounded-[2rem] border border-white/60 bg-white/80 p-6 shadow-[0_20px_80px_rgba(31,60,136,0.08)] ${
+                className={`min-h-[300px] overflow-hidden rounded-[2rem] border border-white/60 bg-white/80 p-6 shadow-[0_20px_80px_rgba(31,60,136,0.08)] ${
                   index === 0 ? "xl:col-span-2" : ""
                 }`}
               >
-                <div className="h-5 w-28 rounded-full bg-slate-200" />
-                <div className="mt-6 h-4 w-36 rounded-full bg-slate-100" />
-                <div className="mt-4 h-8 w-4/5 rounded-xl bg-slate-200" />
-                <div className="mt-4 space-y-3">
-                  <div className="h-4 rounded-full bg-slate-100" />
-                  <div className="h-4 w-11/12 rounded-full bg-slate-100" />
-                  <div className="h-4 w-3/4 rounded-full bg-slate-100" />
+                <div className="skeleton-stack-lg h-full">
+                  <div className="flex items-center gap-3">
+                    <Skeleton className="h-8 w-24 rounded-full" />
+                    <Skeleton className="h-8 w-32 rounded-full" />
+                  </div>
+                  <div className="skeleton-stack">
+                    <Skeleton className="skeleton-text-sm w-32" />
+                    <Skeleton className="skeleton-title" style={{ width: "72%" }} />
+                    <SkeletonText lines={3} size="md" />
+                  </div>
+                  <div className="mt-auto flex items-center justify-between gap-4">
+                    <Skeleton className="h-4 w-28" />
+                    <Skeleton className="h-4 w-24" />
+                  </div>
                 </div>
               </motion.div>
             ))

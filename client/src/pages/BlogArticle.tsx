@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { useScrollToTop } from "@/hooks/useScrollToTop";
+import { Skeleton, SkeletonText } from "@/components/ui/skeleton";
 
 export default function BlogArticle() {
   const navigate = useNavigate();
@@ -55,14 +56,17 @@ export default function BlogArticle() {
           >
             <div className="p-6 md:p-10">
               {isLoading || !article ? (
-                <div>
-                  <div className="h-6 w-28 rounded-full bg-slate-200" />
-                  <div className="mt-5 h-12 w-full max-w-5xl rounded-2xl bg-slate-200" />
-                  <div className="mt-3 h-12 w-3/4 rounded-2xl bg-slate-100" />
-                  <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                    <div className="h-24 rounded-[1.5rem] bg-slate-100" />
-                    <div className="h-24 rounded-[1.5rem] bg-slate-100" />
-                    <div className="h-24 rounded-[1.5rem] bg-slate-100" />
+                <div className="skeleton-stack-lg min-h-[280px]">
+                  <div className="flex gap-3">
+                    <Skeleton className="h-8 w-24 rounded-full" />
+                    <Skeleton className="h-8 w-28 rounded-full" />
+                  </div>
+                  <Skeleton className="h-12 w-full max-w-5xl rounded-2xl" />
+                  <Skeleton className="h-12 w-3/4 rounded-2xl" />
+                  <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                    <Skeleton className="h-24 rounded-[1.5rem]" />
+                    <Skeleton className="h-24 rounded-[1.5rem]" />
+                    <Skeleton className="h-24 rounded-[1.5rem]" />
                   </div>
                 </div>
               ) : (
@@ -112,12 +116,9 @@ export default function BlogArticle() {
             <div className="space-y-8">
               <section className="rounded-[2rem] border border-white/60 bg-white/85 p-6 md:p-8 shadow-[0_20px_80px_rgba(31,60,136,0.08)] backdrop-blur-xl">
                 {isLoading || !article ? (
-                  <div className="space-y-4">
-                    <div className="h-5 w-40 rounded-full bg-slate-200" />
-                    <div className="h-4 rounded-full bg-slate-100" />
-                    <div className="h-4 w-11/12 rounded-full bg-slate-100" />
-                    <div className="h-4 w-5/6 rounded-full bg-slate-100" />
-                    <div className="h-4 w-10/12 rounded-full bg-slate-100" />
+                  <div className="skeleton-stack">
+                    <Skeleton className="h-5 w-40 rounded-full" />
+                    <SkeletonText lines={4} size="md" />
                   </div>
                 ) : (
                   <div

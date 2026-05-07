@@ -27,6 +27,7 @@ import {
   useLmsStore,
 } from "@/features/lms/stores/lms.store";
 import { getCourseLearnRoute, getCourseQuizRoute, getCourseRoute, getCoursesRoute } from "@/features/lms/lib/lms-routes";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const TABS = [
   { key: "materi", label: "Materi", icon: BookOpen },
@@ -41,7 +42,7 @@ function FilesTab() {
     return (
       <div className="space-y-3">
         {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="h-16 bg-slate-100 rounded-2xl animate-pulse" />
+          <Skeleton key={i} className="h-16 rounded-2xl" />
         ))}
       </div>
     );

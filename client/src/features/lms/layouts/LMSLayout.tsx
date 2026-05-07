@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Outlet, useMatches } from "react-router-dom";
 import { AuthGuard } from "@/components/ProtectedRoute";
 import { Topbar } from "@/components/dashboard/Topbar";
 import { LMSSidebar } from "../components/LMSSidebar";
+import { useAppStore } from "@/stores/useAppStore";
 
 /** Route handle type – matches what we put on each Route in App.tsx */
 interface RouteHandle {
@@ -11,10 +12,26 @@ interface RouteHandle {
 
 export function LMSLayout() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const dashboardTheme = useAppStore((state) => state.dashboardTheme);
 
     // Read the page title from the active route's handle
     const matches = useMatches();
     const title = (matches.at(-1)?.handle as RouteHandle | undefined)?.title;
+
+    useEffect(() => {
+        // LMS should always render in light mode even when the dashboard preference is dark.
+        document.documentElement.dataset.theme = "light";
+        document.documentElement.dataset.dashboardTheme = "light";
+        document.body.dataset.theme = "light";
+        document.body.dataset.dashboardTheme = "light";
+
+        return () => {
+            document.documentElement.dataset.theme = dashboardTheme;
+            document.documentElement.dataset.dashboardTheme = dashboardTheme;
+            document.body.dataset.theme = dashboardTheme;
+            document.body.dataset.dashboardTheme = dashboardTheme;
+        };
+    }, [dashboardTheme]);
 
     return (
         <AuthGuard>

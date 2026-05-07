@@ -75,6 +75,22 @@ function getInitials(name: string) {
     return name.trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
 }
 
+function mergePerusahaanIntoUser<T extends Record<string, any> | null | undefined>(
+    user: T,
+    perusahaan: Record<string, any> | null | undefined
+) {
+    if (!user || !perusahaan) return user;
+
+    return {
+        ...user,
+        id_perusahaan: user.id_perusahaan ?? perusahaan.id ?? "",
+        companyId: user.companyId ?? perusahaan.id ?? "",
+        has_company: true,
+        hasCompany: true,
+        perusahaan,
+    };
+}
+
 // ─── Modal: Tambah/Edit PIC ──────────────────────────────────────────────────
 function PicModal({ 
     initialData, 
@@ -150,7 +166,7 @@ export default function EditProfil({ defaultTab = "pengguna" }: EditProfilProps)
     const { data: user, isLoading: isUserLoading } = useUser();
 
     const perusahaanId = user?.id_perusahaan || user?.perusahaan?.id;
-    const { perusahaan } = useCompanyProfile(user);
+    const { perusahaan, isResolvingPerusahaan } = useCompanyProfile(user);
 
     const { data: subSektors } = useQuery({ queryKey: ["subSektor"], queryFn: () => apiClient.get<any[]>("/api/sub_sektor") });
 
@@ -249,7 +265,13 @@ export default function EditProfil({ defaultTab = "pengguna" }: EditProfilProps)
             }
             return apiClient.putForm<any>(`/api/perusahaan/${perusahaanId}`, formData);
         },
-        onSuccess: async () => {
+        onSuccess: async (updatedPerusahaan) => {
+            qc.setQueryData(["perusahaan", perusahaanId], updatedPerusahaan);
+            const mergedUser = mergePerusahaanIntoUser(qc.getQueryData(["me"]) as Record<string, any> | undefined, updatedPerusahaan);
+            if (mergedUser) {
+                qc.setQueryData(["me"], mergedUser);
+                syncCurrentUser(mergedUser);
+            }
             qc.invalidateQueries({ queryKey: ["perusahaan", perusahaanId] });
             qc.invalidateQueries({ queryKey: ["me"] });
             await rehydrateFromServer();
@@ -274,7 +296,13 @@ export default function EditProfil({ defaultTab = "pengguna" }: EditProfilProps)
             if (!perusahaanId) throw new Error("ID perusahaan tidak ditemukan");
             return apiClient.putForm<any>(`/api/perusahaan/${perusahaanId}`, formData);
         },
-        onSuccess: async () => {
+        onSuccess: async (updatedPerusahaan) => {
+            qc.setQueryData(["perusahaan", perusahaanId], updatedPerusahaan);
+            const mergedUser = mergePerusahaanIntoUser(qc.getQueryData(["me"]) as Record<string, any> | undefined, updatedPerusahaan);
+            if (mergedUser) {
+                qc.setQueryData(["me"], mergedUser);
+                syncCurrentUser(mergedUser);
+            }
             qc.invalidateQueries({ queryKey: ["perusahaan", perusahaanId] });
             qc.invalidateQueries({ queryKey: ["me"] });
             await rehydrateFromServer();
@@ -301,7 +329,7 @@ export default function EditProfil({ defaultTab = "pengguna" }: EditProfilProps)
         }
     };
 
-    if (isUserLoading) {
+    if (isUserLoading || (!!perusahaanId && isResolvingPerusahaan)) {
         return (
             <div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-[var(--dashboard-info-soft-fg)]" /></div>
         );

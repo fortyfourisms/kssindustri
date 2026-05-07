@@ -12,8 +12,10 @@ import { IkasYearComparisonChart } from "@/components/IkasYearComparisonChart";
 import { ikasService } from "@/services/ikas.service";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { Skeleton, SkeletonTable, SkeletonText } from "@/components/ui/skeleton";
 import { getIkasEditRequestStatus, getIkasEditStatusMeta } from "@/lib/ikas-edit-request";
 import { mapIkasToView, type IkasViewData } from "@/types/ikas.types";
+import { buildIkasViewFromJawaban } from "@/lib/ikas-live-summary";
 
 // ─── Tipe fallback default ikasDataDynamic ──────────────────────────────────
 const defaultIkasData: IkasViewData = mapIkasToView(null);
@@ -85,6 +87,8 @@ function getVerificationBadgeClasses(status: string) {
 
     return "border-slate-200 bg-slate-50 text-slate-600";
 }
+
+const MIN_EDIT_REASON_LENGTH = 10;
 
 export default function IKAS() {
     const navigate = useNavigate();
@@ -186,6 +190,31 @@ export default function IKAS() {
         selectedIkasRecord?.id,
     ]);
 
+    const liveIkasData = useMemo(() => {
+        const selectedIkasId = normalizeScopedIkasId(selectedIkasRecord?.id);
+        const filterByIkasId = <T extends { ikas_id?: string | number }>(items: T[]) => (
+            items.filter((item) => {
+                if (!selectedIkasId) return true;
+                return normalizeScopedIkasId(item?.ikas_id) === selectedIkasId;
+            })
+        );
+
+        return buildIkasViewFromJawaban({
+            identifikasi: filterByIkasId((jawabanIdentifikasiQuery.data ?? []) as Array<any>),
+            proteksi: filterByIkasId((jawabanProteksiQuery.data ?? []) as Array<any>),
+            deteksi: filterByIkasId((jawabanDeteksiQuery.data ?? []) as Array<any>),
+            gulih: filterByIkasId((jawabanGulihQuery.data ?? []) as Array<any>),
+        });
+    }, [
+        jawabanIdentifikasiQuery.data,
+        jawabanProteksiQuery.data,
+        jawabanDeteksiQuery.data,
+        jawabanGulihQuery.data,
+        selectedIkasRecord?.id,
+    ]);
+
+    const ikasDataForDisplay: IkasViewData = liveIkasData ?? ikasDataDynamic;
+
     const statusVerifikasiIkas = useMemo(() => {
         const selectedStatus = getVerificationStatus(selectedIkasRecord);
         if (selectedStatus !== "Belum diverifikasi") {
@@ -242,7 +271,7 @@ export default function IKAS() {
 
     const formatValue = (value: number | null | undefined) => {
         if (value === null || value === undefined || value === 0) return '-';
-        return value;
+        return Number(value).toFixed(2);
     };
 
     const ikasDetailRows = [
@@ -250,145 +279,145 @@ export default function IKAS() {
             domain: "Identifikasi",
             indikator: "Mengidentifikasi Peran dan tanggung jawab organisasi",
             target: ikasDataStatic.identifikasi.peran_tanggung_jawab,
-            nilai: formatValue(ikasDataDynamic.identifikasi.nilai_subdomain1),
-            nilaiDomain: formatValue(ikasDataDynamic.identifikasi.nilai),
-            kategoriDomain: ikasDataDynamic.identifikasi.kategori,
+            nilai: formatValue(ikasDataForDisplay.identifikasi.nilai_subdomain1),
+            nilaiDomain: formatValue(ikasDataForDisplay.identifikasi.nilai),
+            kategoriDomain: ikasDataForDisplay.identifikasi.kategori,
         },
         {
             domain: "Identifikasi",
             indikator: "Menyusun strategi, kebijakan, dan prosedur Keamanan Siber",
             target: ikasDataStatic.identifikasi.strategi_kebijakan,
-            nilai: formatValue(ikasDataDynamic.identifikasi.nilai_subdomain2),
-            nilaiDomain: formatValue(ikasDataDynamic.identifikasi.nilai),
-            kategoriDomain: ikasDataDynamic.identifikasi.kategori,
+            nilai: formatValue(ikasDataForDisplay.identifikasi.nilai_subdomain2),
+            nilaiDomain: formatValue(ikasDataForDisplay.identifikasi.nilai),
+            kategoriDomain: ikasDataForDisplay.identifikasi.kategori,
         },
         {
             domain: "Identifikasi",
             indikator: "Mengelola aset informasi",
             target: ikasDataStatic.identifikasi.aset_informasi,
-            nilai: formatValue(ikasDataDynamic.identifikasi.nilai_subdomain3),
-            nilaiDomain: formatValue(ikasDataDynamic.identifikasi.nilai),
-            kategoriDomain: ikasDataDynamic.identifikasi.kategori,
+            nilai: formatValue(ikasDataForDisplay.identifikasi.nilai_subdomain3),
+            nilaiDomain: formatValue(ikasDataForDisplay.identifikasi.nilai),
+            kategoriDomain: ikasDataForDisplay.identifikasi.kategori,
         },
         {
             domain: "Identifikasi",
             indikator: "Menilai dan mengelola risiko Keamanan Siber",
             target: ikasDataStatic.identifikasi.risiko_keamanan,
-            nilai: formatValue(ikasDataDynamic.identifikasi.nilai_subdomain4),
-            nilaiDomain: formatValue(ikasDataDynamic.identifikasi.nilai),
-            kategoriDomain: ikasDataDynamic.identifikasi.kategori,
+            nilai: formatValue(ikasDataForDisplay.identifikasi.nilai_subdomain4),
+            nilaiDomain: formatValue(ikasDataForDisplay.identifikasi.nilai),
+            kategoriDomain: ikasDataForDisplay.identifikasi.kategori,
         },
         {
             domain: "Identifikasi",
             indikator: "Mengelola risiko rantai pasok",
             target: ikasDataStatic.identifikasi.rantai_pasok,
-            nilai: formatValue(ikasDataDynamic.identifikasi.nilai_subdomain5),
-            nilaiDomain: formatValue(ikasDataDynamic.identifikasi.nilai),
-            kategoriDomain: ikasDataDynamic.identifikasi.kategori,
+            nilai: formatValue(ikasDataForDisplay.identifikasi.nilai_subdomain5),
+            nilaiDomain: formatValue(ikasDataForDisplay.identifikasi.nilai),
+            kategoriDomain: ikasDataForDisplay.identifikasi.kategori,
         },
         {
             domain: "Proteksi",
             indikator: "Mengelola identitas, autentikasi, dan kendali akses",
             target: ikasDataStatic.proteksi.identitas_autentikasi,
-            nilai: formatValue(ikasDataDynamic.proteksi.nilai_subdomain1),
-            nilaiDomain: formatValue(ikasDataDynamic.proteksi.nilai),
-            kategoriDomain: ikasDataDynamic.proteksi.kategori,
+            nilai: formatValue(ikasDataForDisplay.proteksi.nilai_subdomain1),
+            nilaiDomain: formatValue(ikasDataForDisplay.proteksi.nilai),
+            kategoriDomain: ikasDataForDisplay.proteksi.kategori,
         },
         {
             domain: "Proteksi",
             indikator: "Melindungi aset fisik",
             target: ikasDataStatic.proteksi.aset_fisik,
-            nilai: formatValue(ikasDataDynamic.proteksi.nilai_subdomain2),
-            nilaiDomain: formatValue(ikasDataDynamic.proteksi.nilai),
-            kategoriDomain: ikasDataDynamic.proteksi.kategori,
+            nilai: formatValue(ikasDataForDisplay.proteksi.nilai_subdomain2),
+            nilaiDomain: formatValue(ikasDataForDisplay.proteksi.nilai),
+            kategoriDomain: ikasDataForDisplay.proteksi.kategori,
         },
         {
             domain: "Proteksi",
             indikator: "Melindungi data",
             target: ikasDataStatic.proteksi.data,
-            nilai: formatValue(ikasDataDynamic.proteksi.nilai_subdomain3),
-            nilaiDomain: formatValue(ikasDataDynamic.proteksi.nilai),
-            kategoriDomain: ikasDataDynamic.proteksi.kategori,
+            nilai: formatValue(ikasDataForDisplay.proteksi.nilai_subdomain3),
+            nilaiDomain: formatValue(ikasDataForDisplay.proteksi.nilai),
+            kategoriDomain: ikasDataForDisplay.proteksi.kategori,
         },
         {
             domain: "Proteksi",
             indikator: "Melindungi aplikasi",
             target: ikasDataStatic.proteksi.aplikasi,
-            nilai: formatValue(ikasDataDynamic.proteksi.nilai_subdomain4),
-            nilaiDomain: formatValue(ikasDataDynamic.proteksi.nilai),
-            kategoriDomain: ikasDataDynamic.proteksi.kategori,
+            nilai: formatValue(ikasDataForDisplay.proteksi.nilai_subdomain4),
+            nilaiDomain: formatValue(ikasDataForDisplay.proteksi.nilai),
+            kategoriDomain: ikasDataForDisplay.proteksi.kategori,
         },
         {
             domain: "Proteksi",
             indikator: "Melindungi jaringan",
             target: ikasDataStatic.proteksi.jaringan,
-            nilai: formatValue(ikasDataDynamic.proteksi.nilai_subdomain5),
-            nilaiDomain: formatValue(ikasDataDynamic.proteksi.nilai),
-            kategoriDomain: ikasDataDynamic.proteksi.kategori,
+            nilai: formatValue(ikasDataForDisplay.proteksi.nilai_subdomain5),
+            nilaiDomain: formatValue(ikasDataForDisplay.proteksi.nilai),
+            kategoriDomain: ikasDataForDisplay.proteksi.kategori,
         },
         {
             domain: "Proteksi",
             indikator: "Melindungi sumber daya manusia",
             target: ikasDataStatic.proteksi.sdm,
-            nilai: formatValue(ikasDataDynamic.proteksi.nilai_subdomain6),
-            nilaiDomain: formatValue(ikasDataDynamic.proteksi.nilai),
-            kategoriDomain: ikasDataDynamic.proteksi.kategori,
+            nilai: formatValue(ikasDataForDisplay.proteksi.nilai_subdomain6),
+            nilaiDomain: formatValue(ikasDataForDisplay.proteksi.nilai),
+            kategoriDomain: ikasDataForDisplay.proteksi.kategori,
         },
         {
             domain: "Deteksi",
             indikator: "Mengelola deteksi Peristiwa Siber",
             target: ikasDataStatic.deteksi.deteksi_peristiwa,
-            nilai: formatValue(ikasDataDynamic.deteksi.nilai_subdomain1),
-            nilaiDomain: formatValue(ikasDataDynamic.deteksi.nilai),
-            kategoriDomain: ikasDataDynamic.deteksi.kategori,
+            nilai: formatValue(ikasDataForDisplay.deteksi.nilai_subdomain1),
+            nilaiDomain: formatValue(ikasDataForDisplay.deteksi.nilai),
+            kategoriDomain: ikasDataForDisplay.deteksi.kategori,
         },
         {
             domain: "Deteksi",
             indikator: "Menganalisis anomali dan Peristiwa Siber",
             target: ikasDataStatic.deteksi.anomali_peristiwa,
-            nilai: formatValue(ikasDataDynamic.deteksi.nilai_subdomain2),
-            nilaiDomain: formatValue(ikasDataDynamic.deteksi.nilai),
-            kategoriDomain: ikasDataDynamic.deteksi.kategori,
+            nilai: formatValue(ikasDataForDisplay.deteksi.nilai_subdomain2),
+            nilaiDomain: formatValue(ikasDataForDisplay.deteksi.nilai),
+            kategoriDomain: ikasDataForDisplay.deteksi.kategori,
         },
         {
             domain: "Deteksi",
             indikator: "Memantau Peristiwa Siber berkelanjutan",
             target: ikasDataStatic.deteksi.pemantauan_berkelanjutan,
-            nilai: formatValue(ikasDataDynamic.deteksi.nilai_subdomain3),
-            nilaiDomain: formatValue(ikasDataDynamic.deteksi.nilai),
-            kategoriDomain: ikasDataDynamic.deteksi.kategori,
+            nilai: formatValue(ikasDataForDisplay.deteksi.nilai_subdomain3),
+            nilaiDomain: formatValue(ikasDataForDisplay.deteksi.nilai),
+            kategoriDomain: ikasDataForDisplay.deteksi.kategori,
         },
         {
             domain: "Gulih",
             indikator: "Menyusun perencanaan penanggulangan dan pemulihan Insiden Siber",
             target: ikasDataStatic.gulih.perencanaan_pemulihan,
-            nilai: formatValue(ikasDataDynamic.gulih.nilai_subdomain1),
-            nilaiDomain: formatValue(ikasDataDynamic.gulih.nilai),
-            kategoriDomain: ikasDataDynamic.gulih.kategori,
+            nilai: formatValue(ikasDataForDisplay.gulih.nilai_subdomain1),
+            nilaiDomain: formatValue(ikasDataForDisplay.gulih.nilai),
+            kategoriDomain: ikasDataForDisplay.gulih.kategori,
         },
         {
             domain: "Gulih",
             indikator: "Menganalisis dan melaporkan Insiden Siber",
             target: ikasDataStatic.gulih.analisis_pelaporan,
-            nilai: formatValue(ikasDataDynamic.gulih.nilai_subdomain2),
-            nilaiDomain: formatValue(ikasDataDynamic.gulih.nilai),
-            kategoriDomain: ikasDataDynamic.gulih.kategori,
+            nilai: formatValue(ikasDataForDisplay.gulih.nilai_subdomain2),
+            nilaiDomain: formatValue(ikasDataForDisplay.gulih.nilai),
+            kategoriDomain: ikasDataForDisplay.gulih.kategori,
         },
         {
             domain: "Gulih",
             indikator: "Melaksanakan penanggulangan dan pemulihan Insiden Siber",
             target: ikasDataStatic.gulih.pelaksanaan_pemulihan,
-            nilai: formatValue(ikasDataDynamic.gulih.nilai_subdomain3),
-            nilaiDomain: formatValue(ikasDataDynamic.gulih.nilai),
-            kategoriDomain: ikasDataDynamic.gulih.kategori,
+            nilai: formatValue(ikasDataForDisplay.gulih.nilai_subdomain3),
+            nilaiDomain: formatValue(ikasDataForDisplay.gulih.nilai),
+            kategoriDomain: ikasDataForDisplay.gulih.kategori,
         },
         {
             domain: "Gulih",
             indikator: "Meningkatkan keamanan setelah terjadinya Insiden Siber",
             target: ikasDataStatic.gulih.peningkatan_keamanan,
-            nilai: formatValue(ikasDataDynamic.gulih.nilai_subdomain4),
-            nilaiDomain: formatValue(ikasDataDynamic.gulih.nilai),
-            kategoriDomain: ikasDataDynamic.gulih.kategori,
+            nilai: formatValue(ikasDataForDisplay.gulih.nilai_subdomain4),
+            nilaiDomain: formatValue(ikasDataForDisplay.gulih.nilai),
+            kategoriDomain: ikasDataForDisplay.gulih.kategori,
         },
     ];
 
@@ -469,12 +498,17 @@ export default function IKAS() {
         }
     };
 
+    const closeEditRequestModal = () => {
+        setShowEditRequestModal(false);
+        setEditReason("");
+    };
+
     const handleSubmitEditRequest = async () => {
         if (!selectedIkasRecord?.id) return;
-        if (!editReason.trim()) {
+        if (editReason.trim().length < MIN_EDIT_REASON_LENGTH) {
             toast({
-                title: "Alasan wajib diisi",
-                description: "Tuliskan alasan pengajuan perubahan data IKAS terlebih dahulu.",
+                title: "Alasan belum cukup",
+                description: `Tuliskan alasan pengajuan perubahan data IKAS minimal ${MIN_EDIT_REASON_LENGTH} karakter.`,
                 variant: "destructive",
             });
             return;
@@ -490,8 +524,7 @@ export default function IKAS() {
                 queryClient.invalidateQueries({ queryKey: ["jawaban-deteksi"] }),
                 queryClient.invalidateQueries({ queryKey: ["jawaban-gulih"] }),
             ]);
-            setShowEditRequestModal(false);
-            setEditReason("");
+            closeEditRequestModal();
             toast({
                 title: "Pengajuan berhasil dikirim",
                 description: "Status perubahan data kini menunggu persetujuan admin.",
@@ -507,6 +540,9 @@ export default function IKAS() {
         }
     };
 
+    const editReasonLength = editReason.trim().length;
+    const isEditReasonValid = editReasonLength >= MIN_EDIT_REASON_LENGTH;
+
     return (
         <RequireCompanyProfile>
             <div className="max-w-7xl mx-auto space-y-6">
@@ -520,10 +556,23 @@ export default function IKAS() {
 
                 {/* ── Year Tab Bar ──────────────────────────────────────── */}
                 {/* Year Comparison Charts */}
-                <IkasYearComparisonChart
-                    ikasList={ikasList as any[] | undefined}
-                    availableYears={availableYears}
-                />
+                {ikasListLoading ? (
+                    <div className="rounded-[2rem] border border-slate-200/70 bg-white/85 p-6 shadow-sm">
+                        <div className="skeleton-stack-lg">
+                            <div className="flex flex-wrap items-center justify-between gap-4">
+                                <Skeleton className="h-7 w-48" />
+                                <Skeleton className="h-9 w-28 rounded-xl" />
+                            </div>
+                            <SkeletonText lines={2} size="md" />
+                            <Skeleton className="h-[320px] rounded-[1.5rem]" />
+                        </div>
+                    </div>
+                ) : (
+                    <IkasYearComparisonChart
+                        ikasList={ikasList as any[] | undefined}
+                        availableYears={availableYears}
+                    />
+                )}
 
                 <div className="bg-white/80 backdrop-blur-md border border-slate-200/70 rounded-2xl px-4 py-3 shadow-sm">
                     <div className="flex items-center gap-3 flex-wrap">
@@ -618,9 +667,39 @@ export default function IKAS() {
 
                     {/* Loading skeleton */}
                     {ikasListLoading && (
-                        <div className="flex items-center justify-center py-12 gap-3 text-slate-400">
-                            <Loader2 className="w-5 h-5 animate-spin" />
-                            <span className="text-sm font-medium">Memuat data IKAS...</span>
+                        <div className="mb-8 space-y-6">
+                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                                {Array.from({ length: 4 }).map((_, index) => (
+                                    <div key={`ikas-domain-skeleton-${index}`} className="rounded-2xl border border-slate-200/70 bg-white/85 p-4 shadow-sm">
+                                        <div className="flex items-center gap-4">
+                                            <Skeleton className="skeleton-avatar-md" />
+                                            <div className="min-w-0 flex-1 space-y-2">
+                                                <Skeleton className="h-8 w-16 rounded-xl" />
+                                                <Skeleton className="h-3 w-24" />
+                                                <Skeleton className="h-3 w-20" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div className="space-y-4 md:hidden">
+                                {Array.from({ length: 3 }).map((_, index) => (
+                                    <div key={`ikas-mobile-skeleton-${index}`} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                                        <Skeleton className="h-4 w-28" />
+                                        <div className="mt-4">
+                                            <SkeletonText lines={4} size="md" />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <SkeletonTable
+                                columns={4}
+                                rows={6}
+                                columnTemplate="minmax(0,2.4fr) 110px 110px 150px"
+                                className="hidden border-slate-200 bg-white md:block"
+                            />
                         </div>
                     )}
 
@@ -635,9 +714,9 @@ export default function IKAS() {
                                         <Search className="w-5 h-5" />
                                     </div>
                                     <div className="button-force-white relative z-10">
-                                        <div className="text-2xl font-black leading-none">{formatValue(ikasDataDynamic.identifikasi.nilai)}</div>
+                                        <div className="text-2xl font-black leading-none">{formatValue(ikasDataForDisplay.identifikasi.nilai)}</div>
                                         <div className="mt-1 text-[11px] font-bold uppercase tracking-wide">Identifikasi</div>
-                                        <div className="mt-0.5 text-[11px] italic">{ikasDataDynamic.identifikasi.kategori}</div>
+                                        <div className="mt-0.5 text-[11px] italic">{ikasDataForDisplay.identifikasi.kategori}</div>
                                     </div>
                                 </div>
 
@@ -648,9 +727,9 @@ export default function IKAS() {
                                         <Shield className="w-5 h-5" />
                                     </div>
                                     <div className="button-force-white relative z-10">
-                                        <div className="text-2xl font-black leading-none">{formatValue(ikasDataDynamic.proteksi.nilai)}</div>
+                                        <div className="text-2xl font-black leading-none">{formatValue(ikasDataForDisplay.proteksi.nilai)}</div>
                                         <div className="mt-1 text-[11px] font-bold uppercase tracking-wide">Proteksi</div>
-                                        <div className="mt-0.5 text-[11px] italic">{ikasDataDynamic.proteksi.kategori}</div>
+                                        <div className="mt-0.5 text-[11px] italic">{ikasDataForDisplay.proteksi.kategori}</div>
                                     </div>
                                 </div>
 
@@ -661,9 +740,9 @@ export default function IKAS() {
                                         <Radar className="w-5 h-5" />
                                     </div>
                                     <div className="button-force-white relative z-10">
-                                        <div className="text-2xl font-black leading-none">{formatValue(ikasDataDynamic.deteksi.nilai)}</div>
+                                        <div className="text-2xl font-black leading-none">{formatValue(ikasDataForDisplay.deteksi.nilai)}</div>
                                         <div className="mt-1 text-[11px] font-bold uppercase tracking-wide">Deteksi</div>
-                                        <div className="mt-0.5 text-[11px] italic">{ikasDataDynamic.deteksi.kategori}</div>
+                                        <div className="mt-0.5 text-[11px] italic">{ikasDataForDisplay.deteksi.kategori}</div>
                                     </div>
                                 </div>
 
@@ -674,9 +753,9 @@ export default function IKAS() {
                                         <Activity className="w-5 h-5" />
                                     </div>
                                     <div className="button-force-white relative z-10">
-                                        <div className="text-2xl font-black leading-none">{formatValue(ikasDataDynamic.gulih.nilai)}</div>
+                                        <div className="text-2xl font-black leading-none">{formatValue(ikasDataForDisplay.gulih.nilai)}</div>
                                         <div className="mt-1 text-[11px] font-bold uppercase tracking-wide leading-tight">Penanggulangan &amp; Pemulihan</div>
-                                        <div className="mt-0.5 text-[11px] italic">{ikasDataDynamic.gulih.kategori}</div>
+                                        <div className="mt-0.5 text-[11px] italic">{ikasDataForDisplay.gulih.kategori}</div>
                                     </div>
                                 </div>
                             </div>
@@ -692,12 +771,12 @@ export default function IKAS() {
                                         </div>
                                         <div className="rounded-xl bg-white p-3 shadow-sm">
                                             <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">Nilai Total</p>
-                                            <p className="mt-1 text-lg font-black text-slate-900">{formatValue(ikasDataDynamic.total_rata_rata)}</p>
+                                            <p className="mt-1 text-lg font-black text-slate-900">{formatValue(ikasDataForDisplay.total_rata_rata)}</p>
                                         </div>
                                     </div>
                                     <div className="mt-3 rounded-xl bg-white p-3 shadow-sm">
                                         <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">Kategori Keamanan Siber</p>
-                                        <p className="mt-1 text-base font-black text-[#1e3a5f]">{ikasDataDynamic.total_kategori}</p>
+                                        <p className="mt-1 text-base font-black text-[#1e3a5f]">{ikasDataForDisplay.total_kategori}</p>
                                     </div>
                                 </div>
 
@@ -761,7 +840,7 @@ export default function IKAS() {
                                         <tr>
                                             <th colSpan={2} className="button-force-white border-r border-t border-slate-200 bg-[#1e3a5f] p-2 text-center">Total</th>
                                             <th className="button-force-white border-r border-slate-200 bg-[#1e3a5f] p-2 text-center">2.51</th>
-                                            <th className="button-force-white border-r border-slate-200 bg-[#1e3a5f] p-2 text-center">{formatValue(ikasDataDynamic.total_rata_rata)}</th>
+                                            <th className="button-force-white border-r border-slate-200 bg-[#1e3a5f] p-2 text-center">{formatValue(ikasDataForDisplay.total_rata_rata)}</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -770,30 +849,30 @@ export default function IKAS() {
                                             <td rowSpan={5} className={`button-force-white bg-gradient-to-b from-blue-800 to-blue-600 ${domainCss} [writing-mode:vertical-rl] rotate-180 border border-slate-200`}>IDENTIFIKASI</td>
                                             <td className="p-2 border border-slate-200 text-slate-700">Mengidentifikasi Peran dan tanggung jawab organisasi</td>
                                             <td className="p-2 border border-slate-200 text-center">{ikasDataStatic.identifikasi.peran_tanggung_jawab}</td>
-                                            <td className="p-2 border border-slate-200 text-center font-semibold">{formatValue(ikasDataDynamic.identifikasi.nilai_subdomain1)}</td>
-                                            <td rowSpan={5} className="p-2 border border-slate-200 text-center font-bold">{formatValue(ikasDataDynamic.identifikasi.nilai)}</td>
-                                            <td rowSpan={5} className="p-2 border border-slate-200 text-center font-medium italic text-slate-600">{ikasDataDynamic.identifikasi.kategori}</td>
-                                            <td rowSpan={18} className="p-4 border border-slate-200 text-center font-black text-xl text-[#1e3a5f] tracking-wide leading-snug">{ikasDataDynamic.total_kategori}</td>
+                                            <td className="p-2 border border-slate-200 text-center font-semibold">{formatValue(ikasDataForDisplay.identifikasi.nilai_subdomain1)}</td>
+                                            <td rowSpan={5} className="p-2 border border-slate-200 text-center font-bold">{formatValue(ikasDataForDisplay.identifikasi.nilai)}</td>
+                                            <td rowSpan={5} className="p-2 border border-slate-200 text-center font-medium italic text-slate-600">{ikasDataForDisplay.identifikasi.kategori}</td>
+                                            <td rowSpan={18} className="p-4 border border-slate-200 text-center font-black text-xl text-[#1e3a5f] tracking-wide leading-snug">{ikasDataForDisplay.total_kategori}</td>
                                         </tr>
                                         <tr>
                                             <td className="p-2 border border-slate-200 text-slate-700">Menyusun strategi, kebijakan, dan prosedur Keamanan Siber</td>
                                             <td className="p-2 border border-slate-200 text-center">{ikasDataStatic.identifikasi.strategi_kebijakan}</td>
-                                            <td className="p-2 border border-slate-200 text-center font-semibold">{formatValue(ikasDataDynamic.identifikasi.nilai_subdomain2)}</td>
+                                            <td className="p-2 border border-slate-200 text-center font-semibold">{formatValue(ikasDataForDisplay.identifikasi.nilai_subdomain2)}</td>
                                         </tr>
                                         <tr>
                                             <td className="p-2 border border-slate-200 text-slate-700">Mengelola aset informasi</td>
                                             <td className="p-2 border border-slate-200 text-center">{ikasDataStatic.identifikasi.aset_informasi}</td>
-                                            <td className="p-2 border border-slate-200 text-center font-semibold">{formatValue(ikasDataDynamic.identifikasi.nilai_subdomain3)}</td>
+                                            <td className="p-2 border border-slate-200 text-center font-semibold">{formatValue(ikasDataForDisplay.identifikasi.nilai_subdomain3)}</td>
                                         </tr>
                                         <tr>
                                             <td className="p-2 border border-slate-200 text-slate-700">Menilai dan mengelola risiko Keamanan Siber</td>
                                             <td className="p-2 border border-slate-200 text-center">{ikasDataStatic.identifikasi.risiko_keamanan}</td>
-                                            <td className="p-2 border border-slate-200 text-center font-semibold">{formatValue(ikasDataDynamic.identifikasi.nilai_subdomain4)}</td>
+                                            <td className="p-2 border border-slate-200 text-center font-semibold">{formatValue(ikasDataForDisplay.identifikasi.nilai_subdomain4)}</td>
                                         </tr>
                                         <tr>
                                             <td className="p-2 border border-slate-200 text-slate-700">Mengelola risiko rantai pasok</td>
                                             <td className="p-2 border border-slate-200 text-center">{ikasDataStatic.identifikasi.rantai_pasok}</td>
-                                            <td className="p-2 border border-slate-200 text-center font-semibold">{formatValue(ikasDataDynamic.identifikasi.nilai_subdomain5)}</td>
+                                            <td className="p-2 border border-slate-200 text-center font-semibold">{formatValue(ikasDataForDisplay.identifikasi.nilai_subdomain5)}</td>
                                         </tr>
 
                                         {/* PROTEKSI */}
@@ -801,34 +880,34 @@ export default function IKAS() {
                                             <td rowSpan={6} className={`button-force-white bg-gradient-to-b from-purple-800 to-purple-600 ${domainCss} [writing-mode:vertical-rl] rotate-180 border border-slate-200`}>PROTEKSI</td>
                                             <td className="p-2 border border-slate-200 text-slate-700">Mengelola identitas, autentikasi, dan kendali akses</td>
                                             <td className="p-2 border border-slate-200 text-center">{ikasDataStatic.proteksi.identitas_autentikasi}</td>
-                                            <td className="p-2 border border-slate-200 text-center font-semibold">{formatValue(ikasDataDynamic.proteksi.nilai_subdomain1)}</td>
-                                            <td rowSpan={6} className="p-2 border border-slate-200 text-center font-bold">{formatValue(ikasDataDynamic.proteksi.nilai)}</td>
-                                            <td rowSpan={6} className="p-2 border border-slate-200 text-center font-medium italic text-slate-600">{ikasDataDynamic.proteksi.kategori}</td>
+                                            <td className="p-2 border border-slate-200 text-center font-semibold">{formatValue(ikasDataForDisplay.proteksi.nilai_subdomain1)}</td>
+                                            <td rowSpan={6} className="p-2 border border-slate-200 text-center font-bold">{formatValue(ikasDataForDisplay.proteksi.nilai)}</td>
+                                            <td rowSpan={6} className="p-2 border border-slate-200 text-center font-medium italic text-slate-600">{ikasDataForDisplay.proteksi.kategori}</td>
                                         </tr>
                                         <tr>
                                             <td className="p-2 border border-slate-200 text-slate-700">Melindungi aset fisik</td>
                                             <td className="p-2 border border-slate-200 text-center">{ikasDataStatic.proteksi.aset_fisik}</td>
-                                            <td className="p-2 border border-slate-200 text-center font-semibold">{formatValue(ikasDataDynamic.proteksi.nilai_subdomain2)}</td>
+                                            <td className="p-2 border border-slate-200 text-center font-semibold">{formatValue(ikasDataForDisplay.proteksi.nilai_subdomain2)}</td>
                                         </tr>
                                         <tr>
                                             <td className="p-2 border border-slate-200 text-slate-700">Melindungi data</td>
                                             <td className="p-2 border border-slate-200 text-center">{ikasDataStatic.proteksi.data}</td>
-                                            <td className="p-2 border border-slate-200 text-center font-semibold">{formatValue(ikasDataDynamic.proteksi.nilai_subdomain3)}</td>
+                                            <td className="p-2 border border-slate-200 text-center font-semibold">{formatValue(ikasDataForDisplay.proteksi.nilai_subdomain3)}</td>
                                         </tr>
                                         <tr>
                                             <td className="p-2 border border-slate-200 text-slate-700">Melindungi aplikasi</td>
                                             <td className="p-2 border border-slate-200 text-center">{ikasDataStatic.proteksi.aplikasi}</td>
-                                            <td className="p-2 border border-slate-200 text-center font-semibold">{formatValue(ikasDataDynamic.proteksi.nilai_subdomain4)}</td>
+                                            <td className="p-2 border border-slate-200 text-center font-semibold">{formatValue(ikasDataForDisplay.proteksi.nilai_subdomain4)}</td>
                                         </tr>
                                         <tr>
                                             <td className="p-2 border border-slate-200 text-slate-700">Melindungi jaringan</td>
                                             <td className="p-2 border border-slate-200 text-center">{ikasDataStatic.proteksi.jaringan}</td>
-                                            <td className="p-2 border border-slate-200 text-center font-semibold">{formatValue(ikasDataDynamic.proteksi.nilai_subdomain5)}</td>
+                                            <td className="p-2 border border-slate-200 text-center font-semibold">{formatValue(ikasDataForDisplay.proteksi.nilai_subdomain5)}</td>
                                         </tr>
                                         <tr>
                                             <td className="p-2 border border-slate-200 text-slate-700">Melindungi sumber daya manusia</td>
                                             <td className="p-2 border border-slate-200 text-center">{ikasDataStatic.proteksi.sdm}</td>
-                                            <td className="p-2 border border-slate-200 text-center font-semibold">{formatValue(ikasDataDynamic.proteksi.nilai_subdomain6)}</td>
+                                            <td className="p-2 border border-slate-200 text-center font-semibold">{formatValue(ikasDataForDisplay.proteksi.nilai_subdomain6)}</td>
                                         </tr>
 
                                         {/* DETEKSI */}
@@ -836,19 +915,19 @@ export default function IKAS() {
                                             <td rowSpan={3} className={`button-force-white bg-gradient-to-b from-amber-800 to-amber-600 ${domainCss} [writing-mode:vertical-rl] rotate-180 border border-slate-200`}>DETEKSI</td>
                                             <td className="p-2 border border-slate-200 text-slate-700">Mengelola deteksi Peristiwa Siber</td>
                                             <td className="p-2 border border-slate-200 text-center">{ikasDataStatic.deteksi.deteksi_peristiwa}</td>
-                                            <td className="p-2 border border-slate-200 text-center font-semibold">{formatValue(ikasDataDynamic.deteksi.nilai_subdomain1)}</td>
-                                            <td rowSpan={3} className="p-2 border border-slate-200 text-center font-bold">{formatValue(ikasDataDynamic.deteksi.nilai)}</td>
-                                            <td rowSpan={3} className="p-2 border border-slate-200 text-center font-medium italic text-slate-600">{ikasDataDynamic.deteksi.kategori}</td>
+                                            <td className="p-2 border border-slate-200 text-center font-semibold">{formatValue(ikasDataForDisplay.deteksi.nilai_subdomain1)}</td>
+                                            <td rowSpan={3} className="p-2 border border-slate-200 text-center font-bold">{formatValue(ikasDataForDisplay.deteksi.nilai)}</td>
+                                            <td rowSpan={3} className="p-2 border border-slate-200 text-center font-medium italic text-slate-600">{ikasDataForDisplay.deteksi.kategori}</td>
                                         </tr>
                                         <tr>
                                             <td className="p-2 border border-slate-200 text-slate-700">Menganalisis anomali dan Peristiwa Siber</td>
                                             <td className="p-2 border border-slate-200 text-center">{ikasDataStatic.deteksi.anomali_peristiwa}</td>
-                                            <td className="p-2 border border-slate-200 text-center font-semibold">{formatValue(ikasDataDynamic.deteksi.nilai_subdomain2)}</td>
+                                            <td className="p-2 border border-slate-200 text-center font-semibold">{formatValue(ikasDataForDisplay.deteksi.nilai_subdomain2)}</td>
                                         </tr>
                                         <tr>
                                             <td className="p-2 border border-slate-200 text-slate-700">Memantau Peristiwa Siber berkelanjutan</td>
                                             <td className="p-2 border border-slate-200 text-center">{ikasDataStatic.deteksi.pemantauan_berkelanjutan}</td>
-                                            <td className="p-2 border border-slate-200 text-center font-semibold">{formatValue(ikasDataDynamic.deteksi.nilai_subdomain3)}</td>
+                                            <td className="p-2 border border-slate-200 text-center font-semibold">{formatValue(ikasDataForDisplay.deteksi.nilai_subdomain3)}</td>
                                         </tr>
 
                                         {/* PENANGGULANGAN & PEMULIHAN */}
@@ -856,24 +935,24 @@ export default function IKAS() {
                                             <td rowSpan={4} className={`button-force-white bg-gradient-to-b from-emerald-800 to-emerald-600 ${domainCss} [writing-mode:vertical-rl] rotate-180 border border-slate-200`}>GULIH</td>
                                             <td className="p-2 border border-slate-200 text-slate-700">Menyusun perencanaan penanggulangan dan pemulihan Insiden Siber</td>
                                             <td className="p-2 border border-slate-200 text-center">{ikasDataStatic.gulih.perencanaan_pemulihan}</td>
-                                            <td className="p-2 border border-slate-200 text-center font-semibold">{formatValue(ikasDataDynamic.gulih.nilai_subdomain1)}</td>
-                                            <td rowSpan={4} className="p-2 border border-slate-200 text-center font-bold">{formatValue(ikasDataDynamic.gulih.nilai)}</td>
-                                            <td rowSpan={4} className="p-2 border border-slate-200 text-center font-medium italic text-slate-600">{ikasDataDynamic.gulih.kategori}</td>
+                                            <td className="p-2 border border-slate-200 text-center font-semibold">{formatValue(ikasDataForDisplay.gulih.nilai_subdomain1)}</td>
+                                            <td rowSpan={4} className="p-2 border border-slate-200 text-center font-bold">{formatValue(ikasDataForDisplay.gulih.nilai)}</td>
+                                            <td rowSpan={4} className="p-2 border border-slate-200 text-center font-medium italic text-slate-600">{ikasDataForDisplay.gulih.kategori}</td>
                                         </tr>
                                         <tr>
                                             <td className="p-2 border border-slate-200 text-slate-700">Menganalisis dan melaporkan Insiden Siber</td>
                                             <td className="p-2 border border-slate-200 text-center">{ikasDataStatic.gulih.analisis_pelaporan}</td>
-                                            <td className="p-2 border border-slate-200 text-center font-semibold">{formatValue(ikasDataDynamic.gulih.nilai_subdomain2)}</td>
+                                            <td className="p-2 border border-slate-200 text-center font-semibold">{formatValue(ikasDataForDisplay.gulih.nilai_subdomain2)}</td>
                                         </tr>
                                         <tr>
                                             <td className="p-2 border border-slate-200 text-slate-700">Melaksanakan penanggulangan dan pemulihan Insiden Siber</td>
                                             <td className="p-2 border border-slate-200 text-center">{ikasDataStatic.gulih.pelaksanaan_pemulihan}</td>
-                                            <td className="p-2 border border-slate-200 text-center font-semibold">{formatValue(ikasDataDynamic.gulih.nilai_subdomain3)}</td>
+                                            <td className="p-2 border border-slate-200 text-center font-semibold">{formatValue(ikasDataForDisplay.gulih.nilai_subdomain3)}</td>
                                         </tr>
                                         <tr>
                                             <td className="p-2 border border-slate-200 text-slate-700">Meningkatkan keamanan setelah terjadinya Insiden Siber</td>
                                             <td className="p-2 border border-slate-200 text-center">{ikasDataStatic.gulih.peningkatan_keamanan}</td>
-                                            <td className="p-2 border border-slate-200 text-center font-semibold">{formatValue(ikasDataDynamic.gulih.nilai_subdomain4)}</td>
+                                            <td className="p-2 border border-slate-200 text-center font-semibold">{formatValue(ikasDataForDisplay.gulih.nilai_subdomain4)}</td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -926,46 +1005,81 @@ export default function IKAS() {
                 </div>
 
                 {/* Radar Charts Section */}
-                <RadarChartIkas ikasDataDynamic={ikasDataDynamic} />
+                {ikasListLoading ? (
+                    <div className="rounded-[2rem] border border-slate-200/70 bg-white/85 p-6 shadow-sm">
+                        <div className="skeleton-stack-lg">
+                            <div className="flex items-center justify-between gap-4">
+                                <Skeleton className="h-7 w-44" />
+                                <Skeleton className="h-4 w-24" />
+                            </div>
+                            <Skeleton className="h-[360px] rounded-[1.5rem]" />
+                        </div>
+                    </div>
+                ) : (
+                    <RadarChartIkas ikasDataDynamic={ikasDataForDisplay} />
+                )}
 
                 <Dialog open={showEditRequestModal} onOpenChange={setShowEditRequestModal}>
-                    <DialogContent className="sm:max-w-lg">
-                        <DialogHeader>
-                            <DialogTitle>Ajukan Perubahan Data IKAS</DialogTitle>
-                            <DialogDescription>
-                                Data IKAS yang sudah terverifikasi hanya dapat diubah setelah mendapat persetujuan admin. Tuliskan alasan pengajuan perubahan di bawah ini.
-                            </DialogDescription>
-                        </DialogHeader>
-                        <div className="space-y-2">
-                            <label className="text-sm font-semibold text-slate-700">Alasan pengajuan perubahan</label>
-                            <Textarea
-                                value={editReason}
-                                onChange={(event) => setEditReason(event.target.value)}
-                                placeholder="Jelaskan alasan perubahan data IKAS yang diajukan."
-                                rows={5}
-                                className="resize-none"
-                            />
+                    <DialogContent
+                        overlayClassName="bg-slate-950/55 backdrop-blur-sm"
+                        className="!inset-auto !left-1/2 !top-1/2 !grid !h-auto !max-h-[calc(100dvh-1.5rem)] !w-[calc(100vw-1.5rem)] !max-w-2xl !translate-x-[-50%] !translate-y-[-50%] gap-0 overflow-y-auto rounded-[30px] border border-white/70 bg-[radial-gradient(circle_at_top_left,rgba(251,191,36,0.14),transparent_24%),linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.97)_100%)] p-0 shadow-[0_30px_90px_rgba(15,23,42,0.24)] ring-1 ring-slate-200/70 [&>button]:right-3 [&>button]:top-3 [&>button]:h-10 [&>button]:w-10 [&>button]:rounded-full [&>button]:border [&>button]:border-white/80 [&>button]:bg-white/85 [&>button]:p-0 [&>button]:text-slate-500 [&>button]:opacity-100 [&>button]:shadow-sm [&>button]:backdrop-blur [&>button]:transition-all [&>button]:hover:bg-white [&>button]:hover:text-slate-800 sm:[&>button]:right-4 sm:[&>button]:top-4"
+                    >
+                        <div className="p-4 sm:p-6">
+                            <div className="space-y-5 sm:space-y-6">
+                                <DialogHeader className="space-y-2 text-left">
+                                    <DialogTitle className="pr-10 text-xl font-black leading-tight text-slate-900 sm:text-[1.8rem]">
+                                        Ajukan Perubahan Data IKAS
+                                    </DialogTitle>
+                                    <DialogDescription className="max-w-2xl text-sm leading-relaxed text-slate-600 sm:text-[15px]">
+                                        Data IKAS yang sudah terverifikasi hanya dapat diubah setelah mendapat persetujuan admin. Tuliskan alasan pengajuan perubahan di bawah ini.
+                                    </DialogDescription>
+                                </DialogHeader>
+                                <div className="space-y-3 border-t border-slate-200/80 pt-4 sm:pt-5">
+                                    <div className="flex flex-wrap items-center justify-between gap-2">
+                                        <label className="text-sm font-semibold text-slate-800 sm:text-base">Alasan pengajuan perubahan</label>
+                                        <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-500">
+                                            {editReasonLength}/{MIN_EDIT_REASON_LENGTH}+
+                                        </span>
+                                    </div>
+                                    <Textarea
+                                        value={editReason}
+                                        onChange={(event) => setEditReason(event.target.value)}
+                                        placeholder="Jelaskan alasan perubahan data IKAS yang diajukan."
+                                        rows={5}
+                                        className="min-h-[150px] resize-none rounded-[22px] border-slate-200 bg-white px-4 py-3.5 text-sm leading-relaxed text-slate-700 placeholder:text-slate-400 shadow-inner shadow-slate-100/80 focus-visible:border-blue-400 focus-visible:ring-blue-500 sm:min-h-[190px] sm:text-base"
+                                    />
+                                    <div className="space-y-1">
+                                        {!isEditReasonValid && editReasonLength > 0 ? (
+                                            <p className="text-xs font-medium text-amber-600 sm:text-sm">
+                                                Tambahkan {MIN_EDIT_REASON_LENGTH - editReasonLength} karakter lagi untuk mengaktifkan tombol kirim.
+                                            </p>
+                                        ) : null}
+                                    </div>
+                                </div>
+                                <div className="border-t border-slate-200/80 pt-4 sm:pt-5">
+                                    <DialogFooter className="gap-3 sm:justify-end sm:space-x-0">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setShowEditRequestModal(false);
+                                                setEditReason("");
+                                            }}
+                                            className="inline-flex min-h-12 w-full items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 shadow-[0_10px_22px_rgba(148,163,184,0.10)] transition hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 sm:w-auto sm:min-w-[128px]"
+                                        >
+                                            Batal
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={handleSubmitEditRequest}
+                                            disabled={isSubmittingEditRequest || !isEditReasonValid}
+                                            className="button-force-white inline-flex min-h-12 w-full items-center justify-center rounded-2xl bg-gradient-to-r from-amber-400 via-orange-500 to-orange-600 px-5 py-3 text-sm font-bold shadow-[0_16px_32px_rgba(249,115,22,0.28)] transition hover:-translate-y-0.5 hover:from-amber-500 hover:via-orange-500 hover:to-orange-700 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:from-amber-400 disabled:hover:via-orange-500 disabled:hover:to-orange-600 sm:w-auto sm:min-w-[180px]"
+                                        >
+                                            {isSubmittingEditRequest ? "Mengirim..." : "Kirim Pengajuan"}
+                                        </button>
+                                    </DialogFooter>
+                                </div>
+                            </div>
                         </div>
-                        <DialogFooter className="gap-3 sm:space-x-0">
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setShowEditRequestModal(false);
-                                    setEditReason("");
-                                }}
-                                className="button-force-white inline-flex min-h-11 items-center justify-center rounded-xl border border-transparent bg-gradient-to-r from-slate-500 via-slate-600 to-slate-700 px-4 py-2 text-sm font-bold transition hover:from-slate-600 hover:via-slate-700 hover:to-slate-800"
-                            >
-                                Batal
-                            </button>
-                            <button
-                                type="button"
-                                onClick={handleSubmitEditRequest}
-                                disabled={isSubmittingEditRequest}
-                                className="button-force-white inline-flex min-h-11 items-center justify-center rounded-xl bg-gradient-to-r from-yellow-400 via-amber-500 to-orange-500 px-4 py-2 text-sm font-bold transition hover:from-yellow-500 hover:via-amber-500 hover:to-orange-600 disabled:opacity-70"
-                            >
-                                {isSubmittingEditRequest ? "Mengirim..." : "Kirim Pengajuan"}
-                            </button>
-                        </DialogFooter>
                     </DialogContent>
                 </Dialog>
 

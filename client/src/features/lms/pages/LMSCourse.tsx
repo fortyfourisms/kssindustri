@@ -6,14 +6,15 @@ import {
 } from "lucide-react";
 import { getNextCourseStep, sortMateriByOrder, useLmsStore } from "@/features/lms/stores/lms.store";
 import { getCourseLearnRoute, getCourseQuizRoute, getCoursesRoute, isCoursePath } from "@/features/lms/lib/lms-routes";
+import { Skeleton as SkeletonBlock, SkeletonText } from "@/components/ui/skeleton";
 
 function Skeleton() {
   return (
-    <div className="max-w-6xl mx-auto px-6 lg:px-10 xl:px-12 pb-12 animate-pulse">
-      <div className="flex-1 space-y-4">
-        <div className="h-56 bg-slate-200 rounded-3xl" />
-        <div className="h-6 w-64 bg-slate-200 rounded-full" />
-        <div className="h-4 w-full bg-slate-100 rounded-full" />
+    <div className="max-w-6xl mx-auto px-6 lg:px-10 xl:px-12 pb-12">
+      <div className="skeleton-stack-lg flex-1">
+        <SkeletonBlock className="h-56 rounded-3xl" />
+        <SkeletonBlock className="h-6 w-64 rounded-full" />
+        <SkeletonText lines={2} size="md" />
       </div>
     </div>
   );

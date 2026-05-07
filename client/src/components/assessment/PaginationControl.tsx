@@ -58,7 +58,7 @@ export default function PaginationControl({
         `}
         style={{ color: '#fff' }}
       >
-        {isSubmitStep ? 'Kirim' : 'Lanjut Berikutnya'}
+        {isSubmitStep ? 'Kirim' : 'Simpan dan Lanjutkan'}
         {!isSubmitStep && <ArrowRight className="w-4 h-4" style={{ color: '#fff' }} />}
       </button>
     </div>

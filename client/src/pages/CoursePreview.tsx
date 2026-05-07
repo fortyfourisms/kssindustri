@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { useScrollToTop } from "@/hooks/useScrollToTop";
 import { publicCoursesService } from "@/services/publicCourses.service";
+import { Skeleton, SkeletonText } from "@/components/ui/skeleton";
 
 export default function CoursePreview() {
   const navigate = useNavigate();
@@ -52,10 +53,14 @@ export default function CoursePreview() {
             className="mt-6 rounded-[2rem] border border-white/60 bg-white/80 p-6 md:p-8 shadow-[0_24px_100px_rgba(31,60,136,0.10)] backdrop-blur-xl"
           >
             {isLoading ? (
-              <div className="space-y-6">
-                <div className="h-7 w-40 animate-pulse rounded bg-slate-200" />
-                <div className="h-12 w-3/4 animate-pulse rounded bg-slate-200" />
-                <div className="h-[180px] rounded-[1.5rem] bg-slate-100" />
+              <div className="skeleton-stack-lg min-h-[280px]">
+                <div className="flex gap-3">
+                  <Skeleton className="h-8 w-24 rounded-full" />
+                  <Skeleton className="h-8 w-28 rounded-full" />
+                </div>
+                <Skeleton className="h-12 w-3/4" />
+                <SkeletonText lines={2} size="lg" />
+                <Skeleton className="h-[180px] rounded-[1.5rem]" />
               </div>
             ) : (
               <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
@@ -118,10 +123,7 @@ export default function CoursePreview() {
               <h2 className="text-2xl font-bold text-slate-900">Informasi Umum</h2>
               <div className="mt-5 space-y-4 text-slate-600 leading-relaxed">
                 {isLoading ? (
-                  <>
-                    <div className="h-4 w-full animate-pulse rounded bg-slate-200" />
-                    <div className="h-4 w-5/6 animate-pulse rounded bg-slate-200" />
-                  </>
+                  <SkeletonText lines={2} size="md" />
                 ) : (
                   <>
                     <p>{course?.generalInfo}</p>

@@ -5,6 +5,7 @@ import { Navbar } from "@/components/Navbar";
 import { useScrollToTop } from "@/hooks/useScrollToTop";
 import { useQuery } from "@tanstack/react-query";
 import { publicCoursesService } from "@/services/publicCourses.service";
+import { SkeletonCard } from "@/components/ui/skeleton";
 
 const COURSE_ACCENTS = [
   {
@@ -57,18 +58,10 @@ export default function Courses() {
           <div className="mt-12 grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
             {isLoading
               ? Array.from({ length: 6 }).map((_, index) => (
-                  <div
+                  <SkeletonCard
                     key={`course-page-skeleton-${index}`}
-                    className="overflow-hidden rounded-[2rem] border border-white/60 bg-white/80 shadow-[0_20px_80px_rgba(31,60,136,0.08)]"
-                  >
-                    <div className="h-44 animate-pulse bg-slate-200" />
-                    <div className="space-y-4 p-6">
-                      <div className="h-5 w-24 animate-pulse rounded bg-slate-200" />
-                      <div className="h-4 w-2/3 animate-pulse rounded bg-slate-200" />
-                      <div className="h-4 w-full animate-pulse rounded bg-slate-100" />
-                      <div className="h-4 w-5/6 animate-pulse rounded bg-slate-100" />
-                    </div>
-                  </div>
+                    className="border-white/60 bg-white/80 shadow-[0_20px_80px_rgba(31,60,136,0.08)]"
+                  />
                 ))
               : courses.map((course, index) => {
                   const accent = COURSE_ACCENTS[index % COURSE_ACCENTS.length];
