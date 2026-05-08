@@ -48,6 +48,8 @@ function OtpSlot({ char, hasFakeCaret, isActive }: SlotProps) {
 export default function MfaVerify() {
     const navigate = useNavigate();
     const { toast } = useToast();
+    const otpInputRef = useRef<HTMLInputElement>(null);
+    const shouldRefocusOtpRef = useRef(false);
 
     // Read mode from URL query — same as Vue's route.query.mode
     const params = new URLSearchParams(window.location.search);
@@ -85,6 +87,15 @@ export default function MfaVerify() {
         const interval = setInterval(updateTimer, 1000);
         return () => clearInterval(interval);
     }, []);
+
+    useEffect(() => {
+        if (!verifying && shouldRefocusOtpRef.current) {
+            shouldRefocusOtpRef.current = false;
+            requestAnimationFrame(() => {
+                otpInputRef.current?.focus();
+            });
+        }
+    }, [verifying]);
 
     // Guard: validate tokens on mount (same as Vue onMounted)
     useEffect(() => {
@@ -151,6 +162,7 @@ export default function MfaVerify() {
             } else {
                 setVerifyError("Terjadi kesalahan sistem. Silakan coba lagi beberapa saat lagi.");
             }
+            shouldRefocusOtpRef.current = true;
             setOtpValue("");
         } finally {
             setVerifying(false);
@@ -169,6 +181,9 @@ export default function MfaVerify() {
         setOtpValue("");
         setVerifyError("");
         await fetchMfaSetup();
+        requestAnimationFrame(() => {
+            otpInputRef.current?.focus();
+        });
     };
 
     return (
@@ -276,19 +291,30 @@ export default function MfaVerify() {
 
                             {/* OTP Input */}
                             <div className="flex flex-col items-center gap-4">
-                                <p className="text-sm text-slate-500">
-                                    Masukkan kode 6 digit dari aplikasi autentikator
-                                </p>
+                                {isSetupMode && (
+                                    <p className="text-sm text-slate-500">
+                                        Masukkan kode 6 digit dari aplikasi autentikator
+                                    </p>
+                                )}
 
                                 <OTPInput
+                                    ref={otpInputRef}
                                     autoFocus
                                     value={otpValue}
                                     onChange={(v) => { setOtpValue(v); setVerifyError(""); }}
                                     onComplete={handleComplete}
                                     maxLength={6}
+                                    textAlign="center"
                                     disabled={verifying}
                                     render={({ slots }) => (
-                                        <div className="flex gap-2">
+                                        <div
+                                            className="flex gap-2 cursor-text"
+                                            onClick={() => {
+                                                if (!verifying) {
+                                                    otpInputRef.current?.focus();
+                                                }
+                                            }}
+                                        >
                                             {slots.map((slot, idx) => (
                                                 <OtpSlot key={idx} {...slot} />
                                             ))}

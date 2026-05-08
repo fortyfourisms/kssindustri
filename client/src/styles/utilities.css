@@ -8,7 +8,21 @@
   }
 }
 
+@keyframes caret-blink {
+  0%, 70%, 100% {
+    opacity: 1;
+  }
+
+  20%, 50% {
+    opacity: 0;
+  }
+}
+
 @layer utilities {
+  .animate-caret-blink {
+    animation: caret-blink 1.2s ease-out infinite;
+  }
+
   .skeleton {
     display: block;
     min-width: 0;
