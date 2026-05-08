@@ -55,7 +55,9 @@ const EDIT_BUTTON_CLS = "button-force-white dashboard-warning-button inline-flex
 const ICON_PILL_CLS = "flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[var(--dashboard-info-soft-border)] bg-[var(--dashboard-info-soft-bg)]";
 const INFO_LABEL_CLS = "mb-0.5 text-sm text-[var(--dashboard-text-muted)]";
 const INFO_VALUE_CLS = "truncate font-medium text-[var(--dashboard-text)]";
-const OVERLAY_UPLOAD_BUTTON_CLS = "flex items-center gap-2 rounded-xl bg-white/20 px-4 py-2 text-sm font-medium text-white backdrop-blur transition-all hover:bg-white/30";
+const USER_BANNER_UPLOAD_BUTTON_CLS = "flex items-center gap-2 rounded-xl bg-[#e8edf6] px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm backdrop-blur transition-all hover:bg-white";
+const USER_PHOTO_UPLOAD_BUTTON_CLS = "flex h-11 w-11 items-center justify-center rounded-full bg-[#e8edf6] text-slate-700 shadow-sm backdrop-blur transition-all hover:scale-105 hover:bg-white";
+const COMPANY_BANNER_UPLOAD_BUTTON_CLS = "flex items-center gap-2 rounded-xl bg-white/20 px-4 py-2 text-sm font-medium text-white backdrop-blur transition-all hover:bg-white/30";
 const PIC_TABLE_CLS = "w-full whitespace-nowrap text-left text-sm text-[var(--dashboard-text-soft)]";
 const PIC_TABLE_HEAD_CLS = "dashboard-table-head dashboard-table-divider border-b text-xs font-extrabold uppercase tracking-wider text-[var(--dashboard-text-muted)]";
 const PIC_TABLE_BODY_CLS = "dashboard-table-divider divide-y";
@@ -161,6 +163,10 @@ export default function EditProfil({ defaultTab = "pengguna" }: EditProfilProps)
     const [searchParams] = useSearchParams();
     const [isEditingPengguna, setIsEditingPengguna] = useState(false);
     const [isEditingPerusahaan, setIsEditingPerusahaan] = useState(false);
+    const [pendingUserPhoto, setPendingUserPhoto] = useState<File | null>(null);
+    const [pendingUserBanner, setPendingUserBanner] = useState<File | null>(null);
+    const [userPhotoPreview, setUserPhotoPreview] = useState<string | null>(null);
+    const [userBannerPreview, setUserBannerPreview] = useState<string | null>(null);
     const initialTab = searchParams.get("tab") === "perusahaan" ? "perusahaan" : defaultTab;
 
     const { data: user, isLoading: isUserLoading } = useUser();
@@ -240,11 +246,51 @@ export default function EditProfil({ defaultTab = "pengguna" }: EditProfilProps)
         }
     }, [perusahaan, user?.perusahaan, perusahaanForm]);
 
+    useEffect(() => {
+        return () => {
+            if (userPhotoPreview?.startsWith("blob:")) {
+                URL.revokeObjectURL(userPhotoPreview);
+            }
+        };
+    }, [userPhotoPreview]);
+
+    useEffect(() => {
+        return () => {
+            if (userBannerPreview?.startsWith("blob:")) {
+                URL.revokeObjectURL(userBannerPreview);
+            }
+        };
+    }, [userBannerPreview]);
+
+    const resetPendingUserMedia = () => {
+        setPendingUserPhoto(null);
+        setPendingUserBanner(null);
+        setUserPhotoPreview((current) => {
+            if (current?.startsWith("blob:")) {
+                URL.revokeObjectURL(current);
+            }
+            return null;
+        });
+        setUserBannerPreview((current) => {
+            if (current?.startsWith("blob:")) {
+                URL.revokeObjectURL(current);
+            }
+            return null;
+        });
+    };
+
     const profileMutation = useMutation({
-        mutationFn: (d: ProfileForm) => usersService.updateCurrentUser(d),
+        mutationFn: async (payload: { data: ProfileForm; media?: FormData | null }) => {
+            const updated = await usersService.updateCurrentUser(payload.data);
+            if (payload.media) {
+                return usersService.updateCurrentUserMedia(payload.media);
+            }
+            return updated;
+        },
         onSuccess: (updated) => {
             qc.setQueryData(["me"], updated);
             syncCurrentUser(updated);
+            resetPendingUserMedia();
             toast({ title: "Profil diperbarui" });
             setIsEditingPengguna(false);
         },
@@ -281,16 +327,6 @@ export default function EditProfil({ defaultTab = "pengguna" }: EditProfilProps)
         onError: (e: any) => toast({ title: "Gagal", description: e.message, variant: "destructive" }),
     });
 
-    const uploadProfileImageMutation = useMutation({
-        mutationFn: (formData: FormData) => usersService.updateCurrentUser(formData),
-        onSuccess: (updated) => {
-            qc.setQueryData(["me"], updated);
-            syncCurrentUser(updated);
-            toast({ title: "Foto profil/banner berhasil diperbarui" });
-        },
-        onError: (e: any) => toast({ title: "Gagal mengunggah foto", description: e.message, variant: "destructive" }),
-    });
-
     const uploadPerusahaanImageMutation = useMutation({
         mutationFn: (formData: FormData) => {
             if (!perusahaanId) throw new Error("ID perusahaan tidak ditemukan");
@@ -315,18 +351,55 @@ export default function EditProfil({ defaultTab = "pengguna" }: EditProfilProps)
     const userBannerInputRef = useRef<HTMLInputElement>(null);
     const perusahaanBannerInputRef = useRef<HTMLInputElement>(null);
 
-    const handleUpload = (type: 'user_photo' | 'user_banner' | 'perusahaan_banner', file: File) => {
-        const formData = new FormData();
+    const updateUserMediaPreview = (type: 'user_photo' | 'user_banner', file: File) => {
+        const previewUrl = URL.createObjectURL(file);
         if (type === 'user_photo') {
-            formData.append("foto_profile", file); // Depending on your backend, using 'foto_profile' or 'photo'
-            uploadProfileImageMutation.mutate(formData);
+            setPendingUserPhoto(file);
+            setUserPhotoPreview((current) => {
+                if (current?.startsWith("blob:")) {
+                    URL.revokeObjectURL(current);
+                }
+                return previewUrl;
+            });
+            return;
+        }
+
+        setPendingUserBanner(file);
+        setUserBannerPreview((current) => {
+            if (current?.startsWith("blob:")) {
+                URL.revokeObjectURL(current);
+            }
+            return previewUrl;
+        });
+    };
+
+    const handleUpload = (type: 'user_photo' | 'user_banner' | 'perusahaan_banner', file: File) => {
+        if (type === 'user_photo') {
+            updateUserMediaPreview('user_photo', file);
         } else if (type === 'user_banner') {
-            formData.append("banner", file);
-            uploadProfileImageMutation.mutate(formData);
+            updateUserMediaPreview('user_banner', file);
         } else if (type === 'perusahaan_banner') {
+            const formData = new FormData();
             formData.append("photo", file);
             uploadPerusahaanImageMutation.mutate(formData);
         }
+    };
+
+    const submitProfileUpdate = (data: ProfileForm) => {
+        const media = pendingUserPhoto || pendingUserBanner
+            ? (() => {
+                const formData = new FormData();
+                if (pendingUserPhoto) {
+                    formData.append("profile_photo", pendingUserPhoto);
+                }
+                if (pendingUserBanner) {
+                    formData.append("banner", pendingUserBanner);
+                }
+                return formData;
+            })()
+            : null;
+
+        profileMutation.mutate({ data, media });
     };
 
     if (isUserLoading || (!!perusahaanId && isResolvingPerusahaan)) {
@@ -334,6 +407,9 @@ export default function EditProfil({ defaultTab = "pengguna" }: EditProfilProps)
             <div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-[var(--dashboard-info-soft-fg)]" /></div>
         );
     }
+
+    const userBannerImage = userBannerPreview || (user?.banner ? getMediaUrl(user.banner) : "");
+    const userPhotoImage = userPhotoPreview || (user?.foto_profile ? getMediaUrl(user.foto_profile) : "");
 
     return (
         <div className="max-w-4xl mx-auto space-y-6">
@@ -352,12 +428,12 @@ export default function EditProfil({ defaultTab = "pengguna" }: EditProfilProps)
                         >
                             {/* Banner */}
                             <div
-                                className={`h-32 w-full bg-cover bg-center relative group overflow-hidden ${!user?.banner ? 'bg-gradient-to-r from-indigo-900/60 to-blue-900/60' : ''}`}
-                                style={{ backgroundImage: user?.banner ? `url(${getMediaUrl(user.banner)})` : undefined }}
+                                className={`h-32 w-full bg-cover bg-center relative group overflow-hidden ${!userBannerImage ? 'bg-gradient-to-r from-indigo-900/60 to-blue-900/60' : ''}`}
+                                style={{ backgroundImage: userBannerImage ? `url(${userBannerImage})` : undefined }}
                             >
                                 {isEditingPengguna && (
                                     <div className={HOVER_OVERLAY_CLS}>
-                                        <button onClick={() => userBannerInputRef.current?.click()} className={OVERLAY_UPLOAD_BUTTON_CLS}>
+                                        <button onClick={() => userBannerInputRef.current?.click()} className={USER_BANNER_UPLOAD_BUTTON_CLS}>
                                             <ImageIcon className="w-4 h-4" /> Ganti Banner
                                         </button>
                                     </div>
@@ -375,7 +451,15 @@ export default function EditProfil({ defaultTab = "pengguna" }: EditProfilProps)
                                     </button>
                                 ) : (
                                     <button 
-                                        onClick={() => setIsEditingPengguna(false)}
+                                        onClick={() => {
+                                            profileForm.reset({
+                                                display_name: user?.display_name || user?.username || "",
+                                                email: user?.email || "",
+                                                jabatan: user?.jabatan_name || user?.id_jabatan || user?.jabatan || "",
+                                            });
+                                            resetPendingUserMedia();
+                                            setIsEditingPengguna(false);
+                                        }}
                                         className={DANGER_BUTTON_CLS}
                                     >
                                         <X className="w-4 h-4" />
@@ -390,6 +474,7 @@ export default function EditProfil({ defaultTab = "pengguna" }: EditProfilProps)
                                     accept="image/*"
                                     onChange={(e) => {
                                         if (e.target.files?.[0]) handleUpload('user_photo', e.target.files[0]);
+                                        e.currentTarget.value = "";
                                     }}
                                 />
                                 <input
@@ -399,6 +484,7 @@ export default function EditProfil({ defaultTab = "pengguna" }: EditProfilProps)
                                     accept="image/*"
                                     onChange={(e) => {
                                         if (e.target.files?.[0]) handleUpload('user_banner', e.target.files[0]);
+                                        e.currentTarget.value = "";
                                     }}
                                 />
                             </div>
@@ -408,9 +494,9 @@ export default function EditProfil({ defaultTab = "pengguna" }: EditProfilProps)
                                 {/* Profile Picture */}
                                 <div className="absolute -top-12 left-6 group">
                                     <div className="relative flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border-4 border-white/70 bg-[var(--dashboard-surface)] shadow-sm">
-                                        {user?.foto_profile ? (
+                                        {userPhotoImage ? (
                                             <img
-                                                src={getMediaUrl(user.foto_profile)}
+                                                src={userPhotoImage}
                                                 alt="Profile"
                                                 className="w-full h-full object-cover"
                                             />
@@ -421,8 +507,8 @@ export default function EditProfil({ defaultTab = "pengguna" }: EditProfilProps)
                                         )}
                                         {isEditingPengguna && (
                                             <div className={HOVER_OVERLAY_CLS}>
-                                                <button onClick={() => userPhotoInputRef.current?.click()} className="p-2 text-white hover:scale-110 transition-transform">
-                                                    <Camera className="w-6 h-6" />
+                                                <button onClick={() => userPhotoInputRef.current?.click()} className={USER_PHOTO_UPLOAD_BUTTON_CLS}>
+                                                    <Camera className="w-5 h-5" />
                                                 </button>
                                             </div>
                                         )}
@@ -510,7 +596,12 @@ export default function EditProfil({ defaultTab = "pengguna" }: EditProfilProps)
                                 <UserCircle className={`w-5 h-5 ${INFO_ICON_COLOR_CLS}`} />
                                 <h3 className="font-bold text-[var(--dashboard-text)]">Informasi Akun</h3>
                             </div>
-                            <form onSubmit={profileForm.handleSubmit((d) => profileMutation.mutate(d))} className="space-y-4">
+                            <form onSubmit={profileForm.handleSubmit(submitProfileUpdate)} className="space-y-4">
+                                {(pendingUserPhoto || pendingUserBanner) && (
+                                    <div className="rounded-xl border border-dashed border-[var(--dashboard-info-soft-border)] bg-[var(--dashboard-info-soft-bg)] px-4 py-3 text-sm text-[var(--dashboard-info-soft-fg)]">
+                                        Perubahan foto profil atau banner belum disimpan. Klik `Perbarui Profil` untuk mengirim perubahan ke server.
+                                    </div>
+                                )}
                                 <div>
                                     <label className={LABEL_CLS}>Nama Pengguna</label>
                                     <div className="relative">
@@ -568,7 +659,7 @@ export default function EditProfil({ defaultTab = "pengguna" }: EditProfilProps)
                             >
                                 {isEditingPerusahaan && (
                                     <div className={HOVER_OVERLAY_CLS}>
-                                        <button onClick={() => perusahaanBannerInputRef.current?.click()} className={OVERLAY_UPLOAD_BUTTON_CLS}>
+                                        <button onClick={() => perusahaanBannerInputRef.current?.click()} className={COMPANY_BANNER_UPLOAD_BUTTON_CLS}>
                                             <ImageIcon className="w-4 h-4" /> Ganti Foto/Banner Perusahaan
                                         </button>
                                     </div>

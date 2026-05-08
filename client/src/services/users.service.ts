@@ -15,6 +15,10 @@ class UsersService {
         }
         return apiClient.put<CurrentUser>('/api/me', payload);
     }
+
+    async updateCurrentUserMedia(payload: FormData): Promise<CurrentUser> {
+        return apiClient.postForm<CurrentUser>('/api/me/media', payload);
+    }
 }
 
 export const usersService = new UsersService();
