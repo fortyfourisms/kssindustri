@@ -1,5 +1,21 @@
 import { useAuthStore } from "@/stores/auth.store";
 
+const PROTECTED_PATH_PREFIXES = [
+    "/dashboard",
+    "/perusahaan",
+    "/ikas",
+    "/kse",
+    "/csirt",
+    "/survei-resiko",
+    "/onboarding-perusahaan",
+    "/lms",
+    "/course/",
+];
+
+function isProtectedPath(pathname: string): boolean {
+    return PROTECTED_PATH_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(prefix));
+}
+
 /**
  * Boots the app dengan silent session restore yang efisien.
  *
@@ -13,7 +29,11 @@ import { useAuthStore } from "@/stores/auth.store";
  *   - /api/me hanya dipanggil jika kita yakin ada session yang valid.
  *   - Landing page tetap bisa diakses tanpa login.
  */
-export async function bootstrapApp(): Promise<void> {
+export async function bootstrapApp(pathname = window.location.pathname): Promise<void> {
+    if (!isProtectedPath(pathname)) {
+        return;
+    }
+
     // Ambil store auth secara langsung \u2014 singleton, aman dipanggil di luar React cycle.
     const store = useAuthStore.getState();
 
