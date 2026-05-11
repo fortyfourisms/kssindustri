@@ -83,8 +83,10 @@ export const api = {
 
     // ── Survei ───────────────────────────────────────────────────────────────
     getSurvei: () => surveyService.getRespondents(),
+    getSurveyRespondentMe: () => surveyService.getMyRespondentOrNull(),
     getSurveyRespondentById: (id: string | number) => surveyService.getRespondentById(id),
     saveSurveyRespondent: (payload: any) => surveyService.createRespondent(payload),
+    saveSurveyRespondentMe: (payload: any) => surveyService.upsertMyRespondent(payload),
     updateSurveyRespondent: (id: string | number, payload: any) => surveyService.updateRespondent(id, payload),
     deleteSurveyRespondent: (id: string | number) => surveyService.deleteRespondent(id),
     getSurveyProgress: (respondenId: string | number) => surveyService.getProgress(respondenId),

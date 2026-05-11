@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { RequireCompanyProfile } from "@/components/RequireCompanyProfile";
 import { Info, UserCircle2, ArrowRight, ArrowLeft, AlertTriangle, Loader2, Building2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -7,6 +8,7 @@ import { useCompanyProfile } from "@/hooks/useCompanyProfile";
 import { useSurveyStore } from "@/stores/survey.store";
 import { useToast } from "@/hooks/use-toast";
 import { PageHeader } from "@/components/dashboard/PageHeader";
+import { STATIC_SURVEY_RISKS } from "@/data/survey-static";
 import type { SurveyRiskResponse, SurveyScaleValue, UpsertSurveyRespondentPayload } from "@/types/survey.types";
 
 const INPUT_CLS = "dashboard-input w-full rounded-xl border px-4 py-3 text-sm transition-all duration-300";
@@ -109,8 +111,49 @@ function getCurrentRiskIndex(risk: SurveyRiskResponse | null, progress: Record<s
     return 0;
 }
 
+function getStaticRiskFallback(risk: SurveyRiskResponse | null, progress: Record<string, any> | null): SurveyRiskResponse | null {
+    const resolvedRiskId = getRiskId(risk);
+    const riskById = typeof resolvedRiskId === "number"
+        ? STATIC_SURVEY_RISKS.find((item) => item.id === resolvedRiskId)
+        : undefined;
+    const currentRiskIndex = getCurrentRiskIndex(risk, progress);
+    const riskByIndex = STATIC_SURVEY_RISKS[currentRiskIndex];
+    const fallback = riskById ?? riskByIndex;
+
+    if (!fallback) return null;
+
+    return {
+        risiko_id: fallback.id,
+        current_risk: currentRiskIndex,
+        total_risks: typeof progress?.total_risks === "number"
+            ? progress.total_risks
+            : typeof progress?.total_steps === "number"
+                ? progress.total_steps
+                : STATIC_SURVEY_RISKS.length,
+        nama_risiko: fallback.nama_risiko,
+        deskripsi: fallback.deskripsi,
+    };
+}
+
+function getResolvedRisk(risk: SurveyRiskResponse | null, progress: Record<string, any> | null): SurveyRiskResponse | null {
+    const fallback = getStaticRiskFallback(risk, progress);
+    if (!risk) return fallback;
+    return {
+        ...fallback,
+        ...risk,
+        risiko_id: getRiskId(risk) ?? fallback?.risiko_id,
+        custom_risiko_id: getCustomRiskId(risk) ?? fallback?.custom_risiko_id,
+        current_risk: typeof risk.current_risk === "number" ? risk.current_risk : fallback?.current_risk,
+        total_risks: typeof risk.total_risks === "number" ? risk.total_risks : fallback?.total_risks,
+        nama_risiko: typeof risk.nama_risiko === "string" && risk.nama_risiko.trim() ? risk.nama_risiko : fallback?.nama_risiko,
+        deskripsi: typeof risk.deskripsi === "string" && risk.deskripsi.trim() ? risk.deskripsi : fallback?.deskripsi,
+    };
+}
+
 export default function SurveiProfil() {
     const [answers, setAnswers] = useState<Record<string, any>>(DEFAULT_ANSWERS);
+    const [searchParams, setSearchParams] = useSearchParams();
+    const [respondentStepPinned, setRespondentStepPinned] = useState(searchParams.get("step") === "responden");
 
     const { data: user } = useUser();
     const { perusahaanId, perusahaan } = useCompanyProfile(user ?? null);
@@ -118,9 +161,12 @@ export default function SurveiProfil() {
     const currentRespondent = useSurveyStore((state) => state.currentRespondent);
     const currentRisk = useSurveyStore((state) => state.currentRisk);
     const progressState = useSurveyStore((state) => state.progress);
+    const nextStep = useSurveyStore((state) => state.nextStep);
+    const loading = useSurveyStore((state) => state.loading);
     const saving = useSurveyStore((state) => state.saving);
     const saveRespondent = useSurveyStore((state) => state.saveRespondent);
     const loadSurveyContext = useSurveyStore((state) => state.loadSurveyContext);
+    const fetchCurrentRespondent = useSurveyStore((state) => state.fetchCurrentRespondent);
     const saveRiskStep = useSurveyStore((state) => state.saveRiskStep);
     const navigateRisk = useSurveyStore((state) => state.navigateRisk);
 
@@ -130,7 +176,17 @@ export default function SurveiProfil() {
     const activeRespondent = currentRespondent;
     const activeRisk = currentRisk;
     const activeProgress = progressState;
-    const isLoadingMode = false;
+    const isLoadingMode = loading;
+    const progressRecord = activeProgress as Record<string, any> | null;
+    const resolvedRisk = getResolvedRisk(activeRisk, progressRecord);
+
+    useEffect(() => {
+        void fetchCurrentRespondent();
+    }, [fetchCurrentRespondent]);
+
+    useEffect(() => {
+        setRespondentStepPinned(searchParams.get("step") === "responden");
+    }, [searchParams]);
 
     useEffect(() => {
         setAnswers({
@@ -153,20 +209,29 @@ export default function SurveiProfil() {
             q5: typeof activeRisk?.deskripsi_pengendalian === "string" ? activeRisk.deskripsi_pengendalian : DEFAULT_ANSWERS.q5,
         });
 
+        if (respondentStepPinned) {
+            setStep(0);
+            return;
+        }
+
         if (activeRespondent) {
             setStep(1);
             return;
         }
 
         setStep(0);
-    }, [activeRespondent, activeRisk, perusahaan, user?.email]);
+    }, [activeRespondent, activeRisk, perusahaan, respondentStepPinned, user?.email]);
 
     useEffect(() => {
         setIsFinished(Boolean(activeProgress?.completed || activeProgress?.finished_at));
     }, [activeProgress]);
 
     const setAnswer = (key: string, val: any) => {
-        setAnswers(prev => ({ ...prev, [key]: val }));
+        setAnswers((prev) => ({
+            ...prev,
+            [key]: val,
+            ...(key === "q4" && val === "tidak" ? { q5: "" } : {}),
+        }));
     };
 
     const isStep0Valid = answers.responden_nama && answers.responden_jabatan && answers.responden_perusahaan && answers.responden_email && answers.responden_telepon && answers.responden_sektor;
@@ -182,7 +247,7 @@ export default function SurveiProfil() {
             (answers.q4 === "tidak" || answers.q5?.trim())
         );
 
-    const submitRisk = async (direction: "next" | "previous") => {
+    const submitRisk = async (direction: "next" | "prev") => {
         if (!currentRespondent?.id) {
             toast({
                 title: "Responden belum tersedia",
@@ -192,8 +257,8 @@ export default function SurveiProfil() {
             return false;
         }
 
-        const risikoId = getRiskId(currentRisk);
-        const customRisikoId = getCustomRiskId(currentRisk);
+        const risikoId = getRiskId(resolvedRisk);
+        const customRisikoId = getCustomRiskId(resolvedRisk);
         if (!risikoId && !customRisikoId) {
             toast({
                 title: "Identitas risiko belum tersedia",
@@ -206,7 +271,7 @@ export default function SurveiProfil() {
         const shouldFinish = direction === "next" && !hasNextRisk(currentRisk, progressState as Record<string, any> | null);
         const result = await saveRiskStep({
             responden_id: currentRespondent.id,
-            current_risk: getCurrentRiskIndex(currentRisk, progressState as Record<string, any> | null),
+            current_risk: getCurrentRiskIndex(resolvedRisk, progressState as Record<string, any> | null),
             direction,
             finish: shouldFinish,
             risiko_id: risikoId,
@@ -280,6 +345,11 @@ export default function SurveiProfil() {
                 return;
             }
 
+            if (respondentStepPinned) {
+                setRespondentStepPinned(false);
+                setSearchParams({}, { replace: true });
+            }
+
             await loadSurveyContext(respondentResult.data.id);
             window.scrollTo({ top: 0, behavior: 'smooth' });
             setStep(1);
@@ -309,7 +379,7 @@ export default function SurveiProfil() {
             if (hasPreviousRisk(currentRisk, progressState as Record<string, any> | null) && currentRespondent?.id) {
                 if (isStep1Valid) {
                     window.scrollTo({ top: 0, behavior: 'smooth' });
-                    await submitRisk("previous");
+                    await submitRisk("prev");
                     return;
                 }
 
@@ -353,14 +423,14 @@ export default function SurveiProfil() {
     }
 
     const answeredFields = Object.values(activeAnswers).filter(v => v !== null && v !== '').length;
-    const riskTitle = String(activeRisk?.nama_risiko || activeRisk?.judul || DEFAULT_RISK_TITLE);
-    const riskDescription = typeof activeRisk?.deskripsi === "string" && activeRisk.deskripsi.trim()
-        ? activeRisk.deskripsi
+    const riskTitle = String(resolvedRisk?.nama_risiko || resolvedRisk?.judul || DEFAULT_RISK_TITLE);
+    const riskDescription = typeof resolvedRisk?.deskripsi === "string" && resolvedRisk.deskripsi.trim()
+        ? resolvedRisk.deskripsi
         : DEFAULT_RISK_DESCRIPTION;
-    const isRiskUnavailable = step === 1 && !isLoadingMode && !isFinished && !activeRisk;
-    const currentRiskNumber = getCurrentRiskIndex(activeRisk, activeProgress as Record<string, any> | null) + 1;
-    const totalRiskCount = typeof activeRisk?.total_risks === "number"
-        ? activeRisk.total_risks
+    const isRiskUnavailable = step === 1 && !isLoadingMode && !isFinished && !resolvedRisk;
+    const currentRiskNumber = getCurrentRiskIndex(resolvedRisk, activeProgress as Record<string, any> | null) + 1;
+    const totalRiskCount = typeof resolvedRisk?.total_risks === "number"
+        ? resolvedRisk.total_risks
         : typeof activeProgress?.total_risks === "number"
             ? activeProgress.total_risks
             : typeof activeProgress?.total_steps === "number"
@@ -375,10 +445,11 @@ export default function SurveiProfil() {
         ? "Simpan & Lanjut"
         : isFinished
             ? "Survei Selesai"
-            : hasNextRisk(activeRisk, activeProgress as Record<string, any> | null)
+            : hasNextRisk(resolvedRisk, activeProgress as Record<string, any> | null)
                 ? "Simpan & Berikutnya"
                 : "Simpan & Selesaikan";
     const pageTitle = "Survei Profil Risiko";
+    const nextStepLabel = typeof nextStep === "string" && nextStep.trim() ? nextStep.trim() : null;
     const pageSubtitle = step === 0
         ? "Lengkapi informasi responden untuk memulai penilaian risiko berjenjang."
         : `Risiko ${currentRiskNumber}${typeof totalRiskCount === "number" ? ` dari ${totalRiskCount}` : ""}. Lengkapi jawaban sesuai kondisi aktual organisasi Anda.`;
@@ -400,6 +471,12 @@ export default function SurveiProfil() {
                         title={pageTitle}
                         subtitle={pageSubtitle}
                     />
+
+                    {nextStepLabel ? (
+                        <div className="dashboard-chip-info inline-flex items-center rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-wide">
+                            Next Step: {nextStepLabel}
+                        </div>
+                    ) : null}
 
                     <div className="w-full">
 
@@ -617,8 +694,8 @@ export default function SurveiProfil() {
                                                     <span className="text-rose-500 mt-0.5">*</span>
                                                     <span>Seberapa besar dampak dari <strong className={SELECTED_TEXT_CLS}>{riskTitle}</strong> pada kriteria berikut?</span>
                                                 </p>
-                                                <div className="dashboard-table-surface overflow-hidden rounded-xl border">
-                                                    <table className="w-full text-sm min-w-[700px]">
+                                                <div className="dashboard-table-surface overflow-x-auto overflow-y-hidden rounded-xl border">
+                                                    <table className="min-w-[700px] w-full text-sm">
                                                         <thead>
                                                             <tr className="dashboard-table-head dashboard-table-divider border-b">
                                                                 <th className="p-4 text-left font-semibold w-[20%]">Kategori</th>
@@ -759,8 +836,8 @@ export default function SurveiProfil() {
                                                 
                                                 <div className="flex gap-4 mt-5 mb-8">
                                                     {[
-                                                        { value: 'ya', label: 'Mempunyai Pengendalian' },
-                                                        { value: 'tidak', label: 'Belum Mempunyai' }
+                                                        { value: 'ya', label: 'Ya' },
+                                                        { value: 'tidak', label: 'Tidak' }
                                                     ].map((opt) => (
                                                         <label key={opt.value} className={`flex-1 flex items-center justify-center gap-3 rounded-xl border-2 p-4 transition-all ${answers.q4 === opt.value ? SELECTED_CARD_CLS : 'dashboard-table-surface hover:border-[var(--dashboard-selection-border)]'}`} style={{ color: answers.q4 === opt.value ? "var(--dashboard-selection-text)" : "var(--dashboard-text-soft)" }}>
                                                             <input
@@ -777,18 +854,20 @@ export default function SurveiProfil() {
                                                     ))}
                                                 </div>
 
-                                                <div className="dashboard-divider border-t pt-6">
-                                                    <p className="mb-3 flex items-start gap-2 text-[15px] font-medium" style={{ color: "var(--dashboard-text)" }}>
-                                                        <span className="text-rose-500 mt-0.5">*</span>
-                                                        <span>Sebutkan tindakan pengendalian yang telah dilakukan:</span>
-                                                    </p>
-                                                    <textarea
-                                                        className={`${INPUT_CLS} min-h-[140px] resize-y`}
-                                                        placeholder="Jelaskan secara singkat. Contoh: Pengetatan akses VPN, klasifikasi data sensitif, NDAs..."
-                                                        value={answers.q5}
-                                                        onChange={(e) => setAnswer('q5', e.target.value)}
-                                                    />
-                                                </div>
+                                                {answers.q4 === 'ya' && (
+                                                    <div className="dashboard-divider border-t pt-6">
+                                                        <p className="mb-3 flex items-start gap-2 text-[15px] font-medium" style={{ color: "var(--dashboard-text)" }}>
+                                                            <span className="text-rose-500 mt-0.5">*</span>
+                                                            <span>Sebutkan tindakan pengendalian yang telah dilakukan:</span>
+                                                        </p>
+                                                        <textarea
+                                                            className={`${INPUT_CLS} min-h-[140px] resize-y`}
+                                                            placeholder="Jelaskan secara singkat. Contoh: Pengetatan akses VPN, klasifikasi data sensitif, NDAs..."
+                                                            value={answers.q5}
+                                                            onChange={(e) => setAnswer('q5', e.target.value)}
+                                                        />
+                                                    </div>
+                                                )}
                                             </div>
                                         </motion.div>
                                     )}

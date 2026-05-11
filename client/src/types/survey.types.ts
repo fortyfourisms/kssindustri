@@ -1,4 +1,4 @@
-export type SurveyDirection = 'next' | 'previous' | string;
+export type SurveyDirection = 'next' | 'prev' | 'previous' | string;
 
 export type SurveyScaleValue = 1 | 2 | 3 | 4;
 
@@ -87,6 +87,7 @@ export interface SurveyProgress {
     total_steps?: number;
     has_next?: boolean;
     has_previous?: boolean;
+    next_step?: string;
     [key: string]: unknown;
 }
 
@@ -112,6 +113,7 @@ export interface SurveyRiskResponse {
     frekuensi?: number;
     ada_pengendalian?: boolean;
     deskripsi_pengendalian?: string;
+    next_step?: string;
     [key: string]: unknown;
 }
 

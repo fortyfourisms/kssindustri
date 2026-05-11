@@ -35,6 +35,7 @@ import KSE from "@/pages/dashboard/KSE";
 import FormKse from "@/pages/dashboard/FormKse";
 import CSIRT from "@/pages/dashboard/CSIRT";
 import SurveiProfil from "@/pages/dashboard/SurveiProfil";
+import SurveiRisikoOverview from "@/pages/dashboard/SurveiRisikoOverview";
 import EditProfil from "@/pages/dashboard/EditProfil";
 import PengaturanAkun from "@/pages/dashboard/PengaturanAkun";
 
@@ -125,10 +126,19 @@ const router = createBrowserRouter([
         path: "/survei-resiko",
         element: (
           <OrganizationRoute>
-            <SurveiProfil />
+            <SurveiRisikoOverview />
           </OrganizationRoute>
         ),
         handle: { title: "Survei Risiko" },
+      },
+      {
+        path: "/survei-resiko/form",
+        element: (
+          <OrganizationRoute>
+            <SurveiProfil />
+          </OrganizationRoute>
+        ),
+        handle: { title: "Form Survei Risiko" },
       },
       {
         path: "/dashboard/ikas",

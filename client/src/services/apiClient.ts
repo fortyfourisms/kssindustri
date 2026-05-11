@@ -126,7 +126,7 @@ async function request<T>(
             ...init,
             credentials: 'include', // HTTP-only cookie auth
             headers: isFormData
-                ? (init.headers ?? {}) // let browser set multipart boundary
+                ? { ...(init.headers ?? {}) } // let browser set multipart boundary
                 : { 'Content-Type': 'application/json', ...(init.headers ?? {}) },
         });
     } catch {

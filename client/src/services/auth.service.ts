@@ -20,7 +20,8 @@ let lastRefreshAt = 0;
  */
 class AuthService {
     /**
-     * Login — backend returns setup_token, mfa_token, or access_token.
+     * Login — backend returns setup_token, mfa_token, or user data after
+     * establishing the HTTP-only cookie session.
      */
     async login(payload: LoginPayload): Promise<AuthResponse> {
         return apiClient.post<AuthResponse>('/api/login', {
@@ -62,8 +63,8 @@ class AuthService {
 
     /**
      * Refresh access token via POST /api/refresh.
-     * Backend akan membaca refresh token dari HTTP-only cookie dan menerbitkan
-     * access token baru. Menggunakan raw fetch (bukan apiClient) agar tidak
+     * Backend akan membaca refresh token dari HTTP-only cookie dan memperbarui
+     * session cookie. Menggunakan raw fetch (bukan apiClient) agar tidak
      * memicu interceptor 401 dan menyebabkan infinite loop.
      * Melempar error jika refresh token sudah expired atau tidak valid.
      */
@@ -129,7 +130,7 @@ class AuthService {
 
     /**
      * MFA Enable — verify the 6-digit code during first-time setup.
-     * On success, returns access_token + user data.
+     * On success, backend finalizes the cookie session and returns user data.
      */
     async mfaEnable(setupToken: string, code: string): Promise<MfaEnableResponse> {
         return apiClient.post<MfaEnableResponse>('/api/mfa/enable', {
@@ -140,7 +141,7 @@ class AuthService {
 
     /**
      * MFA Verify — verify the 6-digit code for returning users.
-     * On success, returns access_token + user data.
+     * On success, backend finalizes the cookie session and returns user data.
      */
     async mfaVerify(mfaToken: string, code: string): Promise<MfaVerifyResponse> {
         return apiClient.post<MfaVerifyResponse>('/api/mfa/verify', {
