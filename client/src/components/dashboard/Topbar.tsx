@@ -41,7 +41,7 @@ export function Topbar({ title, onMenuClick, hideThemeToggle = false }: TopbarPr
 
     return (
         <header
-            className="sticky top-0 z-30 flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8"
+            className="sticky top-0 z-30 flex min-h-16 flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8"
             style={{
                 background: "var(--dashboard-topbar-bg)",
                 backdropFilter: "blur(20px)",
@@ -51,35 +51,35 @@ export function Topbar({ title, onMenuClick, hideThemeToggle = false }: TopbarPr
             }}
         >
             {/* Left: Hamburger + Title */}
-            <div className="flex items-center gap-3">
+            <div className="flex min-w-0 flex-1 items-center gap-3">
                 <button
                     onClick={onMenuClick}
-                    className="rounded-xl p-2 transition lg:hidden"
+                    className="flex h-11 w-11 items-center justify-center rounded-2xl transition lg:hidden"
                     style={{ color: "var(--dashboard-text-muted)" }}
                     aria-label="Open menu"
                 >
                     <Menu className="w-5 h-5" />
                 </button>
                 {title && (
-                    <div className="flex items-center gap-2">
+                    <div className="flex min-w-0 items-center gap-2">
                         <div
                             className="hidden h-5 w-1 rounded-full sm:block"
                             style={{
                                 background: "linear-gradient(180deg, var(--dashboard-title-accent-start), var(--dashboard-title-accent-end))",
                             }}
                         />
-                        <h2 className="text-base font-black tracking-tight" style={{ color: "var(--dashboard-text)" }}>{title}</h2>
+                        <h2 className="truncate text-base font-black tracking-tight sm:text-lg" style={{ color: "var(--dashboard-text)" }}>{title}</h2>
                     </div>
                 )}
             </div>
 
             {/* Right: Notifications + Avatar dropdown */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 self-start sm:self-auto">
                 {!hideThemeToggle && (
                     <button
                         type="button"
                         onClick={toggleDashboardTheme}
-                        className="relative flex h-10 items-center gap-2 rounded-2xl border px-3 text-sm font-semibold transition"
+                        className="relative flex h-11 items-center gap-2 rounded-2xl border px-3 text-sm font-semibold transition-all duration-300"
                         style={{
                             borderColor: "var(--dashboard-border)",
                             background: "var(--dashboard-surface)",
@@ -93,7 +93,7 @@ export function Topbar({ title, onMenuClick, hideThemeToggle = false }: TopbarPr
                         ) : (
                             <Moon className="h-4 w-4" style={{ color: "var(--dashboard-text-soft)" }} />
                         )}
-                        <span className="hidden lg:inline">{isDark ? "Light" : "Dark"}</span>
+                        <span className="hidden xl:inline">{isDark ? "Light" : "Dark"}</span>
                     </button>
                 )}
 
@@ -105,7 +105,7 @@ export function Topbar({ title, onMenuClick, hideThemeToggle = false }: TopbarPr
                     <button
                         onClick={() => setOpen((v) => !v)}
                         className={cn(
-                            "flex items-center gap-2.5 rounded-2xl px-2.5 py-1.5 transition-all duration-200",
+                            "flex h-11 items-center gap-2.5 rounded-2xl px-2.5 py-1.5 transition-all duration-200",
                             open
                                 ? "ring-1"
                                 : ""
@@ -131,7 +131,7 @@ export function Topbar({ title, onMenuClick, hideThemeToggle = false }: TopbarPr
                                 user?.name ? getInitials(user.name) : <User className="w-3.5 h-3.5" />
                             )}
                         </div>
-                        <div className="hidden sm:block text-left">
+                        <div className="hidden text-left sm:block">
                             <p className="text-sm font-bold leading-none" style={{ color: "var(--dashboard-text)" }}>{user?.username ?? user?.name}</p>
                             <p className="text-[10px] mt-0.5 truncate max-w-[140px]" style={{ color: "var(--dashboard-text-muted)" }}>{user?.email}</p>
                         </div>
@@ -141,7 +141,7 @@ export function Topbar({ title, onMenuClick, hideThemeToggle = false }: TopbarPr
                     {/* Dropdown */}
                     {open && (
                         <div
-                            className="absolute right-0 mt-2 w-56 rounded-2xl py-1.5 z-50 overflow-hidden"
+                            className="absolute right-0 z-50 mt-2 w-[calc(100vw-2rem)] max-w-56 overflow-hidden rounded-2xl py-1.5"
                             style={{
                                 background: "var(--dashboard-surface-strong)",
                                 backdropFilter: "blur(20px)",

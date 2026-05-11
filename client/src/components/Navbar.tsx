@@ -164,7 +164,7 @@ export function Navbar({ mode = "landing" }: NavbarProps) {
       animate={{
         y: isAtBottom ? -96 : 0,
         opacity: isAtBottom ? 0 : 1,
-        paddingTop: scrolled || isOpen ? 16 : 24,
+        paddingTop: scrolled || isOpen ? 12 : 20,
       }}
       transition={{
         y: { type: "spring", stiffness: 180, damping: 24, mass: 0.9 },
@@ -178,8 +178,8 @@ export function Navbar({ mode = "landing" }: NavbarProps) {
           backgroundColor: scrolled || isOpen ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0)",
           borderColor: scrolled || isOpen ? "rgba(255,255,255,0.24)" : "rgba(255,255,255,0)",
           borderRadius: scrolled || isOpen ? 999 : 24,
-          paddingLeft: scrolled || isOpen ? 24 : 0,
-          paddingRight: scrolled || isOpen ? 24 : 0,
+          paddingLeft: scrolled || isOpen ? 16 : 0,
+          paddingRight: scrolled || isOpen ? 16 : 0,
           paddingTop: scrolled || isOpen ? 8 : 0,
           paddingBottom: scrolled || isOpen ? 8 : 0,
           boxShadow: scrolled || isOpen
@@ -188,18 +188,18 @@ export function Navbar({ mode = "landing" }: NavbarProps) {
         }}
         transition={{
           type: "spring",
-          stiffness: 170,
-          damping: 22,
-          mass: 0.95,
-        }}
-        className="z-[60] mx-4 flex w-full max-w-7xl items-center justify-between border backdrop-blur-xl saturate-[1.8] ring-1 ring-white/20 sm:mx-6 lg:mx-8"
+            stiffness: 170,
+            damping: 22,
+            mass: 0.95,
+          }}
+        className="z-[60] mx-3 flex w-full max-w-7xl items-center justify-between border backdrop-blur-xl saturate-[1.8] ring-1 ring-white/20 sm:mx-6 lg:mx-8"
       >
         {/* Logo Section */}
-        <div className="flex-1 flex items-center justify-start gap-3 py-2">
+        <div className="flex min-w-0 flex-1 items-center justify-start gap-3 py-2">
           <button
             type="button"
             onClick={handleLogoClick}
-            className="font-display font-black text-2xl tracking-tighter text-foreground"
+            className="truncate font-display text-xl font-black tracking-tighter text-foreground sm:text-2xl"
             aria-label="Go to home"
           >
             FortyFour
@@ -246,13 +246,13 @@ export function Navbar({ mode = "landing" }: NavbarProps) {
         <div className="flex flex-1 items-center justify-end gap-3 py-1 sm:gap-4 lg:gap-6">
           <button
             onClick={() => navigate("/login")}
-            className="hidden text-sm font-bold text-slate-500 transition-colors hover:text-foreground sm:block"
+            className="hidden text-sm font-bold text-slate-500 transition-colors duration-300 hover:text-foreground lg:block"
           >
             {mode === "preview" ? "Sign In" : "Sign In"}
           </button>
           <Button
             onClick={() => navigate("/register")}
-            className="hidden h-10 rounded-full border-none bg-blue-600 px-6 text-sm font-bold leading-none text-white shadow-lg shadow-blue-500/20 transition-all hover:scale-105 hover:bg-blue-700 active:scale-95 sm:inline-flex lg:px-8"
+            className="hidden h-11 rounded-full border-none bg-blue-600 px-6 text-sm font-bold leading-none text-white shadow-lg shadow-blue-500/20 transition-all duration-300 hover:scale-105 hover:bg-blue-700 active:scale-95 lg:inline-flex lg:px-8"
           >
             {mode === "preview" ? "Sign Up" : "Sign Up"}
           </Button>
@@ -260,8 +260,10 @@ export function Navbar({ mode = "landing" }: NavbarProps) {
           {/* Mobile Menu Toggle */}
           <button
             onClick={() => setIsOpen(!isOpen)}
-            className="rounded-xl p-2 text-slate-600 transition-colors hover:text-foreground lg:hidden"
+            className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/30 bg-white/60 text-slate-600 transition-all duration-300 hover:text-foreground lg:hidden"
             aria-label="Toggle menu"
+            aria-expanded={isOpen}
+            aria-controls="mobile-nav-menu"
           >
             {isOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
@@ -272,13 +274,15 @@ export function Navbar({ mode = "landing" }: NavbarProps) {
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ opacity: 0, y: -20 }}
+            id="mobile-nav-menu"
+            initial={{ opacity: 0, y: -12 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
+            exit={{ opacity: 0, y: -12 }}
             transition={{ duration: 0.3, ease: "easeOut" }}
-            className="fixed inset-0 z-40 flex flex-col items-center overflow-y-auto bg-white/80 px-5 pb-10 pt-28 backdrop-blur-2xl lg:hidden sm:px-6 sm:pt-32"
+            className="fixed inset-0 z-40 bg-slate-950/10 px-3 pb-6 pt-24 backdrop-blur-sm lg:hidden sm:px-6 sm:pt-28"
           >
-            <nav className="flex w-full max-w-sm flex-col items-center gap-5">
+            <div className="mx-auto w-full max-w-7xl">
+              <nav className="glass-panel flex w-full flex-col gap-3 rounded-[2rem] p-4 shadow-[0_24px_80px_rgba(15,23,42,0.14)] sm:p-5">
               {navLinks.map((link, i) => (
                 <motion.a
                   key={link.name}
@@ -290,9 +294,10 @@ export function Navbar({ mode = "landing" }: NavbarProps) {
                     handleScrollTo(e, link.href);
                     setIsOpen(false);
                   }}
-                  className={`w-full rounded-2xl px-6 py-3 text-center text-xl font-bold transition-colors sm:text-2xl ${activeSection === link.name
-                    ? "bg-blue-50 text-blue-600"
-                    : "text-slate-800 hover:text-blue-600 hover:bg-slate-50"
+                  className={`w-full rounded-2xl px-4 py-3 text-left text-base font-bold transition-all duration-300 sm:px-5 sm:text-lg ${
+                    activeSection === link.name
+                      ? "bg-blue-50 text-blue-600"
+                      : "text-slate-800 hover:bg-slate-50 hover:text-blue-600"
                   }`}
                 >
                   {link.name}
@@ -303,22 +308,23 @@ export function Navbar({ mode = "landing" }: NavbarProps) {
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.25 }}
-                className="mt-6 flex w-full flex-col gap-4"
+                className="mt-3 flex w-full flex-col gap-3 border-t border-slate-200/70 pt-3"
               >
                 <button
                   onClick={() => { setIsOpen(false); navigate("/login"); }}
-                  className="min-h-11 w-full rounded-2xl border border-slate-200 py-3.5 text-base font-bold text-slate-600 sm:text-lg"
+                  className="h-11 w-full rounded-2xl border border-slate-200 px-6 text-base font-bold text-slate-600 transition-all duration-300 hover:bg-slate-50"
                 >
                   {mode === "preview" ? "Sign In" : "Sign In"}
                 </button>
                 <Button
                   onClick={() => { setIsOpen(false); navigate("/register"); }}
-                  className="min-h-11 w-full rounded-2xl bg-blue-600 py-3.5 text-base font-bold text-white shadow-xl shadow-blue-500/20 hover:bg-blue-700 sm:text-lg"
+                  className="h-11 w-full rounded-2xl bg-blue-600 px-6 text-base font-bold text-white shadow-xl shadow-blue-500/20 transition-all duration-300 hover:bg-blue-700"
                 >
                   {mode === "preview" ? "Sign Up" : "Sign Up"}
                 </Button>
               </motion.div>
-            </nav>
+              </nav>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

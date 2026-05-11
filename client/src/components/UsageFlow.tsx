@@ -26,15 +26,15 @@ const steps = [
 
 export function UsageFlow() {
     return (
-        <section id="flow" className="py-24 md:py-32 bg-white relative overflow-hidden">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
-                <div className="text-center mb-16 md:mb-24">
+        <section id="flow" className="relative overflow-hidden bg-white py-12 sm:py-16 lg:py-20">
+            <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                <div className="mb-10 text-center sm:mb-14 lg:mb-16">
                     <motion.h2
                         initial={{ opacity: 0, y: 20 }}
                         whileInView={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.6 }}
                         viewport={{ once: true }}
-                        className="text-5xl md:text-6xl font-display font-medium text-slate-900 tracking-tight leading-tight"
+                        className="text-2xl font-display font-medium leading-tight text-slate-900 sm:text-3xl lg:text-5xl"
                     >
                         Alur Penggunaan Platform
                     </motion.h2>
@@ -43,101 +43,53 @@ export function UsageFlow() {
                         whileInView={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.6, delay: 0.1 }}
                         viewport={{ once: true }}
-                        className="text-muted-foreground text-sm md:text-lg max-w-2xl mx-auto px-4"
+                        className="mx-auto mt-4 max-w-prose text-sm leading-relaxed text-muted-foreground sm:text-base lg:text-lg"
                     >
                         Proses penilaian yang sistematis untuk memastikan hasil yang akurat dan terstandarisasi bagi instansi Anda.
                     </motion.p>
                 </div>
 
                 <div className="relative">
-                    {/* Central Vertical Line */}
-                    <div className="absolute left-1/2 -translate-x-1/2 top-0 bottom-0 w-[1.5px] bg-gradient-to-b from-primary/10 via-primary/40 to-primary/10" />
+                    <div className="absolute bottom-0 left-5 top-0 w-px bg-gradient-to-b from-primary/10 via-primary/40 to-primary/10 lg:left-1/2 lg:-translate-x-1/2" />
 
-                    <div className="space-y-12 md:space-y-24">
+                    <div className="space-y-4 sm:space-y-6 lg:space-y-8">
                         {steps.map((step, index) => {
                             const isEven = index % 2 === 0;
+                            const Icon = step.icon;
+
                             return (
-                                <div key={index} className="grid grid-cols-2 items-center gap-2 md:gap-12">
-                                    {/* Left Side */}
-                                    <div className={`flex items-center ${isEven ? 'justify-center' : 'justify-end pr-2 md:pr-4'}`}>
-                                        {isEven ? (
-                                            /* Icon on Left */
-                                            <motion.div
-                                                initial={{ opacity: 0, x: -30 }}
-                                                whileInView={{ opacity: 1, x: 0 }}
-                                                transition={{ duration: 0.5 }}
-                                                viewport={{}}
-                                                className="w-16 h-16 md:w-40 md:h-40 rounded-xl md:rounded-3xl bg-slate-50 border border-slate-100 flex items-center justify-center relative group"
-                                            >
-                                                <div className="absolute inset-1.5 md:inset-2.5 rounded-xl md:rounded-3xl border-2 border-dashed border-primary/20 animate-spin-slow" />
-                                                <div className="p-2 md:p-4 bg-white rounded-lg md:rounded-2xl shadow-lg md:shadow-xl group-hover:scale-110 transition-transform duration-500">
-                                                    <step.icon size={16} className="md:w-8 md:h-8 text-primary stroke-[1.5]" />
-                                                </div>
-                                            </motion.div>
-                                        ) : (
-                                            /* Text on Left (Odd) */
-                                            <motion.div
-                                                initial={{ opacity: 0, x: -30 }}
-                                                whileInView={{ opacity: 1, x: 0 }}
-                                                transition={{ duration: 0.5 }}
-                                                viewport={{}}
-                                                className="flex flex-row items-center gap-2 md:gap-4 text-right"
-                                            >
-                                                <div className="flex flex-col items-end flex-grow min-w-0">
-                                                    <h3 className="text-[12px] md:text-2xl font-bold text-foreground mb-0.5 md:mb-3 truncate w-full">
-                                                        {step.title}
-                                                    </h3>
-                                                    <p className="text-[10px] md:text-base text-muted-foreground leading-tight md:leading-relaxed">
-                                                        {step.description}
-                                                    </p>
-                                                </div>
-                                                <div className="flex-shrink-0 w-6 h-6 md:w-10 md:h-10 rounded-full bg-primary text-white text-[10px] md:text-base font-bold flex items-center justify-center border-2 md:border-4 border-white shadow-md z-20 -mr-[13.5px] md:-mr-[20.5px]">
+                                <motion.div
+                                    key={index}
+                                    initial={{ opacity: 0, y: 20 }}
+                                    whileInView={{ opacity: 1, y: 0 }}
+                                    transition={{ duration: 0.5, delay: index * 0.06 }}
+                                    viewport={{ once: true, amount: 0.25 }}
+                                    className="relative grid grid-cols-1 gap-4 pl-14 lg:grid-cols-2 lg:gap-10 lg:pl-0"
+                                >
+                                    <div
+                                        className={`${
+                                            isEven ? "lg:col-start-1 lg:pr-14" : "lg:col-start-2 lg:pl-14"
+                                        }`}
+                                    >
+                                        <div className="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl sm:p-6">
+                                            <div className="flex items-center gap-3">
+                                                <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-primary text-sm font-bold text-white">
                                                     {index + 1}
-                                                </div>
-                                            </motion.div>
-                                        )}
+                                                </span>
+                                                <h3 className="text-lg font-bold leading-tight text-foreground sm:text-xl">
+                                                    {step.title}
+                                                </h3>
+                                            </div>
+                                            <p className="mt-4 max-w-prose text-sm leading-relaxed text-muted-foreground sm:text-base">
+                                                {step.description}
+                                            </p>
+                                        </div>
                                     </div>
 
-                                    {/* Right Side */}
-                                    <div className={`flex items-center ${isEven ? 'justify-start pl-2 md:pl-4' : 'justify-center'}`}>
-                                        {isEven ? (
-                                            /* Text on Right (Even) */
-                                            <motion.div
-                                                initial={{ opacity: 0, x: 30 }}
-                                                whileInView={{ opacity: 1, x: 0 }}
-                                                transition={{ duration: 0.5 }}
-                                                viewport={{}}
-                                                className="flex flex-row items-center gap-2 md:gap-4"
-                                            >
-                                                <div className="flex-shrink-0 w-6 h-6 md:w-10 md:h-10 rounded-full bg-primary text-white text-[10px] md:text-base font-bold flex items-center justify-center border-2 md:border-4 border-white shadow-md z-20 -ml-[13.5px] md:-ml-[20.5px]">
-                                                    {index + 1}
-                                                </div>
-                                                <div className="flex flex-col flex-grow min-w-0">
-                                                    <h3 className="text-[12px] md:text-2xl font-bold text-foreground mb-0.5 md:mb-3 truncate w-full">
-                                                        {step.title}
-                                                    </h3>
-                                                    <p className="text-[10px] md:text-base text-muted-foreground leading-tight md:leading-relaxed">
-                                                        {step.description}
-                                                    </p>
-                                                </div>
-                                            </motion.div>
-                                        ) : (
-                                            /* Icon on Right */
-                                            <motion.div
-                                                initial={{ opacity: 0, x: 30 }}
-                                                whileInView={{ opacity: 1, x: 0 }}
-                                                transition={{ duration: 0.5 }}
-                                                viewport={{}}
-                                                className="w-16 h-16 md:w-40 md:h-40 rounded-xl md:rounded-3xl bg-slate-50 border border-slate-100 flex items-center justify-center relative group"
-                                            >
-                                                <div className="absolute inset-1.5 md:inset-2.5 rounded-xl md:rounded-3xl border-2 border-dashed border-primary/20 animate-spin-slow" />
-                                                <div className="p-2 md:p-4 bg-white rounded-lg md:rounded-2xl shadow-lg md:shadow-xl group-hover:scale-110 transition-transform duration-500">
-                                                    <step.icon size={16} className="md:w-8 md:h-8 text-primary stroke-[1.5]" />
-                                                </div>
-                                            </motion.div>
-                                        )}
+                                    <div className="pointer-events-none absolute left-0 top-5 flex h-10 w-10 items-center justify-center rounded-2xl border border-primary/15 bg-white text-primary shadow-sm lg:left-1/2 lg:h-14 lg:w-14 lg:-translate-x-1/2">
+                                        <Icon className="h-5 w-5 stroke-[1.8] lg:h-6 lg:w-6" />
                                     </div>
-                                </div>
+                                </motion.div>
                             );
                         })}
                     </div>

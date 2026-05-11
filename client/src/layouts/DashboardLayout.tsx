@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Outlet, useMatches } from "react-router-dom";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Topbar } from "@/components/dashboard/Topbar";
@@ -29,9 +29,17 @@ function DashboardLayoutContent() {
     useCompanyProfile(user);
     useNotificationStream(true);
 
+    useEffect(() => {
+        document.body.style.overflow = sidebarOpen ? "hidden" : "";
+
+        return () => {
+            document.body.style.overflow = "";
+        };
+    }, [sidebarOpen]);
+
     return (
         <div
-            className="dashboard-shell min-h-screen flex"
+            className="dashboard-shell relative flex min-h-screen overflow-x-clip"
             data-theme={dashboardTheme}
             data-dashboard-theme={dashboardTheme}
             style={{ background: "var(--dashboard-bg)" }}
@@ -58,9 +66,9 @@ function DashboardLayoutContent() {
 
             <Sidebar mobileOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-            <div className="flex-1 flex flex-col min-w-0 relative z-10">
+            <div className="relative z-10 flex min-w-0 flex-1 flex-col">
                 <Topbar title={title} onMenuClick={() => setSidebarOpen(true)} />
-                <main className="flex-1 overflow-x-hidden overflow-y-auto px-4 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
+                <main className="flex-1 overflow-x-clip overflow-y-auto px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-6 sm:py-6 lg:px-8 lg:py-8">
                     <Outlet />
                 </main>
             </div>
