@@ -38,11 +38,11 @@ export default function BlogArticle() {
 
       <Navbar mode="preview" />
 
-      <main className="relative z-10 pt-28 pb-16">
+      <main className="relative z-10 pt-24 pb-12 sm:pt-28 sm:pb-16">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <button
             onClick={() => navigate("/blog")}
-            className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 transition-colors hover:text-blue-600"
+            className="inline-flex h-11 items-center gap-2 rounded-full px-4 text-sm font-semibold text-slate-500 transition-all duration-300 hover:bg-white/70 hover:text-blue-600"
           >
             <ArrowLeft className="h-4 w-4" />
             Kembali ke daftar blog
@@ -54,7 +54,7 @@ export default function BlogArticle() {
             transition={{ duration: 0.6 }}
             className="mt-6 overflow-hidden rounded-[2rem] border border-white/60 bg-white/85 shadow-[0_24px_100px_rgba(31,60,136,0.10)] backdrop-blur-xl"
           >
-            <div className="p-6 md:p-10">
+            <div className="p-5 sm:p-6 md:p-10">
               {isLoading || !article ? (
                 <div className="skeleton-stack-lg min-h-[280px]">
                   <div className="flex gap-3">
@@ -80,10 +80,10 @@ export default function BlogArticle() {
                       {article.publishedAt}
                     </span>
                   </div>
-                  <h1 className="mt-6 max-w-5xl text-3xl font-display font-semibold tracking-tight text-slate-900 leading-[1.05] md:text-5xl xl:text-6xl">
+                  <h1 className="mt-6 max-w-5xl text-2xl font-display font-semibold leading-[1.05] tracking-tight text-slate-900 sm:text-4xl lg:text-5xl xl:text-6xl">
                     {article.title}
                   </h1>
-                  <p className="mt-5 max-w-3xl text-base leading-relaxed text-slate-600 md:text-lg">
+                  <p className="mt-5 max-w-prose text-base leading-relaxed text-slate-600 md:text-lg">
                     {article.excerpt}
                   </p>
                   <div className="mt-8 grid gap-4 text-sm text-slate-600 md:grid-cols-2 xl:grid-cols-[minmax(0,220px)_minmax(0,1fr)]">
@@ -92,18 +92,24 @@ export default function BlogArticle() {
                       <p className="mt-3 text-base font-semibold text-slate-900">{article.authorLabel}</p>
                     </div>
                     <div className="rounded-[1.5rem] border border-slate-200/80 bg-slate-50/80 p-5">
-                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Referensi</p>
+                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Tags</p>
                       <div className="mt-3 flex flex-wrap gap-2">
-                        <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">
-                          <Tag className="h-3 w-3 text-[#0061ff]" />
-                          ID {article.id}
-                        </span>
-                        {article.updatedAt ? (
-                          <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">
-                            <Tag className="h-3 w-3 text-[#0061ff]" />
-                            Sudah diperbarui
+                        {article.tags.length > 0 ? (
+                          article.tags.map((tag) => (
+                            <span
+                              key={tag}
+                              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600"
+                            >
+                              <Tag className="h-3 w-3 text-[#0061ff]" />
+                              {tag}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-500">
+                            <Tag className="h-3 w-3 text-slate-400" />
+                            Belum ada tag
                           </span>
-                        ) : null}
+                        )}
                       </div>
                     </div>
                   </div>
@@ -112,9 +118,9 @@ export default function BlogArticle() {
             </div>
           </motion.section>
 
-          <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
+          <div className="mt-6 grid gap-6 lg:mt-8 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-8">
             <div className="space-y-8">
-              <section className="rounded-[2rem] border border-white/60 bg-white/85 p-6 md:p-8 shadow-[0_20px_80px_rgba(31,60,136,0.08)] backdrop-blur-xl">
+              <section className="rounded-[2rem] border border-white/60 bg-white/85 p-5 sm:p-6 md:p-8 shadow-[0_20px_80px_rgba(31,60,136,0.08)] backdrop-blur-xl">
                 {isLoading || !article ? (
                   <div className="skeleton-stack">
                     <Skeleton className="h-5 w-40 rounded-full" />
@@ -122,7 +128,7 @@ export default function BlogArticle() {
                   </div>
                 ) : (
                   <div
-                    className="prose prose-slate max-w-none text-base leading-relaxed prose-headings:font-display prose-headings:text-slate-900 prose-p:text-slate-600"
+                    className="prose prose-slate max-w-none break-words text-base leading-relaxed prose-headings:font-display prose-headings:text-slate-900 prose-img:h-auto prose-img:w-full prose-img:rounded-2xl prose-p:text-slate-600 prose-pre:overflow-x-auto"
                     dangerouslySetInnerHTML={{ __html: article.descriptionHtml }}
                   />
                 )}
