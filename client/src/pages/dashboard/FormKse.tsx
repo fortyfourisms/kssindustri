@@ -596,7 +596,6 @@ export default function FormKse() {
                 toast({ title: "Tersimpan", description: "Data berhasil disimpan sementara." });
             }
         } catch (e: any) {
-            console.warn('KSE save failed:', e);
             const errMsg = e?.message || "Data tersimpan secara lokal. Sinkronisasi ke server gagal.";
             toast({ title: "Gagal Menyimpan", description: errMsg, variant: "destructive" });
         } finally {

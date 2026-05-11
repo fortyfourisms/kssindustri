@@ -47,6 +47,15 @@ const TURNSTILE_SCRIPT_ID = "cf-turnstile-script";
 const TURNSTILE_SCRIPT_SRC = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
 const TURNSTILE_LOAD_TIMEOUT_MS = 15000;
 
+function getCspNonce(): string | null {
+    const scriptWithNonce = document.querySelector("script[nonce]") as HTMLScriptElement | null;
+    if (!scriptWithNonce) {
+        return null;
+    }
+
+    return scriptWithNonce.nonce || scriptWithNonce.getAttribute("nonce");
+}
+
 function waitForTurnstileApi(timeoutMs = TURNSTILE_LOAD_TIMEOUT_MS): Promise<NonNullable<Window["turnstile"]>> {
     if (window.turnstile) {
         return Promise.resolve(window.turnstile);
@@ -111,8 +120,13 @@ function loadTurnstileScript(): Promise<NonNullable<Window["turnstile"]>> {
 
     return new Promise((resolve, reject) => {
         const script = document.createElement("script");
+        const nonce = getCspNonce();
         script.id = TURNSTILE_SCRIPT_ID;
         script.src = TURNSTILE_SCRIPT_SRC;
+        if (nonce) {
+            script.nonce = nonce;
+            script.setAttribute("nonce", nonce);
+        }
         const timeoutId = window.setTimeout(() => {
             script.dataset.loaded = "error";
             reject(new Error("Turnstile script load timed out"));
@@ -143,7 +157,7 @@ export const TurnstileWidget = forwardRef<TurnstileWidgetHandle, TurnstileWidget
     onError,
     onTimeout,
     theme = "light",
-    size = "flexible",
+    size = "normal",
     retry = "auto",
     retryInterval = 8000,
 }, ref) {
