@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { CalendarDays, CheckCircle2, Download, Loader2, MapPin, X } from "lucide-react";
+import { TurnstileWidget, type TurnstileWidgetHandle } from "@/components/TurnstileWidget";
 import { useToast } from "@/hooks/use-toast";
 import { useEventRegistration } from "@/hooks/useEvents";
 import { industrySectorOptions } from "@/data/events";
@@ -13,6 +14,14 @@ const PHONE_NUMBER_MAX_LENGTH = 15;
 
 const inputClassName =
   "w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30";
+const initialFormState: EventRegistrationPayload = {
+  fullName: "",
+  email: "",
+  company: "",
+  position: "",
+  phoneNumber: "",
+  industrySector: industrySectorOptions[0],
+};
 
 type RegistrationUiState =
   | { status: "form" }
@@ -31,20 +40,38 @@ export function EventRegistrationModal({
 }) {
   const { toast } = useToast();
   const registrationMutation = useEventRegistration(event.id);
-  const [form, setForm] = useState<EventRegistrationPayload>({
-    fullName: "",
-    email: "",
-    company: "",
-    position: "",
-    phoneNumber: "",
-    industrySector: industrySectorOptions[0],
-  });
+  const [form, setForm] = useState<EventRegistrationPayload>(initialFormState);
   const [uiState, setUiState] = useState<RegistrationUiState>({ status: "form" });
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const [turnstileVerified, setTurnstileVerified] = useState(false);
+  const turnstileRef = useRef<TurnstileWidgetHandle>(null);
+  const turnstileSiteKey =
+    window._env_?.TURNSTILE_SITE_KEY || import.meta.env.VITE_TURNSTILE_SITE_KEY || "";
+  const isRegistrationEnabled = turnstileVerified && turnstileToken.trim().length > 0;
+
+  const clearTurnstileState = () => {
+    setTurnstileToken("");
+    setTurnstileVerified(false);
+  };
+
+  const handleClose = () => {
+    clearTurnstileState();
+    setForm(initialFormState);
+    setUiState({ status: "form" });
+    onClose();
+  };
 
   const title = useMemo(() => {
     if (uiState.status === "success") return "Registrasi Berhasil";
     return "Workshop Registration";
   }, [uiState.status]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setTurnstileToken("");
+      setTurnstileVerified(false);
+    }
+  }, [isOpen]);
 
   if (!isOpen) {
     return null;
@@ -73,10 +100,29 @@ export function EventRegistrationModal({
       return;
     }
 
+    if (!turnstileSiteKey) {
+      setUiState({
+        status: "error",
+        message: "Verifikasi keamanan sedang tidak tersedia. Silakan coba lagi nanti.",
+      });
+      return;
+    }
+
+    if (!isRegistrationEnabled) {
+      setUiState({
+        status: "error",
+        message: "Selesaikan verifikasi Turnstile sebelum mengirim registrasi.",
+      });
+      return;
+    }
+
     setUiState({ status: "submitting" });
 
     try {
-      const result = await registrationMutation.mutateAsync(form);
+      const result = await registrationMutation.mutateAsync({
+        ...form,
+        turnstileToken: turnstileToken || undefined,
+      });
       setUiState({ status: "success", ticket: result });
       toast({
         title: "Registrasi berhasil",
@@ -84,6 +130,8 @@ export function EventRegistrationModal({
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Gagal mengirim registrasi.";
+      clearTurnstileState();
+      turnstileRef.current?.reset();
       setUiState({ status: "error", message });
     }
   };
@@ -98,7 +146,7 @@ export function EventRegistrationModal({
           </div>
           <button
             type="button"
-            onClick={onClose}
+            onClick={handleClose}
             className="rounded-2xl bg-slate-100 p-2 text-slate-500 transition hover:bg-slate-200 hover:text-slate-700"
             aria-label="Tutup modal"
           >
@@ -190,17 +238,40 @@ export function EventRegistrationModal({
                 </div>
               ) : null}
 
+              <div className="space-y-2">
+                <TurnstileWidget
+                  ref={turnstileRef}
+                  siteKey={turnstileSiteKey}
+                  onVerify={(token) => {
+                    setTurnstileToken(token);
+                    setTurnstileVerified(true);
+                  }}
+                  onExpire={clearTurnstileState}
+                  onError={clearTurnstileState}
+                  onTimeout={clearTurnstileState}
+                  theme="light"
+                  size="flexible"
+                  retry="auto"
+                  retryInterval={8000}
+                />
+                {!turnstileVerified ? (
+                  <p className="text-xs text-slate-500">
+                    Complete the Cloudflare Turnstile check before submitting registration.
+                  </p>
+                ) : null}
+              </div>
+
               <div className="flex flex-col-reverse gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:justify-end">
                 <button
                   type="button"
-                  onClick={onClose}
+                  onClick={handleClose}
                   className="rounded-full border border-slate-200 px-5 py-2.5 text-sm font-bold text-slate-700 transition hover:bg-slate-50"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
-                  disabled={uiState.status === "submitting"}
+                  disabled={uiState.status === "submitting" || !isRegistrationEnabled}
                   className="inline-flex items-center justify-center gap-2 rounded-full bg-[#0061ff] px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-blue-500/20 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   {uiState.status === "submitting" ? (

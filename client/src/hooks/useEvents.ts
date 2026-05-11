@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { eventsService } from "@/services/events.service";
-import type { EventRegistrationPayload } from "@/types/event.types";
+import type { EventRegistrationSubmitPayload } from "@/types/event.types";
 
 export function useEventsPreview() {
   return useQuery({
@@ -26,6 +26,6 @@ export function useEventDetail(eventId?: string) {
 
 export function useEventRegistration(eventId: string) {
   return useMutation({
-    mutationFn: (payload: EventRegistrationPayload) => eventsService.registerEvent(eventId, payload),
+    mutationFn: (payload: EventRegistrationSubmitPayload) => eventsService.registerEvent(eventId, payload),
   });
 }

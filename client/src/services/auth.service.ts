@@ -10,7 +10,7 @@ import type {
 
 const REFRESH_COOLDOWN_MS = 15000;
 
-let refreshInFlight: Promise<void> | null = null;
+let refreshInFlight: Promise<unknown> | null = null;
 let lastRefreshAt = 0;
 
 /**
@@ -38,7 +38,15 @@ class AuthService {
      * Register new user.
      */
     async register(payload: RegisterPayload): Promise<AuthResponse> {
-        return apiClient.post<AuthResponse>('/api/register', payload);
+        const { turnstileToken, ...registrationPayload } = payload;
+        return apiClient.post<AuthResponse>('/api/register', {
+            ...registrationPayload,
+            "cf-turnstile-response": turnstileToken,
+            // Keep multiple field variants for backend compatibility.
+            turnstile_token: turnstileToken,
+            turnstileToken,
+            turnstiletoken: turnstileToken,
+        });
     }
 
     /**
@@ -59,7 +67,7 @@ class AuthService {
      * memicu interceptor 401 dan menyebabkan infinite loop.
      * Melempar error jika refresh token sudah expired atau tidak valid.
      */
-    async refresh(): Promise<void> {
+    async refresh(): Promise<unknown> {
         const now = Date.now();
         if (refreshInFlight) {
             return refreshInFlight;
@@ -78,11 +86,23 @@ class AuthService {
             if (!res.ok) {
                 throw new Error('Session expired');
             }
+            const text = await res.text();
+            if (text.trim()) {
+                try {
+                    const data = JSON.parse(text) as Record<string, unknown>;
+                    return data;
+                } catch {
+                    return undefined;
+                }
+            }
             lastRefreshAt = Date.now();
+            return undefined;
         })();
 
         try {
-            await refreshInFlight;
+            const result = await refreshInFlight;
+            lastRefreshAt = Date.now();
+            return result;
         } finally {
             refreshInFlight = null;
         }

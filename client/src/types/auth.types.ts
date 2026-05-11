@@ -16,6 +16,7 @@ export interface RegisterPayload {
     id_perusahaan?: string;
     /** New company name (when creating a new one) */
     nama_perusahaan?: string;
+    turnstileToken?: string;
 }
 
 /**
