@@ -6,6 +6,7 @@ interface QuestionCardProps {
   questionNumber: number;
   selectedIndex?: number;
   readOnly?: boolean;
+  autoSelectDefault?: boolean;
   onAnswer: (questionId: string, index: number) => void;
 }
 const indexOptions = [0, 1, 2, 3, 4, 5];
@@ -14,9 +15,10 @@ export default function QuestionCard({
   questionNumber,
   selectedIndex,
   readOnly = false,
+  autoSelectDefault = false,
   onAnswer,
 }: QuestionCardProps) {
-  const defaultIndex = question.indexDescriptions?.[3] ? 3 : undefined;
+  const defaultIndex = autoSelectDefault && question.indexDescriptions?.[3] ? 3 : undefined;
   const [selectedAnswer, setSelectedAnswer] = React.useState<number | undefined>(selectedIndex ?? defaultIndex);
 
   React.useEffect(() => {

@@ -286,13 +286,26 @@ export const useAssessmentStore = create<AssessmentState>()(
                         : Object.fromEntries(
                             Object.entries(answerMap).filter(([questionId]) => validQuestionIds.has(questionId))
                         );
-                    const map = { ...state.answersMap, [currentStakeholderSlug]: filteredIncoming };
+                    const existingAnswers = state.answersMap[currentStakeholderSlug] ?? {};
+                    const mergedAnswers = { ...existingAnswers };
+
+                    for (const [questionId, incomingAnswer] of Object.entries(filteredIncoming)) {
+                        const existingAnswer = existingAnswers[questionId];
+                        if (!existingAnswer || (incomingAnswer.updatedAt ?? 0) >= (existingAnswer.updatedAt ?? 0)) {
+                            mergedAnswers[questionId] = incomingAnswer;
+                        }
+                    }
+
+                    const map = { ...state.answersMap, [currentStakeholderSlug]: mergedAnswers };
                     localStorage.setItem(STORAGE_KEYS.ASSESSMENT_ANSWERS, JSON.stringify(map));
                     return {
                         answersMap: map,
                         answerSnapshotsMap: {
                             ...state.answerSnapshotsMap,
-                            [currentStakeholderSlug]: filteredIncoming,
+                            [currentStakeholderSlug]: {
+                                ...(state.answerSnapshotsMap[currentStakeholderSlug] ?? {}),
+                                ...filteredIncoming,
+                            },
                         },
                     };
                 });

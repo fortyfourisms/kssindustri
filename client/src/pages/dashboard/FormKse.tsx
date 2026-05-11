@@ -49,6 +49,7 @@ const SECONDARY_BUTTON_CLS = "button-force-white dashboard-secondary-button inli
 const PRIMARY_BUTTON_CLS = "button-force-white dashboard-primary-button inline-flex items-center justify-center gap-2 rounded-xl px-6 py-2.5 text-sm font-bold transition-all hover:-translate-y-0.5 active:translate-y-0";
 const SUCCESS_BUTTON_CLS = "button-force-white inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-700 via-emerald-600 to-green-500 px-6 py-2.5 text-sm font-bold transition-all hover:-translate-y-0.5 hover:from-emerald-800 hover:via-emerald-700 hover:to-green-600 active:translate-y-0";
 const WARNING_BUTTON_CLS = "button-force-white dashboard-warning-button inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-[13px] font-bold transition-all hover:-translate-y-0.5";
+const EDIT_BUTTON_CLS = "button-force-white inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-sky-600 via-blue-600 to-indigo-600 px-4 py-3 text-[13px] font-bold transition-all hover:-translate-y-0.5 hover:from-sky-700 hover:via-blue-700 hover:to-indigo-700";
 
 const QUESTION_TO_FIELD: Record<string, string> = {
     '1.1': 'nilai_investasi',
@@ -898,7 +899,7 @@ export default function FormKse() {
                                                     <button
                                                         onClick={handleEditData}
                                                         disabled={isEditLocked}
-                                                        className={`${WARNING_BUTTON_CLS} w-full disabled:opacity-60 disabled:hover:translate-y-0`}
+                                                        className={`${EDIT_BUTTON_CLS} w-full disabled:opacity-60 disabled:hover:translate-y-0`}
                                                     >
                                                         <Edit2 className="w-4 h-4" /> Edit Data Responden
                                                     </button>
@@ -907,7 +908,7 @@ export default function FormKse() {
                                                 <button
                                                     onClick={handleEditAnswers}
                                                     disabled={isEditLocked}
-                                                    className={`${WARNING_BUTTON_CLS} w-full disabled:opacity-60 disabled:hover:translate-y-0`}
+                                                    className={`${EDIT_BUTTON_CLS} w-full disabled:opacity-60 disabled:hover:translate-y-0`}
                                                 >
                                                     <Edit2 className="w-4 h-4" /> Ubah Draft Perubahan
                                                 </button>

@@ -114,20 +114,6 @@ export default function IKAS() {
         staleTime: 30_000,
         enabled: !!perusahaanId,
     });
-    const [
-        jawabanIdentifikasiQuery,
-        jawabanProteksiQuery,
-        jawabanDeteksiQuery,
-        jawabanGulihQuery,
-    ] = useQueries({
-        queries: [
-            { queryKey: ["jawaban-identifikasi"], queryFn: () => ikasService.getJawabanIdentifikasi(), enabled: !!perusahaanId },
-            { queryKey: ["jawaban-proteksi"], queryFn: () => ikasService.getJawabanProteksi(), enabled: !!perusahaanId },
-            { queryKey: ["jawaban-deteksi"], queryFn: () => ikasService.getJawabanDeteksi(), enabled: !!perusahaanId },
-            { queryKey: ["jawaban-gulih"], queryFn: () => ikasService.getJawabanGulih(), enabled: !!perusahaanId },
-        ],
-    });
-
     // Normalize: API may return single object or array
     const ikasList: any[] = useMemo(() => (
         ikasRaw
@@ -170,6 +156,20 @@ export default function IKAS() {
         () => mapIkasToView(selectedIkasRecord ?? null),
         [selectedIkasRecord]
     );
+
+    const [
+        jawabanIdentifikasiQuery,
+        jawabanProteksiQuery,
+        jawabanDeteksiQuery,
+        jawabanGulihQuery,
+    ] = useQueries({
+        queries: [
+            { queryKey: ["jawaban-identifikasi", selectedIkasRecord?.id ?? "all"], queryFn: () => ikasService.getJawabanIdentifikasi(selectedIkasRecord?.id), enabled: !!perusahaanId && !!selectedIkasRecord?.id },
+            { queryKey: ["jawaban-proteksi", selectedIkasRecord?.id ?? "all"], queryFn: () => ikasService.getJawabanProteksi(selectedIkasRecord?.id), enabled: !!perusahaanId && !!selectedIkasRecord?.id },
+            { queryKey: ["jawaban-deteksi", selectedIkasRecord?.id ?? "all"], queryFn: () => ikasService.getJawabanDeteksi(selectedIkasRecord?.id), enabled: !!perusahaanId && !!selectedIkasRecord?.id },
+            { queryKey: ["jawaban-gulih", selectedIkasRecord?.id ?? "all"], queryFn: () => ikasService.getJawabanGulih(selectedIkasRecord?.id), enabled: !!perusahaanId && !!selectedIkasRecord?.id },
+        ],
+    });
 
     const allJawabanIkas = useMemo(() => {
         const selectedIkasId = normalizeScopedIkasId(selectedIkasRecord?.id);
@@ -519,10 +519,10 @@ export default function IKAS() {
             await api.requestIkasEdit(selectedIkasRecord.id, { reason: editReason.trim() });
             await Promise.all([
                 queryClient.invalidateQueries({ queryKey: ["my-ikas", perusahaanId || "unknown"] }),
-                queryClient.invalidateQueries({ queryKey: ["jawaban-identifikasi"] }),
-                queryClient.invalidateQueries({ queryKey: ["jawaban-proteksi"] }),
-                queryClient.invalidateQueries({ queryKey: ["jawaban-deteksi"] }),
-                queryClient.invalidateQueries({ queryKey: ["jawaban-gulih"] }),
+                queryClient.invalidateQueries({ queryKey: ["jawaban-identifikasi", selectedIkasRecord.id] }),
+                queryClient.invalidateQueries({ queryKey: ["jawaban-proteksi", selectedIkasRecord.id] }),
+                queryClient.invalidateQueries({ queryKey: ["jawaban-deteksi", selectedIkasRecord.id] }),
+                queryClient.invalidateQueries({ queryKey: ["jawaban-gulih", selectedIkasRecord.id] }),
             ]);
             closeEditRequestModal();
             toast({

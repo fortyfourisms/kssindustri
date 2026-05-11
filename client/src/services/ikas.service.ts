@@ -4,6 +4,7 @@ import type {
     DomainSlug, SaveJawabanPayload,
     PertanyaanIdentifikasi, PertanyaanProteksi, PertanyaanDeteksi, PertanyaanGulih,
     JawabanIdentifikasi, JawabanProteksi, JawabanDeteksi, JawabanGulih,
+    JawabanCollectionResponse,
 } from '@/types/ikas.types';
 
 // Re-export so existing imports from this service still work
@@ -11,15 +12,46 @@ export type { CreateIkasPayload, UpdateIkasPayload };
 
 // ─── Normalize helpers ────────────────────────────────────────────────────────
 
-function normalizeList<T>(res: any): T[] {
+function collectArrayValues(res: any): any[] {
     if (Array.isArray(res)) return res;
-    if (res && Array.isArray(res.data)) return res.data;
-    if (res && Array.isArray(res.ikas)) return res.ikas;
-    if (res && typeof res === 'object') {
-        const arrVal = Object.values(res).find((v) => Array.isArray(v));
-        if (arrVal) return arrVal as T[];
-    }
-    return [];
+    if (!res || typeof res !== 'object') return [];
+
+    const collected: any[] = [];
+    const visited = new Set<any>();
+
+    const visit = (value: any) => {
+        if (!value || typeof value !== 'object' || visited.has(value)) return;
+        visited.add(value);
+
+        if (Array.isArray(value)) {
+            collected.push(...value);
+            return;
+        }
+
+        const orderedKeys = ['main', 'data', 'ikas', 'buffer'];
+        for (const key of orderedKeys) {
+            if (value[key] !== undefined) {
+                visit(value[key]);
+            }
+        }
+
+        if (collected.length === 0) {
+            for (const nested of Object.values(value)) {
+                if (Array.isArray(nested)) {
+                    collected.push(...nested);
+                } else if (nested && typeof nested === 'object') {
+                    visit(nested);
+                }
+            }
+        }
+    };
+
+    visit(res);
+    return collected;
+}
+
+function normalizeList<T>(res: any): T[] {
+    return collectArrayValues(res) as T[];
 }
 
 function normalizeOne<T>(res: any): T {
@@ -28,6 +60,30 @@ function normalizeOne<T>(res: any): T {
         return Array.isArray(res.data) ? res.data[0] : res.data;
     }
     return res;
+}
+
+function normalizeJawabanCollection<T>(res: any): JawabanCollectionResponse<T> {
+    const wrapper = res?.data && !Array.isArray(res.data) && typeof res.data === 'object'
+        ? res.data
+        : res;
+    const data = normalizeList<T>(res);
+    return {
+        completion_percentage: typeof wrapper?.completion_percentage === 'number' ? wrapper.completion_percentage : undefined,
+        count: typeof wrapper?.count === 'number' ? wrapper.count : data.length,
+        data,
+        is_draft: typeof wrapper?.is_draft === 'boolean' ? wrapper.is_draft : undefined,
+    };
+}
+
+function buildJawabanPath(domain: DomainSlug, ikasId?: string | number): string {
+    const base = `/api/maturity/jawaban-${domain}`;
+    if (ikasId === null || ikasId === undefined) return base;
+    const normalized = String(ikasId).trim();
+    if (!normalized) return base;
+
+    const params = new URLSearchParams();
+    params.set('ikas_id', normalized);
+    return `${base}?${params.toString()}`;
 }
 
 function extractEntityId(res: any): number | null {
@@ -137,27 +193,47 @@ export const ikasService = {
     // ── Jawaban (Answers) ──────────────────────────────────────────────────────
 
     /** Fetch existing answers for IDENTIFIKASI domain (for current user's perusahaan) */
-    async getJawabanIdentifikasi(): Promise<JawabanIdentifikasi[]> {
-        const res = await apiClient.get<any>('/api/maturity/jawaban-identifikasi');
+    async getJawabanIdentifikasi(ikasId?: string | number): Promise<JawabanIdentifikasi[]> {
+        const res = await apiClient.get<any>(buildJawabanPath('identifikasi', ikasId));
         return normalizeList<JawabanIdentifikasi>(res);
     },
 
+    async getJawabanIdentifikasiResponse(ikasId?: string | number): Promise<JawabanCollectionResponse<JawabanIdentifikasi>> {
+        const res = await apiClient.get<any>(buildJawabanPath('identifikasi', ikasId));
+        return normalizeJawabanCollection<JawabanIdentifikasi>(res);
+    },
+
     /** Fetch existing answers for PROTEKSI domain */
-    async getJawabanProteksi(): Promise<JawabanProteksi[]> {
-        const res = await apiClient.get<any>('/api/maturity/jawaban-proteksi');
+    async getJawabanProteksi(ikasId?: string | number): Promise<JawabanProteksi[]> {
+        const res = await apiClient.get<any>(buildJawabanPath('proteksi', ikasId));
         return normalizeList<JawabanProteksi>(res);
     },
 
+    async getJawabanProteksiResponse(ikasId?: string | number): Promise<JawabanCollectionResponse<JawabanProteksi>> {
+        const res = await apiClient.get<any>(buildJawabanPath('proteksi', ikasId));
+        return normalizeJawabanCollection<JawabanProteksi>(res);
+    },
+
     /** Fetch existing answers for DETEKSI domain */
-    async getJawabanDeteksi(): Promise<JawabanDeteksi[]> {
-        const res = await apiClient.get<any>('/api/maturity/jawaban-deteksi');
+    async getJawabanDeteksi(ikasId?: string | number): Promise<JawabanDeteksi[]> {
+        const res = await apiClient.get<any>(buildJawabanPath('deteksi', ikasId));
         return normalizeList<JawabanDeteksi>(res);
     },
 
+    async getJawabanDeteksiResponse(ikasId?: string | number): Promise<JawabanCollectionResponse<JawabanDeteksi>> {
+        const res = await apiClient.get<any>(buildJawabanPath('deteksi', ikasId));
+        return normalizeJawabanCollection<JawabanDeteksi>(res);
+    },
+
     /** Fetch existing answers for GULIH domain */
-    async getJawabanGulih(): Promise<JawabanGulih[]> {
-        const res = await apiClient.get<any>('/api/maturity/jawaban-gulih');
+    async getJawabanGulih(ikasId?: string | number): Promise<JawabanGulih[]> {
+        const res = await apiClient.get<any>(buildJawabanPath('gulih', ikasId));
         return normalizeList<JawabanGulih>(res);
+    },
+
+    async getJawabanGulihResponse(ikasId?: string | number): Promise<JawabanCollectionResponse<JawabanGulih>> {
+        const res = await apiClient.get<any>(buildJawabanPath('gulih', ikasId));
+        return normalizeJawabanCollection<JawabanGulih>(res);
     },
 
     async getJawabanByDomain(domain: DomainSlug): Promise<Array<Record<string, any>>> {
@@ -180,10 +256,13 @@ export const ikasService = {
         // Remap generic fields to domain-specific field names
         const domainPayload: Record<string, any> = {
             ikas_id: payload.ikas_id,
+            perusahaan_id: payload.perusahaan_id,
+            id_perusahaan: payload.perusahaan_id,
             [`pertanyaan_${domain}_id`]: payload.pertanyaan_id,
             [`jawaban_${domain}`]: payload.jawaban,
             evidence: payload.evidence ?? '',
             keterangan: payload.keterangan ?? '',
+            is_draft: true,
         };
         if (jawabanId) {
             return apiClient.put<any>(`${base}/${jawabanId}`, domainPayload);

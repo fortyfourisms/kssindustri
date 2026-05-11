@@ -11,6 +11,7 @@ import type { JawabanIdMap } from '@/hooks/useIkasAssessmentSetup';
 import { Skeleton, SkeletonForm, SkeletonText } from '@/components/ui/skeleton';
 
 const SUCCESS_BUTTON_CLS = 'button-force-white inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-700 via-emerald-600 to-green-500 px-4 py-2.5 text-sm font-bold transition-all hover:-translate-y-0.5 hover:from-emerald-800 hover:via-emerald-700 hover:to-green-600 active:translate-y-0 disabled:opacity-50 disabled:hover:translate-y-0';
+const DRAFT_BUTTON_CLS = 'inline-flex w-full items-center justify-center gap-2 rounded-xl border border-orange-200 bg-orange-100 px-4 py-2 text-sm font-medium text-orange-700 transition-colors hover:bg-orange-200 disabled:cursor-not-allowed disabled:opacity-60 dark:border-orange-900 dark:bg-orange-950/40 dark:text-orange-300 dark:hover:bg-orange-900/50';
 
 interface AssessmentViewProps {
   onBack: () => void;
@@ -39,6 +40,7 @@ export default function AssessmentView({
   const [isSaving, setIsSaving] = useState(false);
   const isAnswerEditingLocked = !canEditAnswers;
   const savedJawabanIdMapRef = useRef<JawabanIdMap>({ ...jawabanIdMap });
+  const respondentCompanyId = store.respondentProfile()?.id_perusahaan;
 
   useEffect(() => {
     savedJawabanIdMapRef.current = {
@@ -186,6 +188,7 @@ export default function AssessmentView({
     for (const item of changedEntries) {
       const saved = await persistAnswerWithThrottle(item.domainSlug, item.existingJawabanId, {
         ikas_id: store.existingIkasId as string,
+        perusahaan_id: respondentCompanyId as string | number | undefined,
         pertanyaan_id: item.pertanyaanId,
         jawaban: item.answer.index,
       });
@@ -246,10 +249,20 @@ export default function AssessmentView({
       if (!existingId) {
         throw new Error('Data responden IKAS belum tersimpan. Simpan data responden terlebih dahulu lalu coba lagi.');
       }
+      if (!respondentCompanyId) {
+        throw new Error('ID perusahaan belum tersedia. Muat ulang data responden lalu coba lagi.');
+      }
 
       await persistEntries();
+      await ikasService.update(existingId, {
+        is_draft: !allAnswered,
+      });
       await refreshIkasSummaryQueries();
-      store.completeAssessment();
+      if (allAnswered) {
+        store.completeAssessment();
+      } else {
+        store.unlockAssessment();
+      }
       toast({
         title: 'Berhasil',
         description: allAnswered
@@ -282,6 +295,14 @@ export default function AssessmentView({
       toast({
         title: 'Data Responden Belum Tersimpan',
         description: 'Simpan data responden terlebih dahulu lalu coba lagi.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (!respondentCompanyId) {
+      toast({
+        title: 'Data Perusahaan Belum Tersedia',
+        description: 'Muat ulang data responden lalu coba lagi.',
         variant: 'destructive',
       });
       return;
@@ -429,7 +450,7 @@ export default function AssessmentView({
       <div className="flex flex-col md:flex-row gap-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
         {/* Sidebar */}
         <div className={`${sidebarCollapsed ? 'md:w-16' : 'md:w-1/4'} transition-all duration-300 flex-shrink-0`}>
-          <div className="sticky top-[100px] max-h-[calc(100vh-120px)] overflow-y-auto no-scrollbar pb-8">
+          <div className="sticky top-[100px]">
             <div className="flex justify-between items-center mb-6 px-2">
               {!sidebarCollapsed && (
                 <h6 className="m-0 font-bold text-slate-900 dark:text-slate-100 text-sm tracking-wide uppercase">
@@ -457,10 +478,10 @@ export default function AssessmentView({
                 ) : !embedded ? (
                   !isViewReadOnly ? (
                     <button
-                      className={`w-full ${allQuestionsAnswered
-                        ? `${SUCCESS_BUTTON_CLS} shadow-md`
-                        : 'bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300'
-                      }`}
+                      className={allQuestionsAnswered
+                        ? `w-full ${SUCCESS_BUTTON_CLS} shadow-md`
+                        : DRAFT_BUTTON_CLS
+                      }
                       onClick={handleSaveAction}
                       disabled={isSaving || isAnswerEditingLocked}
                     >
@@ -481,10 +502,10 @@ export default function AssessmentView({
                   !isViewReadOnly ? (
                     <>
                       <button
-                        className={`w-full mb-3 ${allQuestionsAnswered
-                          ? `${SUCCESS_BUTTON_CLS} shadow-md`
-                          : 'bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300'
-                        }`}
+                        className={allQuestionsAnswered
+                          ? `w-full mb-3 ${SUCCESS_BUTTON_CLS} shadow-md`
+                          : `${DRAFT_BUTTON_CLS} mb-3`
+                        }
                         onClick={handleSaveAction}
                         disabled={isSaving || isAnswerEditingLocked}
                       >
@@ -532,7 +553,8 @@ export default function AssessmentView({
 
             {/* Accordion List */}
             {!sidebarCollapsed && (
-              <div className="flex flex-col gap-2 px-2">
+              <div className="max-h-[calc(100vh-320px)] overflow-y-auto no-scrollbar px-2 pb-8">
+                <div className="flex flex-col gap-2">
                 {showLoadingShell ? renderSidebarSkeleton() : assessmentData.domains.map((domain) => (
                   <div key={domain.id} className="mb-2">
                     <button
@@ -588,6 +610,7 @@ export default function AssessmentView({
                     </div>
                   </div>
                 ))}
+                </div>
               </div>
             )}
           </div>
@@ -654,6 +677,7 @@ export default function AssessmentView({
                       questionNumber={currentQuestionOffset + index + 1}
                       selectedIndex={store.getAnswer(question.id)?.index}
                       readOnly={isViewReadOnly}
+                      autoSelectDefault={currentQuestionOffset + index === 0}
                       onAnswer={(questionId, val) => store.saveAnswer(questionId, val)}
                     />
                   ))}

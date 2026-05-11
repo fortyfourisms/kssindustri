@@ -169,23 +169,26 @@ function buildAnswerMap(
     jawabanG: JawabanGulih[],
 ): AnswerMap {
     const map: AnswerMap = {};
-    const now = Date.now();
+    const toUpdatedAt = (value: unknown) => {
+        const timestamp = new Date(String(value ?? '')).getTime();
+        return Number.isFinite(timestamp) && timestamp > 0 ? timestamp : Date.now();
+    };
 
     for (const j of jawabanI) {
         const qid = `identifikasi-${j.pertanyaan_identifikasi.id}`;
-        map[qid] = { questionId: qid, index: j.jawaban_identifikasi, updatedAt: now };
+        map[qid] = { questionId: qid, index: j.jawaban_identifikasi, updatedAt: toUpdatedAt(j.updated_at ?? j.created_at) };
     }
     for (const j of jawabanP) {
         const qid = `proteksi-${j.pertanyaan_proteksi.id}`;
-        map[qid] = { questionId: qid, index: j.jawaban_proteksi, updatedAt: now };
+        map[qid] = { questionId: qid, index: j.jawaban_proteksi, updatedAt: toUpdatedAt(j.updated_at ?? j.created_at) };
     }
     for (const j of jawabanD) {
         const qid = `deteksi-${j.pertanyaan_deteksi.id}`;
-        map[qid] = { questionId: qid, index: j.jawaban_deteksi, updatedAt: now };
+        map[qid] = { questionId: qid, index: j.jawaban_deteksi, updatedAt: toUpdatedAt(j.updated_at ?? j.created_at) };
     }
     for (const j of jawabanG) {
         const qid = `gulih-${j.pertanyaan_gulih.id}`;
-        map[qid] = { questionId: qid, index: j.jawaban_gulih, updatedAt: now };
+        map[qid] = { questionId: qid, index: j.jawaban_gulih, updatedAt: toUpdatedAt(j.updated_at ?? j.created_at) };
     }
 
     return map;
@@ -249,10 +252,10 @@ export function useIkasAssessmentSetup(
             { queryKey: ['pertanyaan-deteksi'],      queryFn: () => ikasService.getPertanyaanDeteksi(),      staleTime: 1000 * 60 * 10, enabled },
             { queryKey: ['pertanyaan-gulih'],        queryFn: () => ikasService.getPertanyaanGulih(),        staleTime: 1000 * 60 * 10, enabled },
             // Answers
-            { queryKey: ['jawaban-identifikasi'], queryFn: () => ikasService.getJawabanIdentifikasi(), staleTime: 1000 * 60 * 2, enabled: shouldLoadAnswers },
-            { queryKey: ['jawaban-proteksi'],     queryFn: () => ikasService.getJawabanProteksi(),     staleTime: 1000 * 60 * 2, enabled: shouldLoadAnswers },
-            { queryKey: ['jawaban-deteksi'],      queryFn: () => ikasService.getJawabanDeteksi(),      staleTime: 1000 * 60 * 2, enabled: shouldLoadAnswers },
-            { queryKey: ['jawaban-gulih'],        queryFn: () => ikasService.getJawabanGulih(),        staleTime: 1000 * 60 * 2, enabled: shouldLoadAnswers },
+            { queryKey: ['jawaban-identifikasi', scopedIkasId ?? 'all'], queryFn: () => ikasService.getJawabanIdentifikasi(scopedIkasId ?? undefined), staleTime: 1000 * 60 * 2, enabled: shouldLoadAnswers },
+            { queryKey: ['jawaban-proteksi', scopedIkasId ?? 'all'],     queryFn: () => ikasService.getJawabanProteksi(scopedIkasId ?? undefined),     staleTime: 1000 * 60 * 2, enabled: shouldLoadAnswers },
+            { queryKey: ['jawaban-deteksi', scopedIkasId ?? 'all'],      queryFn: () => ikasService.getJawabanDeteksi(scopedIkasId ?? undefined),      staleTime: 1000 * 60 * 2, enabled: shouldLoadAnswers },
+            { queryKey: ['jawaban-gulih', scopedIkasId ?? 'all'],        queryFn: () => ikasService.getJawabanGulih(scopedIkasId ?? undefined),        staleTime: 1000 * 60 * 2, enabled: shouldLoadAnswers },
         ],
     });
 
