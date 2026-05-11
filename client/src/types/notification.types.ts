@@ -11,6 +11,21 @@ export interface NotificationsListResult {
     unreadCount?: number;
 }
 
+const NOTIFICATION_TITLE_MAP: Record<string, string> = {
+    ikas_edit_actioned: "Permintaan Edit IKAS Diperbarui",
+    ikas_edit_requested: "Permintaan Edit IKAS Baru",
+    ikas_edit_approved: "Permintaan Edit IKAS Disetujui",
+    ikas_edit_rejected: "Permintaan Edit IKAS Ditolak",
+    ikas_validated: "Data IKAS Terverifikasi",
+    "ikas validated": "Data IKAS Terverifikasi",
+    ikas_verified: "Data IKAS Terverifikasi",
+    "ikas verified": "Data IKAS Terverifikasi",
+    kse_edit_actioned: "Permintaan Edit KSE Diperbarui",
+    kse_edit_requested: "Permintaan Edit KSE Baru",
+    kse_edit_approved: "Permintaan Edit KSE Disetujui",
+    kse_edit_rejected: "Permintaan Edit KSE Ditolak",
+};
+
 function toRecord(value: unknown): Record<string, unknown> | null {
     return value && typeof value === "object" ? (value as Record<string, unknown>) : null;
 }
@@ -29,6 +44,33 @@ function toBooleanValue(value: unknown): boolean {
         return normalized === "true" || normalized === "1" || normalized === "read";
     }
     return false;
+}
+
+function isMachineReadableNotificationTitle(value: string) {
+    return /^[a-z0-9]+(?:_[a-z0-9]+)+$/.test(value.trim());
+}
+
+function humanizeNotificationTitle(value: string) {
+    const normalized = value.trim().toLowerCase();
+    if (!normalized) return "Notifikasi";
+
+    const mappedTitle = NOTIFICATION_TITLE_MAP[normalized];
+    if (mappedTitle) return mappedTitle;
+
+    if (!isMachineReadableNotificationTitle(normalized)) {
+        return value.trim();
+    }
+
+    return normalized
+        .split("_")
+        .map((segment) => {
+            if (segment === "ikas" || segment === "kse") {
+                return segment.toUpperCase();
+            }
+
+            return segment.charAt(0).toUpperCase() + segment.slice(1);
+        })
+        .join(" ");
 }
 
 function fallbackNotificationId(record: Record<string, unknown>) {
@@ -55,10 +97,10 @@ export function normalizeNotification(value: unknown): NotificationItem | null {
         toStringValue(record.uuid) ||
         fallbackNotificationId(record);
 
-    const title =
-        toStringValue(record.type) ||
+    const rawTitle =
         toStringValue(record.title) ||
         toStringValue(record.judul) ||
+        toStringValue(record.type) ||
         "Notifikasi";
 
     const description =
@@ -84,7 +126,7 @@ export function normalizeNotification(value: unknown): NotificationItem | null {
 
     return {
         id,
-        title,
+        title: humanizeNotificationTitle(rawTitle),
         description,
         timestamp,
         read,

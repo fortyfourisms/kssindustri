@@ -1,4 +1,5 @@
-import { Bell, CheckCheck, Wifi, WifiOff } from "lucide-react";
+import { useState } from "react";
+import { Bell, CheckCheck, ChevronDown, ChevronUp, Wifi, WifiOff } from "lucide-react";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -22,6 +23,7 @@ function formatNotificationTime(timestamp: string) {
 }
 
 export function NotificationBell() {
+    const [expandedNotificationId, setExpandedNotificationId] = useState<string | null>(null);
     const {
         notifications,
         unreadCount,
@@ -30,6 +32,14 @@ export function NotificationBell() {
         markAsRead,
         markAllAsRead,
     } = useNotifications();
+
+    const handleNotificationClick = async (notificationId: string, isRead: boolean) => {
+        setExpandedNotificationId((current) => (current === notificationId ? null : notificationId));
+
+        if (!isRead) {
+            await markAsRead(notificationId);
+        }
+    };
 
     return (
         <DropdownMenu>
@@ -69,14 +79,14 @@ export function NotificationBell() {
 
             <DropdownMenuContent
                 align="end"
-                className="w-[360px] rounded-3xl border p-0 shadow-2xl"
+                className="w-[calc(100vw-1rem)] max-w-[440px] rounded-3xl border p-0 shadow-2xl sm:w-[440px]"
                 style={{
                     borderColor: "var(--dashboard-border)",
                     background: "var(--dashboard-surface-strong)",
                     boxShadow: "var(--dashboard-card-shadow)",
                 }}
             >
-                <div className="flex items-start justify-between gap-3 border-b px-4 py-4" style={{ borderColor: "var(--dashboard-border)" }}>
+                <div className="flex flex-col gap-3 border-b px-4 py-4 sm:flex-row sm:items-start sm:justify-between" style={{ borderColor: "var(--dashboard-border)" }}>
                     <div>
                         <p className="text-sm font-bold" style={{ color: "var(--dashboard-text)" }}>Notifikasi</p>
                         <div className="mt-1 flex items-center gap-2 text-xs" style={{ color: "var(--dashboard-text-muted)" }}>
@@ -93,7 +103,7 @@ export function NotificationBell() {
                         type="button"
                         variant="ghost"
                         size="sm"
-                        className="h-auto rounded-xl px-2 py-1 text-xs hover:bg-[var(--dashboard-action-soft-hover)] hover:text-[var(--dashboard-action-soft-fg-strong)]"
+                        className="h-11 w-full rounded-xl px-3 text-xs hover:bg-[var(--dashboard-action-soft-hover)] hover:text-[var(--dashboard-action-soft-fg-strong)] sm:h-auto sm:w-auto sm:px-2 sm:py-1"
                         style={{ color: "var(--dashboard-action-soft-fg)" }}
                         onClick={() => void markAllAsRead()}
                         disabled={unreadCount === 0 || !isAvailable}
@@ -103,8 +113,8 @@ export function NotificationBell() {
                     </Button>
                 </div>
 
-                <ScrollArea className="max-h-[420px]">
-                    <div className="p-2">
+                <ScrollArea className="max-h-[min(70vh,420px)]">
+                    <div className="space-y-2 p-2 pr-3 sm:pr-4">
                         {!isAvailable ? (
                             <div
                                 className="rounded-2xl border border-dashed px-4 py-8 text-center"
@@ -115,7 +125,7 @@ export function NotificationBell() {
                             >
                                 <p className="text-sm font-semibold" style={{ color: "var(--dashboard-text-soft)" }}>Notifikasi belum tersedia</p>
                                 <p className="mt-1 text-xs" style={{ color: "var(--dashboard-text-muted)" }}>
-                                    Akun ini belum memiliki akses ke endpoint notifikasi.
+                                    Akun ini belum memiliki notifikasi.
                                 </p>
                             </div>
                         ) : notifications.length === 0 ? (
@@ -128,48 +138,85 @@ export function NotificationBell() {
                             >
                                 <p className="text-sm font-semibold" style={{ color: "var(--dashboard-text-soft)" }}>Belum ada notifikasi</p>
                                 <p className="mt-1 text-xs" style={{ color: "var(--dashboard-text-muted)" }}>
-                                    Notifikasi terbaru akan muncul di sini secara realtime.
+                                    Notifikasi terbaru akan muncul di sini.
                                 </p>
                             </div>
                         ) : (
-                            notifications.map((notification) => (
-                                <button
-                                    key={notification.id}
-                                    type="button"
-                                    onClick={() => void markAsRead(notification.id)}
-                                    className={cn(
-                                        "mb-2 w-full rounded-2xl border px-4 py-3 text-left transition last:mb-0",
-                                        notification.read
-                                            ? "border-[var(--dashboard-notification-read-border)] bg-[var(--dashboard-notification-read-bg)] hover:bg-[var(--dashboard-notification-read-hover)]"
-                                            : "border-[var(--dashboard-notification-unread-border)] bg-[var(--dashboard-notification-unread-bg)] hover:bg-[var(--dashboard-notification-unread-hover)]"
-                                    )}
-                                >
-                                    <div className="flex items-start justify-between gap-3">
-                                        <div className="min-w-0">
-                                            <p className="truncate text-sm font-semibold" style={{ color: "var(--dashboard-text)" }}>
-                                                {notification.title}
-                                            </p>
-                                            <p className="mt-1 line-clamp-2 text-xs leading-5" style={{ color: "var(--dashboard-text-soft)" }}>
-                                                {notification.description || "Tidak ada deskripsi."}
-                                            </p>
+                            notifications.map((notification) => {
+                                const isExpanded = expandedNotificationId === notification.id;
+
+                                return (
+                                    <button
+                                        key={notification.id}
+                                        type="button"
+                                        onClick={() => void handleNotificationClick(notification.id, notification.read)}
+                                        className={cn(
+                                            "w-full rounded-2xl border px-4 py-3 text-left transition",
+                                            notification.read
+                                                ? "border-[var(--dashboard-notification-read-border)] bg-[var(--dashboard-notification-read-bg)] hover:bg-[var(--dashboard-notification-read-hover)]"
+                                                : "border-[var(--dashboard-notification-unread-border)] bg-[var(--dashboard-notification-unread-bg)] hover:bg-[var(--dashboard-notification-unread-hover)]"
+                                        )}
+                                        aria-expanded={isExpanded}
+                                    >
+                                        <div className="flex items-start justify-between gap-3">
+                                            <div className="min-w-0 flex-1">
+                                                <p
+                                                    className={cn(
+                                                        "text-sm font-semibold",
+                                                        isExpanded ? "whitespace-normal break-words" : "truncate"
+                                                    )}
+                                                    style={{ color: "var(--dashboard-text)" }}
+                                                >
+                                                    {notification.title}
+                                                </p>
+                                                <p
+                                                    className={cn(
+                                                        "mt-1 text-xs leading-5",
+                                                        isExpanded ? "whitespace-normal break-words" : "line-clamp-2"
+                                                    )}
+                                                    style={{ color: "var(--dashboard-text-soft)" }}
+                                                >
+                                                    {notification.description || "Tidak ada deskripsi."}
+                                                </p>
+                                            </div>
+                                            <div className="flex shrink-0 items-start gap-2">
+                                                <Badge
+                                                    variant={notification.read ? "outline" : "secondary"}
+                                                    className={cn(
+                                                        "rounded-full px-2 py-0.5 text-[10px]",
+                                                        notification.read
+                                                            ? "border-[var(--dashboard-notification-badge-read-border)] bg-[var(--dashboard-notification-badge-read-bg)] text-[var(--dashboard-notification-badge-read-fg)]"
+                                                            : "border-[var(--dashboard-notification-badge-unread-border)] bg-[var(--dashboard-notification-badge-unread-bg)] text-[var(--dashboard-notification-badge-unread-fg)]"
+                                                    )}
+                                                >
+                                                    {notification.read ? "Sudah dibaca" : "Baru"}
+                                                </Badge>
+                                                <span
+                                                    className="mt-0.5"
+                                                    style={{ color: "var(--dashboard-text-muted)" }}
+                                                >
+                                                    {isExpanded ? (
+                                                        <ChevronUp className="h-4 w-4" />
+                                                    ) : (
+                                                        <ChevronDown className="h-4 w-4" />
+                                                    )}
+                                                </span>
+                                            </div>
                                         </div>
-                                        <Badge
-                                            variant={notification.read ? "outline" : "secondary"}
-                                            className={cn(
-                                                "shrink-0 rounded-full px-2 py-0.5 text-[10px]",
-                                                notification.read
-                                                    ? "border-[var(--dashboard-notification-badge-read-border)] bg-[var(--dashboard-notification-badge-read-bg)] text-[var(--dashboard-notification-badge-read-fg)]"
-                                                    : "border-[var(--dashboard-notification-badge-unread-border)] bg-[var(--dashboard-notification-badge-unread-bg)] text-[var(--dashboard-notification-badge-unread-fg)]"
-                                            )}
-                                        >
-                                            {notification.read ? "Read" : "Unread"}
-                                        </Badge>
-                                    </div>
-                                    <p className="mt-2 text-[11px]" style={{ color: "var(--dashboard-text-muted)" }}>
-                                        {formatNotificationTime(notification.timestamp)}
-                                    </p>
-                                </button>
-                            ))
+                                        <div className="mt-2 flex flex-col gap-1 text-left sm:flex-row sm:items-center sm:justify-between">
+                                            <p className="text-[11px]" style={{ color: "var(--dashboard-text-muted)" }}>
+                                                {formatNotificationTime(notification.timestamp)}
+                                            </p>
+                                            <span
+                                                className="text-[11px] whitespace-normal break-words sm:text-right"
+                                                style={{ color: "var(--dashboard-text-muted)" }}
+                                            >
+                                                {isExpanded ? "Klik untuk sembunyikan" : "Klik untuk lihat detail"}
+                                            </span>
+                                        </div>
+                                    </button>
+                                );
+                            })
                         )}
                     </div>
                 </ScrollArea>
