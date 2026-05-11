@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { RequireCompanyProfile } from "@/components/RequireCompanyProfile";
 import { Info, UserCircle2, ArrowRight, ArrowLeft, AlertTriangle, Loader2, Building2 } from "lucide-react";
@@ -55,16 +55,95 @@ const DEFAULT_ANSWERS = {
     responden_telepon: '',
     responden_sektor: '',
     responden_sertifikat: '',
-    q1: 'ya',
+    q1: '',
     q1_alasan: '',
     dampak_reputasi: null,
-    dampak_operasional: 'cukup_signifikan',
-    dampak_finansial: 'cukup_signifikan',
-    dampak_hukum: 'cukup_signifikan',
-    frekuensi: 'sedang',
-    q4: 'ya',
+    dampak_operasional: null,
+    dampak_finansial: null,
+    dampak_hukum: null,
+    frekuensi: null,
+    q4: '',
     q5: ''
 };
+
+type RiskAnswerSnapshot = Pick<
+    typeof DEFAULT_ANSWERS,
+    "q1" | "q1_alasan" | "dampak_reputasi" | "dampak_operasional" | "dampak_finansial" | "dampak_hukum" | "frekuensi" | "q4" | "q5"
+>;
+
+function getRiskSnapshotKey(risk: SurveyRiskResponse | null, progress: Record<string, any> | null): string | null {
+    if (typeof risk?.custom_risiko_id === "number") return `custom:${risk.custom_risiko_id}`;
+    if (typeof risk?.risiko_id === "number") return `risk:${risk.risiko_id}`;
+    if (typeof risk?.id === "number") return `risk:${risk.id}`;
+
+    const index = getCurrentRiskIndex(risk, progress);
+    return Number.isFinite(index) ? `index:${index}` : null;
+}
+
+function hasPersistedRiskAnswer(activeRisk: SurveyRiskResponse | null): boolean {
+    if (!activeRisk) return false;
+    if (activeRisk.pernah_terjadi === true) return true;
+    if (activeRisk.pernah_terjadi === false && typeof activeRisk.alasan === "string" && activeRisk.alasan.trim()) {
+        return true;
+    }
+
+    return Boolean(
+        typeof activeRisk.dampak_reputasi === "number" ||
+        typeof activeRisk.dampak_operasional === "number" ||
+        typeof activeRisk.dampak_finansial === "number" ||
+        typeof activeRisk.dampak_hukum === "number" ||
+        typeof activeRisk.frekuensi === "number" ||
+        typeof activeRisk.ada_pengendalian === "boolean" ||
+        (typeof activeRisk.deskripsi_pengendalian === "string" && activeRisk.deskripsi_pengendalian.trim())
+    );
+}
+
+function buildAnswersFromRisk(
+    activeRespondent: Record<string, any> | null,
+    activeRisk: SurveyRiskResponse | null,
+    perusahaan: Record<string, any> | null | undefined,
+    fallbackSnapshot?: RiskAnswerSnapshot | null,
+) {
+    const hasPersistedAnswer = hasPersistedRiskAnswer(activeRisk);
+    const pernahTerjadi = hasPersistedAnswer && typeof activeRisk?.pernah_terjadi === "boolean"
+        ? activeRisk.pernah_terjadi
+        : null;
+    const baseRiskAnswers = fallbackSnapshot ?? DEFAULT_ANSWERS;
+
+    return {
+        ...DEFAULT_ANSWERS,
+        responden_nama: activeRespondent?.nama_lengkap || DEFAULT_ANSWERS.responden_nama,
+        responden_jabatan: activeRespondent?.jabatan || DEFAULT_ANSWERS.responden_jabatan,
+        responden_perusahaan: activeRespondent?.nama_perusahaan || activeRespondent?.perusahaan || perusahaan?.nama_perusahaan || DEFAULT_ANSWERS.responden_perusahaan,
+        responden_email: activeRespondent?.email || DEFAULT_ANSWERS.responden_email,
+        responden_telepon: activeRespondent?.no_telepon || DEFAULT_ANSWERS.responden_telepon,
+        responden_sektor: activeRespondent?.nama_sub_sektor || activeRespondent?.sektor || perusahaan?.sub_sektor?.nama_sub_sektor || perusahaan?.sektor || DEFAULT_ANSWERS.responden_sektor,
+        responden_sertifikat: activeRespondent?.sertifikat_training || DEFAULT_ANSWERS.responden_sertifikat,
+        q1: pernahTerjadi === null ? baseRiskAnswers.q1 : (pernahTerjadi ? "ya" : "tidak"),
+        q1_alasan: typeof activeRisk?.alasan === "string" ? activeRisk.alasan : baseRiskAnswers.q1_alasan,
+        dampak_reputasi: pernahTerjadi === true && typeof activeRisk?.dampak_reputasi === "number"
+            ? (API_TO_IMPACT[activeRisk.dampak_reputasi] || baseRiskAnswers.dampak_reputasi)
+            : baseRiskAnswers.dampak_reputasi,
+        dampak_operasional: pernahTerjadi === true && typeof activeRisk?.dampak_operasional === "number"
+            ? (API_TO_IMPACT[activeRisk.dampak_operasional] || baseRiskAnswers.dampak_operasional)
+            : baseRiskAnswers.dampak_operasional,
+        dampak_finansial: pernahTerjadi === true && typeof activeRisk?.dampak_finansial === "number"
+            ? (API_TO_IMPACT[activeRisk.dampak_finansial] || baseRiskAnswers.dampak_finansial)
+            : baseRiskAnswers.dampak_finansial,
+        dampak_hukum: pernahTerjadi === true && typeof activeRisk?.dampak_hukum === "number"
+            ? (API_TO_IMPACT[activeRisk.dampak_hukum] || baseRiskAnswers.dampak_hukum)
+            : baseRiskAnswers.dampak_hukum,
+        frekuensi: pernahTerjadi === true && typeof activeRisk?.frekuensi === "number"
+            ? (API_TO_FREQUENCY[activeRisk.frekuensi] || baseRiskAnswers.frekuensi)
+            : baseRiskAnswers.frekuensi,
+        q4: pernahTerjadi === true && typeof activeRisk?.ada_pengendalian === "boolean"
+            ? (activeRisk.ada_pengendalian ? "ya" : "tidak")
+            : baseRiskAnswers.q4,
+        q5: pernahTerjadi === true && typeof activeRisk?.deskripsi_pengendalian === "string"
+            ? activeRisk.deskripsi_pengendalian
+            : baseRiskAnswers.q5,
+    };
+}
 
 function hasNextRisk(risk: SurveyRiskResponse | null, progress: Record<string, any> | null): boolean {
     if (typeof risk?.has_next === "boolean") return risk.has_next;
@@ -152,6 +231,7 @@ function getResolvedRisk(risk: SurveyRiskResponse | null, progress: Record<strin
 
 export default function SurveiProfil() {
     const [answers, setAnswers] = useState<Record<string, any>>(DEFAULT_ANSWERS);
+    const riskAnswersRef = useRef<Record<string, RiskAnswerSnapshot>>({});
     const [searchParams, setSearchParams] = useSearchParams();
     const [respondentStepPinned, setRespondentStepPinned] = useState(searchParams.get("step") === "responden");
 
@@ -189,25 +269,9 @@ export default function SurveiProfil() {
     }, [searchParams]);
 
     useEffect(() => {
-        setAnswers({
-            ...DEFAULT_ANSWERS,
-            responden_nama: activeRespondent?.nama_lengkap || DEFAULT_ANSWERS.responden_nama,
-            responden_jabatan: activeRespondent?.jabatan || DEFAULT_ANSWERS.responden_jabatan,
-            responden_perusahaan: activeRespondent?.nama_perusahaan || activeRespondent?.perusahaan || perusahaan?.nama_perusahaan || DEFAULT_ANSWERS.responden_perusahaan,
-            responden_email: activeRespondent?.email || DEFAULT_ANSWERS.responden_email,
-            responden_telepon: activeRespondent?.no_telepon || DEFAULT_ANSWERS.responden_telepon,
-            responden_sektor: activeRespondent?.nama_sub_sektor || activeRespondent?.sektor || perusahaan?.sub_sektor?.nama_sub_sektor || perusahaan?.sektor || DEFAULT_ANSWERS.responden_sektor,
-            responden_sertifikat: activeRespondent?.sertifikat_training || DEFAULT_ANSWERS.responden_sertifikat,
-            q1: typeof activeRisk?.pernah_terjadi === "boolean" ? (activeRisk.pernah_terjadi ? "ya" : "tidak") : DEFAULT_ANSWERS.q1,
-            q1_alasan: typeof activeRisk?.alasan === "string" ? activeRisk.alasan : DEFAULT_ANSWERS.q1_alasan,
-            dampak_reputasi: typeof activeRisk?.dampak_reputasi === "number" ? (API_TO_IMPACT[activeRisk.dampak_reputasi] || DEFAULT_ANSWERS.dampak_reputasi) : DEFAULT_ANSWERS.dampak_reputasi,
-            dampak_operasional: typeof activeRisk?.dampak_operasional === "number" ? (API_TO_IMPACT[activeRisk.dampak_operasional] || DEFAULT_ANSWERS.dampak_operasional) : DEFAULT_ANSWERS.dampak_operasional,
-            dampak_finansial: typeof activeRisk?.dampak_finansial === "number" ? (API_TO_IMPACT[activeRisk.dampak_finansial] || DEFAULT_ANSWERS.dampak_finansial) : DEFAULT_ANSWERS.dampak_finansial,
-            dampak_hukum: typeof activeRisk?.dampak_hukum === "number" ? (API_TO_IMPACT[activeRisk.dampak_hukum] || DEFAULT_ANSWERS.dampak_hukum) : DEFAULT_ANSWERS.dampak_hukum,
-            frekuensi: typeof activeRisk?.frekuensi === "number" ? (API_TO_FREQUENCY[activeRisk.frekuensi] || DEFAULT_ANSWERS.frekuensi) : DEFAULT_ANSWERS.frekuensi,
-            q4: typeof activeRisk?.ada_pengendalian === "boolean" ? (activeRisk.ada_pengendalian ? "ya" : "tidak") : DEFAULT_ANSWERS.q4,
-            q5: typeof activeRisk?.deskripsi_pengendalian === "string" ? activeRisk.deskripsi_pengendalian : DEFAULT_ANSWERS.q5,
-        });
+        const snapshotKey = getRiskSnapshotKey(activeRisk, progressRecord);
+        const fallbackSnapshot = snapshotKey ? riskAnswersRef.current[snapshotKey] ?? null : null;
+        setAnswers(buildAnswersFromRisk(activeRespondent, activeRisk, perusahaan, fallbackSnapshot));
 
         if (respondentStepPinned) {
             setStep(0);
@@ -223,21 +287,71 @@ export default function SurveiProfil() {
     }, [activeRespondent, activeRisk, perusahaan, respondentStepPinned, user?.email]);
 
     useEffect(() => {
+        const snapshotKey = getRiskSnapshotKey(resolvedRisk, progressRecord);
+        if (!snapshotKey || step !== 1) return;
+
+        riskAnswersRef.current[snapshotKey] = {
+            q1: answers.q1,
+            q1_alasan: answers.q1_alasan,
+            dampak_reputasi: answers.dampak_reputasi,
+            dampak_operasional: answers.dampak_operasional,
+            dampak_finansial: answers.dampak_finansial,
+            dampak_hukum: answers.dampak_hukum,
+            frekuensi: answers.frekuensi,
+            q4: answers.q4,
+            q5: answers.q5,
+        };
+    }, [answers, progressRecord, resolvedRisk, step]);
+
+    useEffect(() => {
         setIsFinished(Boolean(activeProgress?.completed || activeProgress?.finished_at));
     }, [activeProgress]);
 
     const setAnswer = (key: string, val: any) => {
-        setAnswers((prev) => ({
-            ...prev,
-            [key]: val,
-            ...(key === "q4" && val === "tidak" ? { q5: "" } : {}),
-        }));
+        setAnswers((prev) => {
+            if (key === "q1" && val === "tidak") {
+                return {
+                    ...prev,
+                    q1: "tidak",
+                    q1_alasan: "",
+                    dampak_reputasi: null,
+                    dampak_operasional: null,
+                    dampak_finansial: null,
+                    dampak_hukum: null,
+                    frekuensi: null,
+                    q4: "",
+                    q5: "",
+                };
+            }
+
+            if (key === "q1" && val === "ya") {
+                return {
+                    ...prev,
+                    q1: "ya",
+                    q1_alasan: "",
+                    dampak_reputasi: null,
+                    dampak_operasional: null,
+                    dampak_finansial: null,
+                    dampak_hukum: null,
+                    frekuensi: null,
+                    q4: "",
+                    q5: "",
+                };
+            }
+
+            return {
+                ...prev,
+                [key]: val,
+                ...(key === "q4" && val === "tidak" ? { q5: "" } : {}),
+            };
+        });
     };
 
     const isStep0Valid = answers.responden_nama && answers.responden_jabatan && answers.responden_perusahaan && answers.responden_email && answers.responden_telepon && answers.responden_sektor;
     const isStep1Valid = answers.q1 === "tidak"
         ? Boolean(answers.q1_alasan?.trim())
         : Boolean(
+            answers.q1 === "ya" &&
             answers.dampak_reputasi &&
             answers.dampak_operasional &&
             answers.dampak_finansial &&

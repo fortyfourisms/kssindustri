@@ -284,7 +284,7 @@ export default function Dashboard() {
 
     const surveyProgressQuery = useQuery({
         queryKey: ["survey-progress", surveyRespondent?.id || "unknown"],
-        queryFn: () => surveyService.getProgress(surveyRespondent?.id as number),
+        queryFn: () => surveyService.getMyProgressOrNull(surveyRespondent?.id),
         enabled: isPrimaryStageReady && !!surveyRespondent?.id,
         staleTime: DASHBOARD_STAGE_STALE_TIME,
     });
