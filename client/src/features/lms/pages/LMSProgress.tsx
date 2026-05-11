@@ -175,12 +175,12 @@ export function LMSProgress() {
 
     return (
         <div className="h-full overflow-y-auto bg-[#f8fafc]">
-            <div className="mx-auto max-w-[1480px] px-4 py-4 sm:px-6 sm:py-6">
+            <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
 
                 {/* ── Page Header — mirrors dashboard welcome card ── */}
-                <div className="mb-6 rounded-3xl py-5">
+                <div className="mb-6 rounded-3xl bg-white px-5 py-5 shadow-sm ring-1 ring-slate-200 sm:px-6">
 
-                    <h1 className="mt-1 text-2xl font-black tracking-tight text-slate-950">
+                    <h1 className="mt-1 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">
                         Pantau Perjalanan Belajarmu
                     </h1>
                 </div>
@@ -230,7 +230,7 @@ export function LMSProgress() {
                     <div className="min-w-0 flex-1">
                         <div className="mb-4 flex items-center justify-between">
                             <h2 className="text-xl font-black tracking-tight text-slate-950">Progress per Kelas</h2>
-                            <span className="rounded-full border border-slate-200 bg-white px-4 py-1.5 text-sm font-bold text-slate-700 shadow-sm">
+                            <span className="inline-flex h-10 items-center rounded-full border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 shadow-sm">
                                 {overallProgress}% total
                             </span>
                         </div>
@@ -271,7 +271,7 @@ export function LMSProgress() {
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ duration: 0.35, delay: index * 0.05 }}
                                         onClick={() => navigate(getCourseRoute(course.id))}
-                                        className="w-full rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md"
+                                        className="w-full rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md sm:p-5"
                                     >
                                         {/* Top row: title + status */}
                                         <div className="flex flex-wrap items-start justify-between gap-2">
@@ -300,7 +300,7 @@ export function LMSProgress() {
                                         </div>
 
                                         {/* Stat chips — same as dashboard featured card chips */}
-                                        <div className="mt-4 grid grid-cols-3 gap-2">
+                                        <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
                                             <div className="rounded-xl bg-slate-50 px-3 py-2">
                                                 <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Materi</div>
                                                 <div className="mt-1 text-sm font-black text-slate-900">

@@ -10,7 +10,7 @@ import type {
 
 const REFRESH_COOLDOWN_MS = 15000;
 
-let refreshInFlight: Promise<void> | null = null;
+let refreshInFlight: Promise<unknown> | null = null;
 let lastRefreshAt = 0;
 
 /**
@@ -20,7 +20,8 @@ let lastRefreshAt = 0;
  */
 class AuthService {
     /**
-     * Login — backend returns setup_token, mfa_token, or access_token.
+     * Login — backend returns setup_token, mfa_token, or user data after
+     * establishing the HTTP-only cookie session.
      */
     async login(payload: LoginPayload): Promise<AuthResponse> {
         return apiClient.post<AuthResponse>('/api/login', {
@@ -38,7 +39,15 @@ class AuthService {
      * Register new user.
      */
     async register(payload: RegisterPayload): Promise<AuthResponse> {
-        return apiClient.post<AuthResponse>('/api/register', payload);
+        const { turnstileToken, ...registrationPayload } = payload;
+        return apiClient.post<AuthResponse>('/api/register', {
+            ...registrationPayload,
+            "cf-turnstile-response": turnstileToken,
+            // Keep multiple field variants for backend compatibility.
+            turnstile_token: turnstileToken,
+            turnstileToken,
+            turnstiletoken: turnstileToken,
+        });
     }
 
     /**
@@ -54,12 +63,12 @@ class AuthService {
 
     /**
      * Refresh access token via POST /api/refresh.
-     * Backend akan membaca refresh token dari HTTP-only cookie dan menerbitkan
-     * access token baru. Menggunakan raw fetch (bukan apiClient) agar tidak
+     * Backend akan membaca refresh token dari HTTP-only cookie dan memperbarui
+     * session cookie. Menggunakan raw fetch (bukan apiClient) agar tidak
      * memicu interceptor 401 dan menyebabkan infinite loop.
      * Melempar error jika refresh token sudah expired atau tidak valid.
      */
-    async refresh(): Promise<void> {
+    async refresh(): Promise<unknown> {
         const now = Date.now();
         if (refreshInFlight) {
             return refreshInFlight;
@@ -78,11 +87,23 @@ class AuthService {
             if (!res.ok) {
                 throw new Error('Session expired');
             }
+            const text = await res.text();
+            if (text.trim()) {
+                try {
+                    const data = JSON.parse(text) as Record<string, unknown>;
+                    return data;
+                } catch {
+                    return undefined;
+                }
+            }
             lastRefreshAt = Date.now();
+            return undefined;
         })();
 
         try {
-            await refreshInFlight;
+            const result = await refreshInFlight;
+            lastRefreshAt = Date.now();
+            return result;
         } finally {
             refreshInFlight = null;
         }
@@ -109,7 +130,7 @@ class AuthService {
 
     /**
      * MFA Enable — verify the 6-digit code during first-time setup.
-     * On success, returns access_token + user data.
+     * On success, backend finalizes the cookie session and returns user data.
      */
     async mfaEnable(setupToken: string, code: string): Promise<MfaEnableResponse> {
         return apiClient.post<MfaEnableResponse>('/api/mfa/enable', {
@@ -120,7 +141,7 @@ class AuthService {
 
     /**
      * MFA Verify — verify the 6-digit code for returning users.
-     * On success, returns access_token + user data.
+     * On success, backend finalizes the cookie session and returns user data.
      */
     async mfaVerify(mfaToken: string, code: string): Promise<MfaVerifyResponse> {
         return apiClient.post<MfaVerifyResponse>('/api/mfa/verify', {

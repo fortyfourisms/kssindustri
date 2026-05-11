@@ -32,7 +32,7 @@ export function BlogSection() {
   const hasMoreArticles = blogArticles.length > BLOG_PREVIEW_LIMIT;
 
   return (
-    <section id="blog" className="relative py-16 md:py-28 overflow-hidden">
+    <section id="blog" className="relative overflow-hidden py-12 sm:py-16 lg:py-20">
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute inset-0 bg-[linear-gradient(180deg,#ffffff_0%,#f7fbff_45%,#eef6ff_100%)]" />
         <div className="absolute left-[8%] top-10 h-56 w-56 rounded-full bg-[#595cff]/10 blur-3xl" />
@@ -41,9 +41,9 @@ export function BlogSection() {
       </div>
 
       <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_300px] lg:items-end">
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px] lg:items-end lg:gap-10">
           <div className="max-w-3xl">
-            <h2 className="text-5xl md:text-6xl font-display font-medium text-slate-900 tracking-tight leading-tight">
+            <h2 className="text-2xl font-display font-medium leading-tight text-slate-900 sm:text-3xl lg:text-5xl">
               Artikel untuk memperkuat
               <span className="block text-slate-400">
                 pemahaman keamanan siber
@@ -55,7 +55,7 @@ export function BlogSection() {
               <button
                 type="button"
                 onClick={() => navigate("/blog")}
-                className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition hover:border-blue-200 hover:text-[#0061ff]"
+                className="inline-flex h-11 items-center gap-2 rounded-full border border-slate-200 bg-white px-5 text-sm font-bold text-slate-700 shadow-sm transition-all duration-300 hover:border-blue-200 hover:text-[#0061ff]"
               >
                 Show More
                 <ArrowRight className="h-4 w-4" />
@@ -69,15 +69,15 @@ export function BlogSection() {
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-100px" }}
-          className="mt-12 grid grid-cols-1 gap-6 xl:grid-cols-3"
+          className="mt-8 grid grid-cols-1 gap-4 sm:mt-10 sm:grid-cols-2 sm:gap-6 xl:grid-cols-3"
         >
           {isLoading ? (
             Array.from({ length: 3 }).map((_, index) => (
               <motion.div
                 key={`blog-skeleton-${index}`}
                 variants={itemVariants}
-                className={`min-h-[300px] overflow-hidden rounded-[2rem] border border-white/60 bg-white/80 p-6 shadow-[0_20px_80px_rgba(31,60,136,0.08)] ${
-                  index === 0 ? "xl:col-span-2" : ""
+                className={`min-h-[300px] overflow-hidden rounded-[2rem] border border-white/60 bg-white/80 p-5 shadow-[0_20px_80px_rgba(31,60,136,0.08)] sm:p-6 ${
+                  index === 0 ? "sm:col-span-2 xl:col-span-2" : ""
                 }`}
               >
                 <div className="skeleton-stack-lg h-full">
@@ -100,13 +100,13 @@ export function BlogSection() {
           ) : null}
 
           {!isLoading && isError ? (
-            <div className="xl:col-span-3 rounded-[2rem] border border-red-100 bg-white/90 p-6 text-sm text-slate-600 shadow-[0_20px_80px_rgba(31,60,136,0.08)]">
+            <div className="sm:col-span-2 xl:col-span-3 rounded-[2rem] border border-red-100 bg-white/90 p-6 text-sm text-slate-600 shadow-[0_20px_80px_rgba(31,60,136,0.08)]">
               Artikel belum dapat dimuat dari server saat ini.
             </div>
           ) : null}
 
           {!isLoading && !isError && previewArticles.length === 0 ? (
-            <div className="xl:col-span-3 rounded-[2rem] border border-slate-200 bg-white/90 p-6 text-sm text-slate-600 shadow-[0_20px_80px_rgba(31,60,136,0.08)]">
+            <div className="sm:col-span-2 xl:col-span-3 rounded-[2rem] border border-slate-200 bg-white/90 p-6 text-sm text-slate-600 shadow-[0_20px_80px_rgba(31,60,136,0.08)]">
               Belum ada berita yang tersedia.
             </div>
           ) : null}
@@ -125,15 +125,15 @@ export function BlogSection() {
                   }}
                   role="button"
                   tabIndex={0}
-                  className={`group relative overflow-hidden rounded-[2rem] border border-white/60 bg-white/90 shadow-[0_20px_80px_rgba(31,60,136,0.10)] backdrop-blur-sm transition-all duration-500 hover:-translate-y-3 hover:border-[#0061ff]/20 hover:shadow-[0_28px_100px_rgba(31,60,136,0.18)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0061ff]/40 ${
-                    index === 0 ? "xl:col-span-2" : ""
+                  className={`group relative overflow-hidden rounded-[2rem] border border-white/60 bg-white/90 shadow-[0_20px_80px_rgba(31,60,136,0.10)] backdrop-blur-sm transition-all duration-300 hover:-translate-y-2 hover:border-[#0061ff]/20 hover:shadow-[0_28px_100px_rgba(31,60,136,0.18)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0061ff]/40 ${
+                    index === 0 ? "sm:col-span-2 xl:col-span-2" : ""
                   }`}
                 >
                   <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-500 group-hover:opacity-100">
                     <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(96,239,255,0.14),transparent_42%)]" />
                   </div>
 
-                  <div className="relative border-b border-slate-100 p-6 md:p-7">
+                  <div className="relative border-b border-slate-100 p-5 sm:p-6 md:p-7">
                     <div className="flex flex-wrap items-center gap-3">
                       <span className="inline-flex rounded-full bg-slate-900 px-3 py-1.5 text-xs font-bold text-white">
                         {article.category}
@@ -148,30 +148,36 @@ export function BlogSection() {
                       <p className="text-xs font-semibold uppercase tracking-[0.26em] text-slate-400">
                         {article.coverLabel}
                       </p>
-                      <h3 className="mt-3 text-2xl md:text-3xl font-bold leading-tight text-slate-900">
+                      <h3 className="mt-3 text-xl font-bold leading-tight text-slate-900 sm:text-2xl lg:text-3xl">
                         {article.title}
                       </h3>
-                      <p className="mt-4 text-base leading-relaxed text-slate-600">
+                      <p className="mt-4 max-w-prose text-sm leading-relaxed text-slate-600 sm:text-base">
                         {article.excerpt}
                       </p>
                     </div>
                   </div>
 
-                  <div className="relative p-6 md:p-7">
+                  <div className="relative p-5 sm:p-6 md:p-7">
                     <div className="flex flex-wrap gap-2">
-                      <span className="inline-flex items-center gap-2 rounded-full border border-[#0061ff]/15 bg-[#eff6ff] px-3 py-1 text-xs font-semibold text-[#1f3c88]">
-                        <Tag className="h-3 w-3" />
-                        ID {article.id}
-                      </span>
-                      {article.updatedAt ? (
-                        <span className="inline-flex items-center gap-2 rounded-full border border-[#0061ff]/15 bg-[#eff6ff] px-3 py-1 text-xs font-semibold text-[#1f3c88]">
-                          <Tag className="h-3 w-3" />
-                          Diperbarui
-                        </span>
-                      ) : null}
+                      {article.tags.length > 0
+                        ? article.tags.slice(0, 3).map((tag) => (
+                            <span
+                              key={`${article.slug}-${tag}`}
+                              className="inline-flex items-center gap-2 rounded-full border border-[#0061ff]/15 bg-[#eff6ff] px-3 py-1 text-xs font-semibold text-[#1f3c88]"
+                            >
+                              <Tag className="h-3 w-3" />
+                              {tag}
+                            </span>
+                          ))
+                        : (
+                            <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-500">
+                              <Tag className="h-3 w-3" />
+                              Belum ada tag
+                            </span>
+                          )}
                     </div>
 
-                    <div className="mt-6 flex items-center justify-between gap-4">
+                    <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <p className="text-sm font-medium text-slate-500">
                         Oleh {article.authorLabel}
                       </p>
@@ -191,7 +197,7 @@ export function BlogSection() {
             <button
               type="button"
               onClick={() => navigate("/blog")}
-              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition hover:border-blue-200 hover:text-[#0061ff]"
+              className="inline-flex h-11 items-center gap-2 rounded-full border border-slate-200 bg-white px-5 text-sm font-bold text-slate-700 shadow-sm transition-all duration-300 hover:border-blue-200 hover:text-[#0061ff]"
             >
               Show More
               <ArrowRight className="h-4 w-4" />

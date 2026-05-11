@@ -63,15 +63,15 @@ export default function LMSCertificate() {
 
     const handleDownload = (certId: string) => {
         const url = lmsService.downloadSertifikat(certId);
-        window.open(url, "_blank");
+        window.location.assign(url);
     };
 
     // ── Loading ──────────────────────────────────────────────────────────────
     if (isLoadingCertificate) {
         return (
-            <div className="w-full h-full flex flex-col pt-2 lg:pt-6">
-                <div className="flex-1 overflow-y-auto px-6 lg:px-8 xl:px-10 pb-12 session-scrollbar content-area-padding">
-                    <div className="max-w-[1180px] py-24 flex flex-col items-center">
+            <div className="flex h-full w-full flex-col pt-2 lg:pt-6">
+                <div className="session-scrollbar content-area-padding flex-1 overflow-y-auto px-4 pb-12 sm:px-6 lg:px-8">
+                    <div className="mx-auto flex max-w-6xl flex-col items-center py-24">
                         <Loader2 className="w-8 h-8 text-blue-400 animate-spin mb-3" />
                         <p className="text-sm text-slate-400 font-medium">Memeriksa sertifikat...</p>
                     </div>
@@ -83,15 +83,15 @@ export default function LMSCertificate() {
     // ── Error ────────────────────────────────────────────────────────────────
     if (certificateError) {
         return (
-            <div className="w-full h-full flex flex-col pt-2 lg:pt-6">
-                <div className="flex-1 overflow-y-auto px-6 lg:px-8 xl:px-10 pb-12 session-scrollbar content-area-padding">
-                    <div className="max-w-[1180px] py-24 flex flex-col items-center text-center">
+            <div className="flex h-full w-full flex-col pt-2 lg:pt-6">
+                <div className="session-scrollbar content-area-padding flex-1 overflow-y-auto px-4 pb-12 sm:px-6 lg:px-8">
+                    <div className="mx-auto flex max-w-6xl flex-col items-center py-24 text-center">
                         <AlertCircle className="w-10 h-10 text-red-400 mb-3" />
                         <h3 className="text-base font-black text-slate-700 mb-1">Gagal Memuat Sertifikat</h3>
                         <p className="text-sm text-slate-400 mb-4">{certificateError}</p>
                         <button
                             onClick={() => courseId && fetchCertificate(courseId)}
-                            className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white font-bold text-sm rounded-xl hover:bg-blue-700 transition-colors"
+                            className="flex h-11 items-center gap-2 rounded-xl bg-blue-600 px-5 text-sm font-bold text-white transition-all duration-300 hover:bg-blue-700"
                         >
                             <RefreshCcw className="w-4 h-4" />
                             Coba Lagi
@@ -103,23 +103,23 @@ export default function LMSCertificate() {
     }
 
     return (
-        <div className="w-full h-full flex flex-col pt-2 lg:pt-6">
-            <div className="px-6 lg:px-10 xl:px-12 flex items-center justify-between mb-8">
+        <div className="flex h-full w-full flex-col pt-2 lg:pt-6">
+            <div className="mb-6 px-4 sm:px-6 lg:mb-8 lg:px-8">
                 <button
                     onClick={() => navigate(getCourseRoute(courseId!))}
-                    className="flex items-center gap-2 text-sm font-bold text-slate-600 hover:text-slate-900 transition-colors"
+                    className="inline-flex h-11 items-center gap-2 rounded-full px-4 text-sm font-bold text-slate-600 transition-all duration-300 hover:bg-white/70 hover:text-slate-900"
                 >
                     <ArrowLeft className="w-4 h-4" />
                     Kembali ke Kelas
                 </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto px-6 lg:px-8 xl:px-10 pb-12 session-scrollbar content-area-padding">
-                <div className="max-w-[1180px]">
+            <div className="session-scrollbar content-area-padding flex-1 overflow-y-auto px-4 pb-12 sm:px-6 lg:px-8">
+                <div className="mx-auto max-w-6xl">
                     <div className="mb-8">
                         <div className="flex items-center gap-3 mb-2">
                             <Award className="w-6 h-6 text-amber-500" />
-                            <h1 className="text-2xl font-black text-slate-900">Sertifikat</h1>
+                            <h1 className="text-2xl font-black text-slate-900 sm:text-3xl">Sertifikat</h1>
                         </div>
                         <p className="text-sm text-slate-500 font-medium">
                             {activeCourse?.judul ?? "Kelas"}
@@ -130,7 +130,7 @@ export default function LMSCertificate() {
                     {courseCertificate ? (
                         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
                             {/* Certificate Card */}
-                            <div className="relative w-full bg-gradient-to-br from-amber-500 via-yellow-500 to-orange-500 rounded-3xl overflow-hidden shadow-2xl shadow-amber-200 p-10 mb-8">
+                            <div className="relative mb-8 w-full overflow-hidden rounded-3xl bg-gradient-to-br from-amber-500 via-yellow-500 to-orange-500 p-6 shadow-2xl shadow-amber-200 sm:p-8 lg:p-10">
                                 {/* Decorative elements */}
                                 <div className="absolute inset-0 opacity-20">
                                     <div className="absolute -top-16 -right-16 w-64 h-64 rounded-full bg-white" />
@@ -146,7 +146,7 @@ export default function LMSCertificate() {
                                     </div>
 
                                     <p className="text-amber-100 text-xs font-black uppercase tracking-widest mb-3">Sertifikat Kelulusan</p>
-                                    <h2 className="text-white font-black text-2xl leading-tight mb-2">
+                                    <h2 className="mb-2 text-2xl font-black leading-tight text-white sm:text-3xl">
                                         {activeCourse?.judul ?? courseCertificate.nama_kelas ?? "Kelas"}
                                     </h2>
 
@@ -195,13 +195,13 @@ export default function LMSCertificate() {
                             className="py-12"
                         >
                             {/* Congratulations Banner */}
-                            <div className="w-full bg-gradient-to-br from-[#1e3a8a] to-[#2a45a3] rounded-3xl p-10 mb-8 relative overflow-hidden text-center">
+                            <div className="relative mb-8 w-full overflow-hidden rounded-3xl bg-gradient-to-br from-[#1e3a8a] to-[#2a45a3] p-6 text-center sm:p-8 lg:p-10">
                                 <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_30%_70%,white_0%,transparent_50%)]" />
                                 <div className="relative z-10 text-center">
                                     <div className="w-20 h-20 rounded-3xl bg-white/10 border border-white/20 flex items-center justify-center mx-auto mb-5">
                                         <Sparkles className="w-10 h-10 text-yellow-300" />
                                     </div>
-                                    <h2 className="text-white font-black text-2xl mb-3">Selamat Telah Menyelesaikan Kelas!</h2>
+                                    <h2 className="mb-3 text-2xl font-black text-white sm:text-3xl">Selamat Telah Menyelesaikan Kelas!</h2>
                                     <p className="text-blue-200 font-medium max-w-md mx-auto">
                                         Anda berhak mendapatkan sertifikat kelulusan. Klik tombol di bawah untuk membuat sertifikat Anda.
                                     </p>
@@ -211,7 +211,7 @@ export default function LMSCertificate() {
                             <button
                                 onClick={handleGenerate}
                                 disabled={generating}
-                                className="w-full flex items-center justify-center gap-3 py-4 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-white font-black text-base rounded-2xl transition-all shadow-xl shadow-amber-200 hover:scale-[1.01] disabled:opacity-60"
+                                className="flex min-h-12 w-full items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-amber-500 to-yellow-500 px-6 py-3 text-base font-black text-white transition-all duration-300 shadow-xl shadow-amber-200 hover:scale-[1.01] hover:from-amber-600 hover:to-yellow-600 disabled:opacity-60"
                             >
                                 {generating ? (
                                     <>
@@ -244,7 +244,7 @@ export default function LMSCertificate() {
                                             initial={{ opacity: 0, x: -10 }}
                                             animate={{ opacity: 1, x: 0 }}
                                             transition={{ delay: idx * 0.05 }}
-                                            className="flex items-center gap-4 p-5 bg-white border border-slate-200 hover:border-amber-200 hover:shadow-sm rounded-2xl transition-all group"
+                                            className="group flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-4 transition-all duration-300 hover:border-amber-200 hover:shadow-sm sm:flex-row sm:items-center sm:p-5"
                                         >
                                             <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center shrink-0">
                                                 <Award className="w-5 h-5 text-amber-500" />
@@ -265,7 +265,7 @@ export default function LMSCertificate() {
                                             </div>
                                             <button
                                                 onClick={() => handleDownload(cert.id)}
-                                                className="flex items-center gap-1.5 px-3 py-2 bg-amber-50 hover:bg-amber-100 text-amber-700 text-xs font-bold rounded-xl transition-colors shrink-0"
+                                                className="inline-flex h-11 shrink-0 items-center justify-center gap-1.5 rounded-xl bg-amber-50 px-3 text-xs font-bold text-amber-700 transition-all duration-300 hover:bg-amber-100"
                                             >
                                                 <Download className="w-3.5 h-3.5" />
                                                 Unduh

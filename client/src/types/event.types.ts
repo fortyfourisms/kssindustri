@@ -37,6 +37,10 @@ export type EventRegistrationPayload = {
   industrySector: string;
 };
 
+export type EventRegistrationSubmitPayload = EventRegistrationPayload & {
+  turnstileToken?: string;
+};
+
 export type EventRegistrationRequest = {
   email: string;
   jabatan: string;
@@ -44,6 +48,10 @@ export type EventRegistrationRequest = {
   no_hp: string;
   perusahaan: string;
   sektor: string;
+  "cf-turnstile-response"?: string;
+  turnstile_token?: string;
+  turnstileToken?: string;
+  turnstiletoken?: string;
 };
 
 export type EventRegistrationResult = {

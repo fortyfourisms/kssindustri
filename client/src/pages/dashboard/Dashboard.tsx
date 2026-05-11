@@ -258,9 +258,9 @@ export default function Dashboard() {
         staleTime: DASHBOARD_STAGE_STALE_TIME,
     });
     const surveyRespondentQuery = useQuery({
-        queryKey: ["survey-respondent", user?.id || "unknown"],
-        queryFn: () => surveyService.getRespondentByIdOrNull(user?.id),
-        enabled: !!user?.id,
+        queryKey: ["survey-respondent", user?.id || "unknown", "me"],
+        queryFn: () => surveyService.getMyRespondentOrNull(),
+        enabled: !!user,
         staleTime: DASHBOARD_STAGE_STALE_TIME,
     });
     const surveyRespondent = surveyRespondentQuery.data;
@@ -542,12 +542,9 @@ export default function Dashboard() {
                     {/* Top row */}
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 mb-8">
                         <div className="flex items-center gap-4">
-                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border backdrop-blur-sm" style={{ background: "var(--dashboard-surface-strong)", borderColor: "var(--dashboard-border-strong)" }}>
-                                <Shield className="h-5 w-5" style={{ color: "var(--dashboard-info-soft-fg)" }} />
-                            </div>
                             <div>
                                 <p className="text-[10px] font-black uppercase tracking-[0.25em]" style={{ color: "var(--dashboard-text-muted)" }}>
-                                    Dashboard Utama · BSSN
+                                    Selamat Datang di Dashboard
                                 </p>
                                 <h1 className="mt-0.5 text-xl font-black leading-tight tracking-tight md:text-2xl" style={{ color: "var(--dashboard-text)" }}>
                                     {perusahaan?.nama_perusahaan ?? "Nama Perusahaan"}

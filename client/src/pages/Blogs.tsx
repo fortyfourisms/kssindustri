@@ -101,16 +101,22 @@ export default function Blogs() {
 
                     <div className="relative p-6 md:p-7">
                       <div className="flex flex-wrap gap-2">
-                        <span className="inline-flex items-center gap-2 rounded-full border border-[#0061ff]/15 bg-[#eff6ff] px-3 py-1 text-xs font-semibold text-[#1f3c88]">
-                          <Tag className="h-3 w-3" />
-                          ID {article.id}
-                        </span>
-                        {article.updatedAt ? (
-                          <span className="inline-flex items-center gap-2 rounded-full border border-[#0061ff]/15 bg-[#eff6ff] px-3 py-1 text-xs font-semibold text-[#1f3c88]">
-                            <Tag className="h-3 w-3" />
-                            Diperbarui
-                          </span>
-                        ) : null}
+                        {article.tags.length > 0
+                          ? article.tags.slice(0, 3).map((tag) => (
+                              <span
+                                key={`${article.slug}-${tag}`}
+                                className="inline-flex items-center gap-2 rounded-full border border-[#0061ff]/15 bg-[#eff6ff] px-3 py-1 text-xs font-semibold text-[#1f3c88]"
+                              >
+                                <Tag className="h-3 w-3" />
+                                {tag}
+                              </span>
+                            ))
+                          : (
+                              <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-500">
+                                <Tag className="h-3 w-3" />
+                                Belum ada tag
+                              </span>
+                            )}
                       </div>
 
                       <div className="mt-6 flex items-center justify-between gap-4">

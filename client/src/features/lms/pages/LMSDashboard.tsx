@@ -176,12 +176,12 @@ export function LMSDashboard() {
 
     return (
         <div className="h-full overflow-y-auto bg-[#f8fafc]">
-            <div className="mx-auto max-w-[1480px] px-4 py-4 sm:px-6 sm:py-6">
+            <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
                 <div className="flex flex-col gap-6 lg:flex-row lg:gap-8 xl:gap-10">
                     <div className="min-w-0 flex-1">
-                        <div data-tour-id="lms-dashboard-hero" className="mb-6 rounded-3xl bg-white px-6 py-5 shadow-sm ring-1 ring-slate-200">
+                        <div data-tour-id="lms-dashboard-hero" className="mb-6 rounded-3xl bg-white px-5 py-5 shadow-sm ring-1 ring-slate-200 sm:px-6">
                             <p className="text-sm font-medium text-slate-500">Beranda LMS</p>
-                            <h1 className="mt-1 text-2xl font-black tracking-tight text-slate-950">
+                            <h1 className="mt-1 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">
                                 Selamat datang {userDisplayName}
                             </h1>
                         </div>
@@ -192,7 +192,7 @@ export function LMSDashboard() {
                                     key={cat}
                                     onClick={() => setSelectedCategory(cat)}
                                     className={cn(
-                                        "rounded-full px-3 py-1.5 text-xs font-semibold transition-all sm:px-5 sm:py-2 sm:text-sm",
+                                        "inline-flex h-10 items-center rounded-full px-3 text-xs font-semibold transition-all duration-300 sm:px-5 sm:text-sm",
                                         cat === safeSelectedCategory
                                             ? "bg-slate-900 text-white shadow-md"
                                             : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-100"
@@ -281,7 +281,7 @@ export function LMSDashboard() {
                                 <h2 className="text-xl font-black tracking-tight text-slate-950">Materi Saya</h2>
                                 <button
                                     onClick={() => navigate(getCoursesRoute())}
-                                    className="text-sm font-medium text-slate-500 transition hover:text-[#4f46e5]"
+                                    className="text-sm font-medium text-slate-500 transition-all duration-300 hover:text-[#4f46e5]"
                                 >
                                     Lihat semua materi
                                 </button>
@@ -306,7 +306,7 @@ export function LMSDashboard() {
                                             <button
                                                 key={course.id}
                                                 onClick={() => navigate(getCourseRoute(course.id))}
-                                                className="w-full rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+                                                className="w-full rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition-all duration-300 hover:border-slate-300 hover:bg-slate-50"
                                             >
                                                 <div className="flex items-start gap-3">
                                                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-900 text-xs font-black text-white">
@@ -317,7 +317,7 @@ export function LMSDashboard() {
                                                         <span className="mt-1 block text-xs text-slate-500">{course.lastItemLabel}</span>
                                                     </div>
                                                 </div>
-                                                <div className="mt-4 grid grid-cols-3 gap-2 text-left">
+                                                <div className="mt-4 grid grid-cols-1 gap-2 text-left sm:grid-cols-3">
                                                     <div className="rounded-xl bg-slate-50 px-3 py-2">
                                                         <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Materi</div>
                                                         <div className="mt-1 text-sm font-bold text-slate-900">{course.completedMateri}/{course.totalMateri}</div>

@@ -10,7 +10,7 @@ import { Skeleton as SkeletonBlock, SkeletonText } from "@/components/ui/skeleto
 
 function Skeleton() {
   return (
-    <div className="max-w-6xl mx-auto px-6 lg:px-10 xl:px-12 pb-12">
+    <div className="mx-auto max-w-6xl px-4 pb-12 sm:px-6 lg:px-8">
       <div className="skeleton-stack-lg flex-1">
         <SkeletonBlock className="h-56 rounded-3xl" />
         <SkeletonBlock className="h-6 w-64 rounded-full" />
@@ -107,10 +107,10 @@ export default function LMSCourse() {
   }
 
   return (
-    <div className="flex min-h-full w-full bg-[#f4f7fb]">
+    <div className="flex min-h-full w-full overflow-x-clip bg-[#f4f7fb]">
       <div className="relative flex flex-1 min-h-0 flex-col bg-transparent">
-        <div className="lg:hidden flex items-center p-4 border-b border-slate-100 bg-white/90 backdrop-blur-xl sticky top-0 z-10">
-          <button onClick={() => navigate(getCoursesRoute())} className="p-2 hover:bg-slate-100 text-slate-600 rounded-lg transition-colors mr-3">
+        <div className="sticky top-0 z-10 flex items-center border-b border-slate-100 bg-white/90 p-4 backdrop-blur-xl lg:hidden">
+          <button onClick={() => navigate(getCoursesRoute())} className="mr-3 flex h-11 w-11 items-center justify-center rounded-2xl text-slate-600 transition-all duration-300 hover:bg-slate-100">
             <ArrowLeft className="w-5 h-5" />
           </button>
           <span className="font-bold text-slate-800">Kembali ke Daftar Kelas</span>

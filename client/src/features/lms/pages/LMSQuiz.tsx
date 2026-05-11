@@ -101,7 +101,7 @@ function StartScreen({
             <button
                 onClick={onStart}
                 disabled={isLoading}
-                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 py-4 text-base font-black text-white shadow-xl shadow-blue-200 transition-all hover:from-blue-700 hover:to-indigo-700 hover:scale-[1.01] disabled:opacity-60"
+                className="flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-3 text-base font-black text-white shadow-xl shadow-blue-200 transition-all duration-300 hover:from-blue-700 hover:to-indigo-700 hover:scale-[1.01] disabled:opacity-60"
             >
                 {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <PlayCircle className="h-5 w-5" />}
                 Mulai Kuis
@@ -178,7 +178,7 @@ function QuestionsScreen({
                                             <button
                                                 key={p.id}
                                                 onClick={() => onSelect(q.id, p.id)}
-                                                className={`flex w-full items-start gap-3 rounded-2xl border-2 px-4 py-3.5 text-left text-sm font-semibold transition-all duration-200 ${isSelected
+                                                className={`flex min-h-12 w-full items-start gap-3 rounded-2xl border-2 px-4 py-3.5 text-left text-sm font-semibold transition-all duration-200 ${isSelected
                                                     ? "border-blue-600 bg-blue-600 text-white shadow-lg shadow-blue-200/60"
                                                     : "border-slate-100 bg-slate-50 text-slate-600 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
                                                     }`}
@@ -573,7 +573,7 @@ export default function LMSQuiz() {
                                         </span>
                                     )}
                                 </div>
-                                <h1 className="mt-4 max-w-4xl text-[28px] font-black leading-tight text-white lg:text-[34px]">
+                                <h1 className="mt-4 max-w-4xl text-2xl font-black leading-tight text-white sm:text-[28px] lg:text-[34px]">
                                     {kuisInfo?.judul ?? "Kuis"}
                                 </h1>
                                 <p className="mt-4 max-w-3xl text-sm leading-relaxed text-white/85 lg:text-base">

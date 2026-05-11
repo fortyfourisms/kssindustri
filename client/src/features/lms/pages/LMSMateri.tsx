@@ -79,17 +79,17 @@ export default function LMS() {
     }, [fetchCourses]);
 
     return (
-        <div className="h-full overflow-y-auto p-4 md:p-6">
-            <div className="max-w-7xl mx-auto pb-12 space-y-6">
+        <div className="h-full overflow-y-auto px-4 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
+            <div className="mx-auto max-w-7xl space-y-6 pb-12">
             {/* Header */}
-            <div className="flex items-center justify-between mb-2">
-                <div>
-                    <h1 className="text-2xl font-bold font-display text-slate-900">Materi Pembelajaran</h1>
+            <div className="mb-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
+                    <h1 className="text-2xl font-bold font-display text-slate-900 sm:text-3xl">Materi Pembelajaran</h1>
                     <p className="text-sm text-slate-500 mt-1">
                         Tingkatkan pemahaman Anda tentang keamanan siber melalui berbagai materi komprehensif.
                     </p>
                 </div>
-                <div className="hidden sm:flex items-center gap-2 text-sm text-slate-500">
+                <div className="hidden shrink-0 items-center gap-2 text-sm text-slate-500 sm:flex">
                     <span className="font-medium text-blue-600 hover:underline cursor-pointer">Dashboard</span>
                     <ChevronRight className="w-3.5 h-3.5" />
                     <span className="font-semibold text-slate-900">Materi</span>
@@ -97,7 +97,7 @@ export default function LMS() {
             </div>
 
             {/* Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4">
                 {/* Loading */}
                 {isLoadingCourses && Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={i} />)}
 
@@ -124,7 +124,7 @@ export default function LMS() {
                             className="group flex flex-col h-full bg-white border border-slate-200 hover:border-blue-200 rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer"
                         >
                             {/* Top Decorative Section */}
-                            <div className="h-[200px] relative flex flex-col items-center justify-center p-6 overflow-hidden bg-slate-50">
+                            <div className="relative flex aspect-video flex-col items-center justify-center overflow-hidden bg-slate-50 p-6 sm:h-[200px] sm:aspect-auto">
                                 <div className={`absolute -top-8 -left-8 w-36 h-36 rounded-full blur-[40px] opacity-40 group-hover:scale-110 transition-transform duration-700 ease-in-out ${blob1}`} />
                                 <div className={`absolute -bottom-8 -right-8 w-36 h-36 rounded-full blur-[40px] opacity-40 group-hover:scale-110 transition-transform duration-700 ease-in-out ${blob2}`} />
                                 <div className="absolute inset-0 bg-white/40 backdrop-blur-[1px]" />

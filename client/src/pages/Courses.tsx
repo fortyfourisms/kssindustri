@@ -34,7 +34,7 @@ export default function Courses() {
     <div className="min-h-screen bg-background font-sans selection:bg-primary selection:text-white">
       <Navbar mode="preview" />
 
-      <main className="relative overflow-hidden pt-28">
+      <main className="relative overflow-hidden pt-24 sm:pt-28">
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute inset-0 bg-[linear-gradient(180deg,#f8fbff_0%,#ffffff_45%,#eff6ff_100%)]" />
           <div className="absolute left-[10%] top-16 h-60 w-60 rounded-full bg-[#595cff]/10 blur-3xl" />
@@ -42,20 +42,20 @@ export default function Courses() {
           <div className="absolute bottom-16 left-1/2 h-80 w-80 -translate-x-1/2 rounded-full bg-[#0061ff]/10 blur-3xl" />
         </div>
 
-        <section className="relative z-10 mx-auto max-w-7xl px-4 pb-20 sm:px-6 lg:px-8">
+        <section className="relative z-10 mx-auto max-w-7xl px-4 pb-12 sm:px-6 sm:pb-16 lg:px-8 lg:pb-20">
           <div className="max-w-4xl">
-            <h1 className="mt-4 text-4xl md:text-6xl font-display font-medium tracking-tight text-slate-900 leading-tight">
+            <h1 className="mt-4 text-3xl font-display font-medium leading-tight tracking-tight text-slate-900 sm:text-4xl lg:text-6xl">
               Jelajahi program pembelajaran
               <span className="block text-transparent bg-clip-text bg-gradient-to-r from-[#1f3c88] via-[#0061ff] to-[#60efff]">
                 keamanan siber yang siap dipelajari
               </span>
             </h1>
-            <p className="mt-5 max-w-3xl text-base leading-relaxed text-slate-600 md:text-lg">
+            <p className="mt-5 max-w-prose text-base leading-relaxed text-slate-600 sm:text-lg">
               Kelas dirancang untuk kebutuhan awareness, operasional, governance, dan engineering agar peserta bisa belajar dengan alur yang lebih jelas dan relevan.
             </p>
           </div>
 
-          <div className="mt-12 grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+          <div className="mt-8 grid grid-cols-1 gap-4 sm:mt-10 sm:grid-cols-2 sm:gap-6 xl:grid-cols-3">
             {isLoading
               ? Array.from({ length: 6 }).map((_, index) => (
                   <SkeletonCard
@@ -78,7 +78,7 @@ export default function Courses() {
                       }}
                       role="button"
                       tabIndex={0}
-                      className="group relative overflow-hidden rounded-[2rem] border border-white/60 bg-white/90 shadow-[0_20px_80px_rgba(31,60,136,0.10)] backdrop-blur-sm transition-all duration-500 hover:-translate-y-3 hover:border-[#0061ff]/20 hover:shadow-[0_28px_100px_rgba(31,60,136,0.18)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0061ff]/40"
+                      className="group relative overflow-hidden rounded-[2rem] border border-white/60 bg-white/90 shadow-[0_20px_80px_rgba(31,60,136,0.10)] backdrop-blur-sm transition-all duration-300 hover:-translate-y-2 hover:border-[#0061ff]/20 hover:shadow-[0_28px_100px_rgba(31,60,136,0.18)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0061ff]/40"
                     >
                       <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-500 group-hover:opacity-100">
                         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(96,239,255,0.14),transparent_42%)]" />
@@ -86,7 +86,7 @@ export default function Courses() {
                       </div>
 
                       <div
-                        className={`relative h-44 overflow-hidden bg-gradient-to-br ${accent.accent} p-6`}
+                        className={`relative aspect-video overflow-hidden bg-gradient-to-br ${accent.accent} p-5 sm:h-44 sm:aspect-auto sm:p-6`}
                         style={
                           course.thumbnailUrl
                             ? {
@@ -104,14 +104,14 @@ export default function Courses() {
                           <BookOpen className="h-5 w-5" />
                         </div>
                         <div className="relative z-10 flex h-full items-end">
-                          <h2 className="max-w-[85%] text-2xl font-bold leading-tight text-white transition-transform duration-500 group-hover:translate-y-[-2px]">
+                          <h2 className="max-w-[85%] text-xl font-bold leading-tight text-white transition-transform duration-500 group-hover:translate-y-[-2px] sm:text-2xl">
                             {course.title}
                           </h2>
                         </div>
                       </div>
 
-                      <div className="relative p-6">
-                        <div className="mb-5 flex items-center justify-between gap-3">
+                      <div className="relative p-5 sm:p-6">
+                        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
                           <span className="inline-flex rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-bold text-white shadow-sm">
                             {course.category}
                           </span>
@@ -134,8 +134,8 @@ export default function Courses() {
                         </div>
 
                         <div className="mt-6 h-px bg-gradient-to-r from-[#1f3c88]/15 via-[#0061ff]/30 to-[#60efff]/15" />
-                        <div className="mt-5 flex items-center justify-between gap-4">
-                          <p className="text-sm font-medium text-slate-500 transition-colors duration-500 group-hover:text-slate-700">
+                        <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                          <p className="max-w-prose text-sm font-medium text-slate-500 transition-colors duration-500 group-hover:text-slate-700">
                             {course.summary}
                           </p>
                           <span className="inline-flex shrink-0 items-center gap-2 text-sm font-bold text-[#0061ff] transition-transform duration-500 group-hover:translate-x-1">

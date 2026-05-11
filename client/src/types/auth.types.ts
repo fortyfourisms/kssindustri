@@ -16,6 +16,7 @@ export interface RegisterPayload {
     id_perusahaan?: string;
     /** New company name (when creating a new one) */
     nama_perusahaan?: string;
+    turnstileToken?: string;
 }
 
 /**
@@ -23,13 +24,12 @@ export interface RegisterPayload {
  * Returns one of three mutually exclusive flows:
  *  - setup_token  → first-time MFA setup required
  *  - mfa_token    → returning user, MFA verification required
- *  - access_token → direct login (no MFA)
+ *  - user/session → direct login via HTTP-only cookie (no MFA)
  */
 export interface AuthResponse {
     message?: string;
     setup_token?: string;
     mfa_token?: string;
-    access_token?: string;
     user?: AuthUser;
     [key: string]: unknown;
 }
@@ -45,13 +45,11 @@ export interface MfaSetupResponse {
 /** POST /api/mfa/enable response */
 export interface MfaEnableResponse {
     message?: string;
-    access_token: string;
     user: AuthUser;
 }
 
 /** POST /api/mfa/verify response */
 export interface MfaVerifyResponse {
     message?: string;
-    access_token: string;
     user: AuthUser;
 }

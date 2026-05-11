@@ -1,18 +1,18 @@
-import { create } from 'zustand';
-import { surveyService } from '@/services/survey.service';
+import { create } from "zustand";
+import { surveyService } from "@/services/survey.service";
 import type {
     SaveSurveyRiskStepPayload,
     SurveyProgress,
     SurveyRespondent,
     SurveyRiskResponse,
     UpsertSurveyRespondentPayload,
-} from '@/types/survey.types';
+} from "@/types/survey.types";
 
 interface ActionResult<T = unknown> {
     success: boolean;
     data?: T;
     error?: string;
-    reason?: 'not_found' | 'error';
+    reason?: "not_found" | "error";
 }
 
 interface SurveyStoreState {
@@ -20,11 +20,13 @@ interface SurveyStoreState {
     currentRespondent: SurveyRespondent | null;
     progress: SurveyProgress | null;
     currentRisk: SurveyRiskResponse | null;
+    nextStep: string | null;
     loading: boolean;
     saving: boolean;
     error: string | null;
     fetchRespondents: () => Promise<void>;
     hydrateByUserId: (userId?: number | string | null) => Promise<ActionResult<SurveyRespondent>>;
+    fetchCurrentRespondent: (userId?: number | string | null) => Promise<ActionResult<SurveyRespondent>>;
     saveRespondent: (payload: UpsertSurveyRespondentPayload, existingId?: number | string | null) => Promise<ActionResult<SurveyRespondent>>;
     loadSurveyContext: (respondenId: number | string) => Promise<ActionResult<{ progress: SurveyProgress | null; currentRisk: SurveyRiskResponse | null }>>;
     saveRiskStep: (payload: SaveSurveyRiskStepPayload) => Promise<ActionResult<SurveyRiskResponse | SurveyProgress>>;
@@ -38,10 +40,17 @@ const initialState = {
     currentRespondent: null as SurveyRespondent | null,
     progress: null as SurveyProgress | null,
     currentRisk: null as SurveyRiskResponse | null,
+    nextStep: null as string | null,
     loading: false,
     saving: false,
     error: null as string | null,
 };
+
+function extractNextStep(result: unknown): string | null {
+    if (!result || typeof result !== "object") return null;
+    const step = (result as Record<string, unknown>).next_step;
+    return typeof step === "string" && step.trim() ? step.trim() : null;
+}
 
 export const useSurveyStore = create<SurveyStoreState>()((set, get) => ({
     ...initialState,
@@ -54,58 +63,66 @@ export const useSurveyStore = create<SurveyStoreState>()((set, get) => ({
         } catch (error: unknown) {
             set({
                 loading: false,
-                error: error instanceof Error ? error.message : 'Gagal memuat data responden survei',
+                error: error instanceof Error ? error.message : "Gagal memuat data responden survei",
             });
         }
     },
 
-    hydrateByUserId: async (userId) => {
+    fetchCurrentRespondent: async (userId) => {
         set({ loading: true, error: null });
         try {
-            const respondent = await surveyService.getRespondentByIdOrNull(userId);
+            const respondent = await surveyService.getMyRespondentOrNull(userId);
             if (!respondent) {
-                set({ currentRespondent: null, progress: null, currentRisk: null, loading: false });
-                return { success: false, error: 'Responden survei belum ditemukan', reason: 'not_found' };
+                set({ currentRespondent: null, progress: null, currentRisk: null, nextStep: null, loading: false });
+                return { success: false, error: "Responden survei belum ditemukan", reason: "not_found" };
             }
 
+            set({
+                currentRespondent: respondent,
+                loading: true,
+            });
+
             const [progress, currentRisk] = await Promise.all([
-                surveyService.getProgress(respondent.id),
-                surveyService.getRiskByRespondent(respondent.id),
+                surveyService.getProgressOrNull(respondent.id),
+                surveyService.getRiskByRespondentOrNull(respondent.id),
             ]);
 
             set({
                 currentRespondent: respondent,
                 progress,
                 currentRisk,
+                nextStep: extractNextStep(currentRisk ?? progress) ?? get().nextStep,
                 loading: false,
             });
 
             return { success: true, data: respondent };
         } catch (error: unknown) {
-            const message = error instanceof Error ? error.message : 'Gagal memuat konteks survei';
+            const message = error instanceof Error ? error.message : "Gagal memuat konteks survei";
             set({ loading: false, error: message });
-            return { success: false, error: message, reason: 'error' };
+            return { success: false, error: message, reason: "error" };
         }
+    },
+
+    hydrateByUserId: async (userId) => {
+        return get().fetchCurrentRespondent(userId);
     },
 
     saveRespondent: async (payload, existingId) => {
         set({ saving: true, error: null });
         try {
-            const result = existingId
-                ? await surveyService.updateRespondent(existingId, payload)
-                : await surveyService.createRespondent(payload);
+            const result = await surveyService.upsertMyRespondent(payload, existingId);
 
             set((state) => ({
                 currentRespondent: result,
-                respondents: existingId
+                respondents: state.respondents.some((item) => item.id === result.id)
                     ? state.respondents.map((item) => (item.id === result.id ? result : item))
-                    : [result, ...state.respondents.filter((item) => item.id !== result.id)],
+                    : [result, ...state.respondents],
                 saving: false,
             }));
 
             return { success: true, data: result };
         } catch (error: unknown) {
-            const message = error instanceof Error ? error.message : 'Gagal menyimpan responden survei';
+            const message = error instanceof Error ? error.message : "Gagal menyimpan responden survei";
             set({ saving: false, error: message });
             return { success: false, error: message };
         }
@@ -115,18 +132,23 @@ export const useSurveyStore = create<SurveyStoreState>()((set, get) => ({
         set({ loading: true, error: null });
         try {
             const [progress, currentRisk] = await Promise.all([
-                surveyService.getProgress(respondenId),
-                surveyService.getRiskByRespondent(respondenId),
+                surveyService.getProgressOrNull(respondenId),
+                surveyService.getRiskByRespondentOrNull(respondenId),
             ]);
 
-            set({ progress, currentRisk, loading: false });
+            set({
+                progress,
+                currentRisk,
+                nextStep: extractNextStep(currentRisk ?? progress) ?? get().nextStep,
+                loading: false,
+            });
 
             return {
                 success: true,
                 data: { progress, currentRisk },
             };
         } catch (error: unknown) {
-            const message = error instanceof Error ? error.message : 'Gagal memuat progress survei';
+            const message = error instanceof Error ? error.message : "Gagal memuat progress survei";
             set({ loading: false, error: message });
             return { success: false, error: message };
         }
@@ -137,17 +159,18 @@ export const useSurveyStore = create<SurveyStoreState>()((set, get) => ({
         try {
             const result = await surveyService.saveRiskStep(payload);
             const progress = await surveyService.getProgress(payload.responden_id);
-            const currentRisk = await surveyService.getRiskByRespondent(payload.responden_id);
+            const currentRisk = await surveyService.getRiskByRespondentOrNull(payload.responden_id);
 
             set({
                 progress,
                 currentRisk,
+                nextStep: extractNextStep(result ?? currentRisk ?? progress) ?? get().nextStep,
                 saving: false,
             });
 
             return { success: true, data: result };
         } catch (error: unknown) {
-            const message = error instanceof Error ? error.message : 'Gagal menyimpan jawaban survei';
+            const message = error instanceof Error ? error.message : "Gagal menyimpan jawaban survei";
             set({ saving: false, error: message });
             return { success: false, error: message };
         }
@@ -162,17 +185,18 @@ export const useSurveyStore = create<SurveyStoreState>()((set, get) => ({
                 direction,
             });
             const progress = await surveyService.getProgress(respondenId);
-            const currentRiskData = await surveyService.getRiskByRespondent(respondenId);
+            const currentRiskData = await surveyService.getRiskByRespondentOrNull(respondenId);
 
             set({
                 progress,
                 currentRisk: currentRiskData ?? result,
+                nextStep: extractNextStep(currentRiskData ?? result ?? progress) ?? get().nextStep,
                 saving: false,
             });
 
             return { success: true, data: currentRiskData ?? result };
         } catch (error: unknown) {
-            const message = error instanceof Error ? error.message : 'Gagal berpindah ke risiko berikutnya';
+            const message = error instanceof Error ? error.message : "Gagal berpindah ke risiko berikutnya";
             set({ saving: false, error: message });
             return { success: false, error: message };
         }
@@ -186,12 +210,13 @@ export const useSurveyStore = create<SurveyStoreState>()((set, get) => ({
 
             set({
                 progress: progress ?? result,
+                nextStep: extractNextStep(progress ?? result) ?? get().nextStep,
                 saving: false,
             });
 
             return { success: true, data: progress ?? result };
         } catch (error: unknown) {
-            const message = error instanceof Error ? error.message : 'Gagal menyelesaikan survei';
+            const message = error instanceof Error ? error.message : "Gagal menyelesaikan survei";
             set({ saving: false, error: message });
             return { success: false, error: message };
         }

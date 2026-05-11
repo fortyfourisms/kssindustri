@@ -17,7 +17,7 @@ import {
   StickyNote,
 } from "lucide-react";
 import { toast } from "sonner";
-import { buildYoutubeEmbed } from "@/features/lms/services/lms.service";
+import { buildYoutubeEmbed, lmsService } from "@/features/lms/services/lms.service";
 import {
   getLinkedQuizzesForMateri,
   getNextCourseStep,
@@ -37,6 +37,10 @@ const TABS = [
 
 function FilesTab() {
   const { materiFiles, isLoadingMateri } = useLmsStore();
+
+  const handleDownload = (fileId: string) => {
+    window.location.assign(lmsService.downloadFile(fileId));
+  };
 
   if (isLoadingMateri) {
     return (
@@ -72,15 +76,14 @@ function FilesTab() {
               </p>
             )}
           </div>
-          <a
-            href={`/api/file-pendukung/${file.id}/download`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-colors shrink-0"
+          <button
+            type="button"
+            onClick={() => handleDownload(file.id)}
+            className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-xl bg-blue-600 px-3 text-xs font-bold text-white transition-all duration-300 hover:bg-blue-700"
           >
             <Download className="w-3.5 h-3.5" />
             Unduh
-          </a>
+          </button>
         </div>
       ))}
     </div>
@@ -128,7 +131,7 @@ function FeedbackTab({ materiId }: { materiId: string }) {
         <button
           onClick={handleSave}
           disabled={saving || !dirty}
-          className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 text-white font-bold text-sm rounded-xl transition-colors"
+          className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 text-sm font-bold text-white transition-all duration-300 hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 sm:w-auto"
         >
           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
           Simpan Feedback
@@ -251,10 +254,10 @@ export default function LMSLearn() {
   };
 
   return (
-    <div className="w-full h-full flex flex-col pt-2 lg:pt-6">
+    <div className="flex h-full w-full flex-col pt-2 lg:pt-6">
       {materi && (
-        <div className="px-6 lg:px-10 xl:px-12 flex items-center justify-between mb-8">
-          <div className="flex-1 min-w-0 pr-4 text-sm font-medium text-slate-400 truncate">
+        <div className="mb-6 px-4 sm:px-6 lg:mb-8 lg:px-8">
+          <div className="min-w-0 text-sm font-medium leading-relaxed text-slate-400">
             <span className="hover:text-slate-600 cursor-pointer transition-colors" onClick={() => navigate(getCoursesRoute())}>
               Kelas Saya
             </span>
@@ -263,12 +266,12 @@ export default function LMSLearn() {
               {activeCourse?.judul || "Kelas"}
             </span>
             <span className="mx-2">/</span>
-            <span className="text-slate-600 font-bold">{materi.judul}</span>
+            <span className="break-words font-bold text-slate-600">{materi.judul}</span>
           </div>
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto px-6 lg:px-8 xl:px-10 pb-12 session-scrollbar content-area-padding">
+      <div className="session-scrollbar content-area-padding flex-1 overflow-y-auto px-4 pb-12 sm:px-6 lg:px-8">
         {!materi && isLoadingMateri && (
           <div className="flex flex-col items-center py-24">
             <Loader2 className="w-8 h-8 text-blue-400 animate-spin mb-3" />
@@ -285,9 +288,9 @@ export default function LMSLearn() {
         )}
 
         {materi && (
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="max-w-[1180px]">
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mx-auto max-w-6xl">
             <div className="mb-8 rounded-[2rem] border border-white/70 bg-white/75 backdrop-blur-xl shadow-[0_20px_80px_rgba(15,23,42,0.06)] overflow-hidden">
-              <div className="bg-gradient-to-r from-[#1f3c88] via-[#0061ff] to-[#60efff] p-6 lg:p-8 relative overflow-hidden">
+              <div className="relative overflow-hidden bg-gradient-to-r from-[#1f3c88] via-[#0061ff] to-[#60efff] p-5 sm:p-6 lg:p-8">
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.26),transparent_30%)]" />
                 <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10 blur-xl" />
                 <div className="relative z-10">
@@ -303,14 +306,14 @@ export default function LMSLearn() {
                       </span>
                     )}
                   </div>
-                  <h1 className="mt-4 text-[28px] lg:text-[34px] font-black text-white leading-tight max-w-4xl">{materi.judul}</h1>
-                  <p className="mt-4 text-sm lg:text-base text-white/85 max-w-3xl leading-relaxed">
+                  <h1 className="mt-4 max-w-4xl text-2xl font-black leading-tight text-white sm:text-[28px] lg:text-[34px]">{materi.judul}</h1>
+                  <p className="mt-4 max-w-3xl text-sm leading-relaxed text-white/85 lg:text-base">
                     {materi.deskripsi_singkat || "Pelajari materi ini sampai tuntas, lalu tandai selesai ketika Anda sudah benar-benar memahami isinya."}
                   </p>
                 </div>
               </div>
 
-              <div className="px-4 lg:px-6 pt-4 bg-white/80">
+              <div className="bg-white/80 px-4 pt-4 lg:px-6">
                 <div className="flex items-center justify-between gap-4 border-b border-slate-200/80 relative">
                   <div className="flex items-center gap-1 overflow-x-auto">
                     {TABS.map(({ key, label, icon: Icon }) => (
@@ -352,9 +355,9 @@ export default function LMSLearn() {
                         </div>
                       )
                     ) : (
-                      <div className="w-full p-8 md:p-10 min-h-[320px] bg-white">
+                      <div className="min-h-[320px] w-full bg-white p-5 sm:p-6 md:p-10">
                         {materi.konten_html ? (
-                          <div className="prose prose-slate max-w-none text-slate-600 prose-headings:font-display prose-headings:text-slate-900" dangerouslySetInnerHTML={{ __html: materi.konten_html }} />
+                          <div className="prose prose-slate max-w-none break-words text-slate-600 prose-headings:font-display prose-headings:text-slate-900 prose-img:h-auto prose-img:w-full prose-img:rounded-2xl prose-pre:overflow-x-auto" dangerouslySetInnerHTML={{ __html: materi.konten_html }} />
                         ) : materi.deskripsi_singkat ? (
                           <p className="text-base leading-relaxed text-slate-600 font-medium">{materi.deskripsi_singkat}</p>
                         ) : (
@@ -363,21 +366,23 @@ export default function LMSLearn() {
                       </div>
                     )}
 
-                    <div className={`p-4 md:p-5 border-t border-slate-200 bg-white flex flex-col md:flex-row items-center justify-between gap-4 transition-all ${isCompleted ? "bg-teal-50/30" : ""}`}>
-                      <span className="text-slate-600 font-medium text-[15px] md:pl-2">{isCompleted ? "Anda sudah memahami materi ini." : "Apakah sudah paham?"}</span>
-                      <div className="flex w-full md:w-auto items-center gap-3">
+                    <div className={`border-t border-slate-200 bg-white p-4 transition-all md:p-5 ${isCompleted ? "bg-teal-50/30" : ""}`}>
+                      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                      <span className="text-[15px] font-medium text-slate-600 md:pl-2">{isCompleted ? "Anda sudah memahami materi ini." : "Apakah sudah paham?"}</span>
+                      <div className="flex w-full flex-col items-stretch gap-3 md:w-auto md:flex-row md:items-center">
                         {isCompleted ? (
-                          <div className="flex items-center gap-2 px-5 py-3 bg-teal-50 border border-teal-200 text-teal-700 rounded-xl text-sm font-bold">
+                          <div className="flex h-11 items-center justify-center gap-2 rounded-xl border border-teal-200 bg-teal-50 px-5 text-sm font-bold text-teal-700">
                             <CheckCircle2 className="w-4 h-4" /> Selesai
                           </div>
                         ) : (
                           <button
                             onClick={handleSelesai}
-                            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-3 bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white rounded-xl text-sm font-bold transition-all shadow-sm shadow-cyan-500/20"
+                            className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-teal-500 to-cyan-500 px-5 text-sm font-bold text-white transition-all duration-300 shadow-sm shadow-cyan-500/20 hover:from-teal-600 hover:to-cyan-600 md:w-auto"
                           >
                             <CheckCircle2 className="w-4 h-4" /> Ya, Saya Sudah Paham
                           </button>
                         )}
+                      </div>
                       </div>
                     </div>
                   </div>
@@ -405,7 +410,7 @@ export default function LMSLearn() {
               <button
                 onClick={navigateToNextStep}
                 disabled={!isCompleted}
-                className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-bold text-slate-700 border border-slate-200 shadow-sm hover:border-blue-200 hover:text-blue-700 disabled:text-slate-300 disabled:border-slate-100 transition-colors"
+                className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-5 text-sm font-bold text-slate-700 shadow-sm transition-all duration-300 hover:border-blue-200 hover:text-blue-700 disabled:border-slate-100 disabled:text-slate-300 sm:w-auto"
               >
                 Berikutnya
                 <ChevronRight className="w-4 h-4" />

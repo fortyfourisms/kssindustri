@@ -1,5 +1,6 @@
 import React from "react";
-import { Twitter, Mail, Instagram } from "lucide-react";
+import { Mail, Instagram } from "lucide-react";
+import { FaWhatsapp } from "react-icons/fa6";
 import { useLocation, useNavigate } from "react-router-dom";
 
 type LandingScrollState = {
@@ -60,12 +61,12 @@ export function Footer() {
   };
 
   return (
-    <section className="relative w-full overflow-hidden bg-transparent px-4 py-10 sm:py-14 md:px-8 md:py-20 lg:px-10">
-      <div className="max-w-7xl mx-auto relative z-10">
+    <section className="relative w-full overflow-hidden bg-transparent py-12 sm:py-16 lg:py-20">
+      <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <footer className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-2xl sm:rounded-[2.5rem] lg:rounded-[3rem]">
           <div className="p-6 sm:p-8 md:p-12 lg:p-16">
             {/* Top Navigation */}
-            <nav className="mb-8 flex flex-wrap justify-center gap-x-5 gap-y-3 md:mb-10 md:gap-12">
+            <nav className="mb-8 flex flex-wrap justify-center gap-x-4 gap-y-3 sm:gap-x-5 md:mb-10 md:gap-8 lg:gap-12">
               {[
                 { label: "Home", href: "#home" },
                 { label: "About", href: "#about" },
@@ -79,7 +80,7 @@ export function Footer() {
                   key={item.label}
                   href={item.href}
                   onClick={(e) => handleScrollTo(e, item.href)}
-                  className="text-base font-bold text-slate-900 transition-colors hover:text-blue-600 sm:text-lg"
+                  className="text-sm font-bold text-slate-900 transition-colors duration-300 hover:text-blue-600 sm:text-base"
                 >
                   {item.label}
                 </a>
@@ -91,14 +92,14 @@ export function Footer() {
             {/* Bottom Content */}
             <div className="grid grid-cols-1 items-center gap-10 text-center md:grid-cols-3 md:gap-12 md:text-left">
               {/* Logo Section */}
-              <div className="relative flex justify-center md:justify-start items-center h-24">
-                <span className="absolute left-1/2 md:left-0 -translate-x-1/2 md:translate-x-0 text-white font-bold opacity-10 leading-none select-none pointer-events-none italic" style={{ fontSize: 'clamp(5rem, 25vw, 10rem)', letterSpacing: '-0.05em' }}>
+              <div className="relative flex h-24 items-center justify-center md:justify-start">
+                <span className="pointer-events-none absolute left-1/2 -translate-x-1/2 select-none text-white font-bold italic leading-none opacity-10 md:left-0 md:translate-x-0" style={{ fontSize: 'clamp(4.5rem, 22vw, 10rem)', letterSpacing: '-0.05em' }}>
                   44
                 </span>
                 <button
                   type="button"
                   onClick={handleLogoClick}
-                  className="relative z-10 text-[clamp(2.5rem,7vw,3.5rem)] font-black tracking-tighter text-slate-900"
+                  className="relative z-10 text-[clamp(2.25rem,8vw,3.5rem)] font-black tracking-tighter text-slate-900"
                   aria-label="Go to home"
                 >
                   FortyFour
@@ -107,21 +108,21 @@ export function Footer() {
 
               {/* Description */}
               <div className="flex justify-center">
-                <p className="text-slate-600 text-sm md:text-base leading-relaxed max-w-sm font-medium">
+                <p className="max-w-prose text-sm font-medium leading-relaxed text-slate-600 md:text-base">
                   Platform resmi Direktorat Keamanan Siber dan Sandi Industri, mendukung transformasi digital yang aman dan terpercaya.
                 </p>
               </div>
 
               {/* Social Icons */}
-              <div className="flex justify-center md:justify-end items-center gap-6">
-                <a href="#" className="p-2 transition-transform hover:scale-110">
-                  <Twitter className="w-6 h-6" />
+              <div className="flex items-center justify-center gap-3 md:justify-end">
+                <a href="#" className="flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 transition-all duration-300 hover:-translate-y-0.5 hover:border-blue-200 hover:text-blue-600">
+                  <FaWhatsapp className="h-5 w-5" />
                 </a>
-                <a href="#" className="p-2 transition-transform hover:scale-110">
-                  <Mail className="w-6 h-6" />
+                <a href="#" className="flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 transition-all duration-300 hover:-translate-y-0.5 hover:border-blue-200 hover:text-blue-600">
+                  <Mail className="h-5 w-5" />
                 </a>
-                <a href="#" className="p-2 transition-transform hover:scale-110">
-                  <Instagram className="w-6 h-6" />
+                <a href="#" className="flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 transition-all duration-300 hover:-translate-y-0.5 hover:border-blue-200 hover:text-blue-600">
+                  <Instagram className="h-5 w-5" />
                 </a>
               </div>
             </div>

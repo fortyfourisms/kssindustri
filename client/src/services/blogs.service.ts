@@ -64,6 +64,15 @@ function toAuthorLabel(authorId?: number) {
   return `Author #${authorId}`;
 }
 
+function normalizeTags(tags?: string[] | null) {
+  if (!Array.isArray(tags)) return [];
+
+  return tags
+    .filter((tag): tag is string => typeof tag === "string")
+    .map((tag) => tag.trim())
+    .filter(Boolean);
+}
+
 function mapBlogItem(item: BlogApiItem): BlogItem {
   const title = item.judul?.trim() || "Berita tanpa judul";
   const descriptionHtml = toDescriptionHtml(item.deskripsi);
@@ -81,6 +90,7 @@ function mapBlogItem(item: BlogApiItem): BlogItem {
     publishedAt: formatPublishedAt(item.created_at),
     authorId: Number.isFinite(authorId) ? authorId : undefined,
     authorLabel: toAuthorLabel(Number.isFinite(authorId) ? authorId : undefined),
+    tags: normalizeTags(item.tags),
     category: BLOG_CATEGORY_LABEL,
     coverLabel: BLOG_COVER_LABEL,
     createdAt: item.created_at,

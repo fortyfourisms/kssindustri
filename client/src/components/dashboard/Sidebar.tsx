@@ -215,7 +215,7 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
             {/* ── MOBILE DRAWER ── */}
             {mobileOpen && (
                 <div
-                    className="fixed inset-0 z-40 backdrop-blur-sm lg:hidden"
+                    className="fixed inset-0 z-40 backdrop-blur-sm transition-all duration-300 lg:hidden"
                     style={{ background: "var(--dashboard-overlay)" }}
                     onClick={onClose}
                 />
@@ -224,14 +224,16 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
             {/* Mobile slide-in sidebar */}
             <aside
                 className={cn(
-                    "fixed top-0 left-0 h-screen z-50 flex flex-col transition-transform duration-300 lg:hidden",
+                    "fixed top-0 left-0 z-50 flex h-screen flex-col overflow-hidden transition-transform duration-300 lg:hidden",
                     "border-r shadow-2xl",
-                    "w-72",
+                    "w-[min(20rem,calc(100vw-1rem))]",
                     mobileOpen ? "translate-x-0" : "-translate-x-full"
                 )}
                 style={{
                     background: "var(--dashboard-sidebar-bg)",
                     borderColor: "var(--dashboard-sidebar-border)",
+                    paddingTop: "env(safe-area-inset-top)",
+                    paddingBottom: "env(safe-area-inset-bottom)",
                 }}
             >
                 <NavContent forMobile />
@@ -240,7 +242,7 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
             {/* ── DESKTOP SIDEBAR ── */}
             <aside
                 className={cn(
-                    "fixed top-0 left-0 h-screen z-40 hidden flex-col transition-all duration-300 lg:flex",
+                    "fixed top-0 left-0 z-40 hidden h-screen flex-col overflow-hidden transition-all duration-300 lg:flex",
                     "border-r shadow-2xl",
                     collapsed ? "w-[72px]" : "w-64"
                 )}

@@ -2,9 +2,9 @@ import { API_BASE_URL, apiClient } from "@/services/apiClient";
 import type {
   EventApiItem,
   EventItem,
-  EventRegistrationPayload,
   EventRegistrationRequest,
   EventRegistrationResult,
+  EventRegistrationSubmitPayload,
 } from "@/types/event.types";
 
 export function normalizeList<T>(res: unknown): T[] {
@@ -323,15 +323,20 @@ export const eventsService = {
     return event;
   },
 
-  async registerEvent(eventId: string, payload: EventRegistrationPayload): Promise<EventRegistrationResult> {
+  async registerEvent(eventId: string, payload: EventRegistrationSubmitPayload): Promise<EventRegistrationResult> {
     const event = await eventsService.getEventDetail(eventId);
+    const { turnstileToken, ...attendeePayload } = payload;
     const requestPayload: EventRegistrationRequest = {
-      email: payload.email,
-      jabatan: payload.position,
-      nama: payload.fullName,
-      no_hp: payload.phoneNumber,
-      perusahaan: payload.company,
-      sektor: payload.industrySector,
+      email: attendeePayload.email,
+      jabatan: attendeePayload.position,
+      nama: attendeePayload.fullName,
+      no_hp: attendeePayload.phoneNumber,
+      perusahaan: attendeePayload.company,
+      sektor: attendeePayload.industrySector,
+      "cf-turnstile-response": turnstileToken,
+      turnstile_token: turnstileToken,
+      turnstileToken,
+      turnstiletoken: turnstileToken,
     };
     const res = await apiClient.post<unknown>(`/api/kegiatan/${eventId}/registrasi`, requestPayload);
     const rootRecord = res && typeof res === "object" ? (res as Record<string, unknown>) : null;
@@ -355,7 +360,7 @@ export const eventsService = {
     return {
       message: getResponseMessage(res) || "Registrasi berhasil dikirim.",
       registeredAt: new Date().toISOString(),
-      attendee: payload,
+      attendee: attendeePayload,
       event: {
         id: event.id,
         title: event.title,

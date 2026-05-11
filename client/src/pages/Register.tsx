@@ -8,6 +8,7 @@ import { Eye, EyeOff, Loader2, ShieldCheck, ShieldAlert, XCircle, CheckCircle2 }
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { PerusahaanSelector } from "@/components/PerusahaanSelector";
+import { TurnstileWidget, type TurnstileWidgetHandle } from "@/components/TurnstileWidget";
 import Logo from "@/assets/d44.svg";
 
 const RegisterSchema = z
@@ -49,10 +50,15 @@ type RegisterForm = z.infer<typeof RegisterSchema>;
 
 export default function Register() {
     const [showPass, setShowPass] = useState(false);
+    const [turnstileToken, setTurnstileToken] = useState("");
+    const [turnstileVerified, setTurnstileVerified] = useState(false);
     const { register: registerUser, loading } = useAuth();
     const { toast } = useToast();
     const navigate = useNavigate();
     const containerRef = useRef<HTMLDivElement>(null);
+    const turnstileRef = useRef<TurnstileWidgetHandle>(null);
+    const turnstileSiteKey =
+        window._env_?.TURNSTILE_SITE_KEY || import.meta.env.VITE_TURNSTILE_SITE_KEY || "";
 
     const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
         if (!containerRef.current) return;
@@ -88,6 +94,7 @@ export default function Register() {
     const emailPrefix = emailValue.split("@")[0];
     const hasEmailError = emailPrefix.length >= 3 && passwordValue.toLowerCase().includes(emailPrefix.toLowerCase());
     const doesNotContainUserOrEmail = !hasUsernameError && !hasEmailError && passwordValue.length > 0;
+    const isRegisterEnabled = turnstileVerified && turnstileToken.trim().length > 0;
 
     const strengthScore = [hasMinLen, hasLower, hasUpper, hasNumber, hasSymbol, doesNotContainUserOrEmail].filter(Boolean).length;
     let strengthLabel = "Very Weak";
@@ -112,18 +119,44 @@ export default function Register() {
         StrengthIcon = ShieldAlert;
     }
 
+    const clearTurnstileState = () => {
+        setTurnstileToken("");
+        setTurnstileVerified(false);
+    };
+
     const onSubmit = async (data: RegisterForm) => {
+        if (!turnstileSiteKey) {
+            toast({
+                title: "Turnstile unavailable",
+                description: "Registration is temporarily unavailable. Please try again later.",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        if (!isRegisterEnabled) {
+            toast({
+                title: "Verification required",
+                description: "Complete Turnstile verification before creating your account.",
+                variant: "destructive",
+            });
+            return;
+        }
+
         const result = await registerUser({
             username: data.username,
             email: data.email,
             password: data.password,
             id_perusahaan: data.perusahaanId,
+            turnstileToken: turnstileToken || undefined,
         });
 
         if (result.success) {
             toast({ title: "Registration successful", description: "Please log in with your new account." });
             navigate("/login");
         } else {
+            clearTurnstileState();
+            turnstileRef.current?.reset();
             toast({ title: "Registration failed", description: result.error, variant: "destructive" });
         }
     };
@@ -339,9 +372,31 @@ export default function Register() {
                             )}
                         </div>
 
+                        <TurnstileWidget
+                            ref={turnstileRef}
+                            siteKey={turnstileSiteKey}
+                            onVerify={(token) => {
+                                setTurnstileToken(token);
+                                setTurnstileVerified(true);
+                            }}
+                            onExpire={clearTurnstileState}
+                            onError={clearTurnstileState}
+                            onTimeout={clearTurnstileState}
+                            theme="light"
+                            size="flexible"
+                            retry="auto"
+                            retryInterval={8000}
+                        />
+
+                        {!turnstileVerified && (
+                            <p className="text-xs text-slate-500">
+                                Complete the Cloudflare Turnstile check before account creation is enabled.
+                            </p>
+                        )}
+
                         <button
                             type="submit"
-                            disabled={loading}
+                            disabled={loading || !isRegisterEnabled}
                             className="w-full py-4 mt-6 rounded-2xl bg-blue-600 text-white font-bold text-sm shadow-xl shadow-blue-600/20 hover:shadow-blue-600/30 hover:bg-blue-700 active:scale-[0.98] transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-3"
                         >
                             {loading ? (
