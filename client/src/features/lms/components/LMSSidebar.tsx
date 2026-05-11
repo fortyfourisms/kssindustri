@@ -80,7 +80,7 @@ export function LMSSidebar({ mobileOpen = false, onClose }: LMSSidebarProps) {
                 {forMobile && (
                     <button
                         onClick={onClose}
-                        className="ml-auto p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition"
+                        className="ml-auto flex h-11 w-11 items-center justify-center rounded-2xl text-slate-400 transition-all duration-300 hover:bg-slate-100 hover:text-slate-600"
                     >
                         <X className="w-4 h-4" />
                     </button>
@@ -288,7 +288,7 @@ export function LMSSidebar({ mobileOpen = false, onClose }: LMSSidebarProps) {
                         onClick={() => navigate("/dashboard")}
                         title={!forMobile && collapsed ? "Kembali ke Dashboard Utama" : ""}
                         className={cn(
-                            "w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-slate-600 hover:text-slate-900 hover:bg-white border border-transparent hover:border-slate-200 transition group relative",
+                            "flex h-11 w-full items-center gap-3 rounded-2xl border border-transparent px-4 text-slate-600 transition group relative hover:border-slate-200 hover:bg-white hover:text-slate-900",
                             !forMobile && collapsed ? "justify-center px-0" : ""
                         )}
                     >
@@ -301,7 +301,7 @@ export function LMSSidebar({ mobileOpen = false, onClose }: LMSSidebarProps) {
                 {(forMobile || !collapsed) && (
                     <button
                         onClick={() => logout.mutate()}
-                        className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-red-500 hover:text-red-700 hover:bg-red-50 border border-transparent hover:border-red-100 transition group relative"
+                        className="flex h-11 w-full items-center gap-3 rounded-2xl border border-transparent px-4 text-red-500 transition group relative hover:border-red-100 hover:bg-red-50 hover:text-red-700"
                     >
                         <LogOut className="w-5 h-5 flex-shrink-0" />
                         <span className="text-sm font-semibold">Logout</span>
@@ -336,7 +336,7 @@ export function LMSSidebar({ mobileOpen = false, onClose }: LMSSidebarProps) {
             {/* Overlay backdrop */}
             {mobileOpen && (
                 <div
-                    className="fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-sm lg:hidden"
+                    className="fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-sm transition-all duration-300 lg:hidden"
                     onClick={onClose}
                 />
             )}
@@ -344,11 +344,15 @@ export function LMSSidebar({ mobileOpen = false, onClose }: LMSSidebarProps) {
             {/* Mobile slide-in sidebar */}
             <aside
                 className={cn(
-                    "fixed top-0 left-0 h-screen z-50 flex flex-col transition-transform duration-300 lg:hidden",
+                    "fixed top-0 left-0 z-50 flex h-screen flex-col overflow-hidden transition-transform duration-300 lg:hidden",
                     "bg-white/95 backdrop-blur-xl border-r border-white/50 shadow-2xl",
-                    "w-72",
+                    "w-[min(20rem,calc(100vw-1rem))]",
                     mobileOpen ? "translate-x-0" : "-translate-x-full"
                 )}
+                style={{
+                    paddingTop: "env(safe-area-inset-top)",
+                    paddingBottom: "env(safe-area-inset-bottom)",
+                }}
             >
                 <NavContent forMobile />
             </aside>
@@ -356,7 +360,7 @@ export function LMSSidebar({ mobileOpen = false, onClose }: LMSSidebarProps) {
             {/* ── DESKTOP SIDEBAR ── */}
             <aside
                 className={cn(
-                    "fixed top-0 left-0 h-screen z-40 hidden flex-col transition-all duration-300 lg:flex",
+                    "fixed top-0 left-0 z-40 hidden h-screen flex-col overflow-hidden transition-all duration-300 lg:flex",
                     "bg-[#f8fafc]/92 backdrop-blur-xl border-r border-white/60 shadow-xl shadow-slate-900/5",
                     collapsed ? "w-[72px]" : desktopSidebarWidth
                 )}

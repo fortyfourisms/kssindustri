@@ -24,18 +24,20 @@ export function LMSLayout() {
         document.documentElement.dataset.dashboardTheme = "light";
         document.body.dataset.theme = "light";
         document.body.dataset.dashboardTheme = "light";
+        document.body.style.overflow = sidebarOpen ? "hidden" : "";
 
         return () => {
             document.documentElement.dataset.theme = dashboardTheme;
             document.documentElement.dataset.dashboardTheme = dashboardTheme;
             document.body.dataset.theme = dashboardTheme;
             document.body.dataset.dashboardTheme = dashboardTheme;
+            document.body.style.overflow = "";
         };
-    }, [dashboardTheme]);
+    }, [dashboardTheme, sidebarOpen]);
 
     return (
         <AuthGuard>
-            <div className="min-h-screen bg-[#f5f7ff] flex">
+            <div className="relative flex min-h-screen overflow-x-clip bg-[#f5f7ff]">
                 {/* Background gradient */}
                 <div
                     className="fixed inset-0 pointer-events-none z-0"
@@ -51,11 +53,11 @@ export function LMSLayout() {
                 <LMSSidebar mobileOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
                 {/* Main area - flush (padding applied per page) */}
-                <div className="flex-1 flex min-h-screen min-w-0 flex-col relative z-10">
+                <div className="relative z-10 flex min-h-screen min-w-0 flex-1 flex-col">
                     {/* Topbar height is roughly 4rem (h-16) */}
                     <Topbar title={title} onMenuClick={() => setSidebarOpen(true)} hideThemeToggle />
                     
-                    <main className="relative flex-1 min-h-0 overflow-x-hidden overflow-y-auto">
+                    <main className="relative min-h-0 flex-1 overflow-x-clip overflow-y-auto pb-[max(1rem,env(safe-area-inset-bottom))]">
                         <Outlet />
                     </main>
                 </div>
