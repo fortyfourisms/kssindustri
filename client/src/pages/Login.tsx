@@ -129,20 +129,7 @@ export default function Login() {
                 />
 
                 {/* Base Mesh Gradient (Animated Background Elements) */}
-                <style>
-                    {`
-                    @keyframes blob-float-1 {
-                        0%, 100% { transform: translate(0px, 0px) scale(1); }
-                        33% { transform: translate(40px, -60px) scale(1.1); }
-                        66% { transform: translate(-30px, 30px) scale(0.9); }
-                    }
-                    @keyframes blob-float-2 {
-                        0%, 100% { transform: translate(0px, 0px) scale(1); }
-                        33% { transform: translate(-40px, 50px) scale(1.15); }
-                        66% { transform: translate(30px, -40px) scale(0.85); }
-                    }
-                    `}
-                </style>
+                {/* @keyframes blob-float-1 / blob-float-2 are defined in base.css */}
                 <div className="absolute top-[20%] left-[-20%] w-[100%] h-[100%] bg-[#DBEAFE] rounded-full blur-[120px] opacity-90" style={{ animation: 'blob-float-1 15s ease-in-out infinite' }} />
                 <div className="absolute top-[10%] right-[-10%] w-[80%] h-[90%] bg-[#FFFFFF] rounded-full blur-[100px] opacity-95" style={{ animation: 'blob-float-2 18s ease-in-out infinite' }} />
                 <div className="absolute top-[-10%] right-[-5%] w-[50%] h-[50%] bg-[#BFDBFE] rounded-full blur-[80px] opacity-70" style={{ animation: 'blob-float-1 22s ease-in-out infinite reverse' }} />
