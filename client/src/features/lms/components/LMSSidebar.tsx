@@ -360,12 +360,14 @@ export function LMSSidebar({ mobileOpen = false, onClose }: LMSSidebarProps) {
             {/* ── DESKTOP SIDEBAR ── */}
             <aside
                 className={cn(
-                    "fixed top-0 left-0 z-40 hidden h-screen flex-col overflow-hidden transition-all duration-300 lg:flex",
+                    "fixed top-0 left-0 z-40 hidden h-screen flex-col overflow-visible transition-all duration-300 lg:flex",
                     "bg-[#f8fafc]/92 backdrop-blur-xl border-r border-white/60 shadow-xl shadow-slate-900/5",
                     collapsed ? "w-[72px]" : desktopSidebarWidth
                 )}
             >
-                <NavContent />
+                <div className="flex h-full flex-col overflow-hidden">
+                    <NavContent />
+                </div>
 
                 {/* Collapse Toggle */}
                 <button

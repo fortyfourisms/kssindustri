@@ -561,12 +561,12 @@ function mapDomainToView(
 
 export function getKategoriKematangan(score: number | null | undefined): string {
     const value = toSafeNumber(score);
-    if (value <= 0) return "Input Belum Lengkap";
-    if (value < 1) return "Awal";
-    if (value < 2) return "Berkembang";
-    if (value < 3) return "Terdefinisi";
-    if (value < 4) return "Terkelola";
-    return "Optimal";
+      if (value <= 0) return "INPUT BELUM LENGKAP";
+    if (value < 1.50) return "Level 1 - Awal";
+    if (value < 2.50) return "Level 2 - Berulang";
+    if (value < 3.50) return "Level 3 - Terdefinisi";
+    if (value < 4.50) return "Level 4 - Terkelola";
+    return "Level 5 - Inovatif";
 }
 
 export function mapIkasToView(data: IkasData | null | undefined): IkasViewData {
