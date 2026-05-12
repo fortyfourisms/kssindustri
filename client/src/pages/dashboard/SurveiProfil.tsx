@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { RequireCompanyProfile } from "@/components/RequireCompanyProfile";
 import { Info, UserCircle2, ArrowRight, ArrowLeft, AlertTriangle, Loader2, Building2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -70,6 +70,35 @@ type RiskAnswerSnapshot = Pick<
     typeof DEFAULT_ANSWERS,
     "q1" | "q1_alasan" | "dampak_reputasi" | "dampak_operasional" | "dampak_finansial" | "dampak_hukum" | "frekuensi" | "q4" | "q5"
 >;
+
+function snapshotFromAnswers(answers: Record<string, any>): RiskAnswerSnapshot {
+    return {
+        q1: answers.q1,
+        q1_alasan: answers.q1_alasan,
+        dampak_reputasi: answers.dampak_reputasi,
+        dampak_operasional: answers.dampak_operasional,
+        dampak_finansial: answers.dampak_finansial,
+        dampak_hukum: answers.dampak_hukum,
+        frekuensi: answers.frekuensi,
+        q4: answers.q4,
+        q5: answers.q5,
+    };
+}
+
+function isSameRiskAnswer(a: RiskAnswerSnapshot | null | undefined, b: RiskAnswerSnapshot | null | undefined): boolean {
+    if (!a || !b) return false;
+    return (
+        a.q1 === b.q1 &&
+        a.q1_alasan === b.q1_alasan &&
+        a.dampak_reputasi === b.dampak_reputasi &&
+        a.dampak_operasional === b.dampak_operasional &&
+        a.dampak_finansial === b.dampak_finansial &&
+        a.dampak_hukum === b.dampak_hukum &&
+        a.frekuensi === b.frekuensi &&
+        a.q4 === b.q4 &&
+        a.q5 === b.q5
+    );
+}
 
 function getRiskSnapshotKey(risk: SurveyRiskResponse | null, progress: Record<string, any> | null): string | null {
     if (typeof risk?.custom_risiko_id === "number") return `custom:${risk.custom_risiko_id}`;
@@ -146,20 +175,19 @@ function buildAnswersFromRisk(
 }
 
 function hasNextRisk(risk: SurveyRiskResponse | null, progress: Record<string, any> | null): boolean {
+    const totalRisks = getTotalRiskCount(risk, progress);
+    const currentRiskIndex = getCurrentRiskIndex(risk, progress);
+
+    if (typeof totalRisks === "number" && totalRisks > 0 && currentRiskIndex >= totalRisks - 1) {
+        return false;
+    }
+
     if (typeof risk?.has_next === "boolean") return risk.has_next;
     if (typeof progress?.has_next === "boolean") return progress.has_next;
     if (typeof risk?.next_risk === "number") return true;
 
-    const totalRisks = typeof risk?.total_risks === "number"
-        ? risk.total_risks
-        : typeof progress?.total_risks === "number"
-            ? progress.total_risks
-            : typeof progress?.total_steps === "number"
-                ? progress.total_steps
-                : undefined;
-
     if (typeof totalRisks === "number") {
-        return getCurrentRiskIndex(risk, progress) + 1 < totalRisks;
+        return currentRiskIndex + 1 < totalRisks;
     }
 
     return true;
@@ -188,6 +216,24 @@ function getCurrentRiskIndex(risk: SurveyRiskResponse | null, progress: Record<s
     if (risk && typeof risk.current_risk === "number") return risk.current_risk;
     if (progress && typeof progress.current_risk === "number") return progress.current_risk;
     return 0;
+}
+
+function getTotalRiskCount(risk: SurveyRiskResponse | null, progress: Record<string, any> | null): number | undefined {
+    if (typeof risk?.total_risks === "number") return risk.total_risks;
+    if (typeof progress?.total_risks === "number") return progress.total_risks;
+    if (typeof progress?.total_steps === "number") return progress.total_steps;
+    return STATIC_SURVEY_RISKS.length || undefined;
+}
+
+function getDisplayRiskNumber(risk: SurveyRiskResponse | null, progress: Record<string, any> | null): number {
+    const currentRiskNumber = getCurrentRiskIndex(risk, progress) + 1;
+    const totalRiskCount = getTotalRiskCount(risk, progress);
+
+    if (typeof totalRiskCount === "number" && totalRiskCount > 0) {
+        return Math.min(currentRiskNumber, totalRiskCount);
+    }
+
+    return currentRiskNumber;
 }
 
 function getStaticRiskFallback(risk: SurveyRiskResponse | null, progress: Record<string, any> | null): SurveyRiskResponse | null {
@@ -230,8 +276,9 @@ function getResolvedRisk(risk: SurveyRiskResponse | null, progress: Record<strin
 }
 
 export default function SurveiProfil() {
+    const navigate = useNavigate();
     const [answers, setAnswers] = useState<Record<string, any>>(DEFAULT_ANSWERS);
-    const riskAnswersRef = useRef<Record<string, RiskAnswerSnapshot>>({});
+    const savedRiskAnswersRef = useRef<Record<string, RiskAnswerSnapshot>>({});
     const [searchParams, setSearchParams] = useSearchParams();
     const [respondentStepPinned, setRespondentStepPinned] = useState(searchParams.get("step") === "responden");
 
@@ -249,6 +296,8 @@ export default function SurveiProfil() {
     const fetchCurrentRespondent = useSurveyStore((state) => state.fetchCurrentRespondent);
     const saveRiskStep = useSurveyStore((state) => state.saveRiskStep);
     const navigateRisk = useSurveyStore((state) => state.navigateRisk);
+    const finishSurvey = useSurveyStore((state) => state.finishSurvey);
+    const resetSurvey = useSurveyStore((state) => state.reset);
 
     const [step, setStep] = useState(0);
     const [isFinished, setIsFinished] = useState(false);
@@ -259,19 +308,31 @@ export default function SurveiProfil() {
     const isLoadingMode = loading;
     const progressRecord = activeProgress as Record<string, any> | null;
     const resolvedRisk = getResolvedRisk(activeRisk, progressRecord);
+    const snapshotKey = getRiskSnapshotKey(resolvedRisk, progressRecord);
+    const persistedSnapshot = snapshotKey ? savedRiskAnswersRef.current[snapshotKey] ?? null : null;
+    const currentRiskNumber = getDisplayRiskNumber(resolvedRisk, progressRecord);
 
     useEffect(() => {
         void fetchCurrentRespondent();
     }, [fetchCurrentRespondent]);
 
     useEffect(() => {
+        return () => {
+            resetSurvey();
+        };
+    }, [resetSurvey]);
+
+    useEffect(() => {
         setRespondentStepPinned(searchParams.get("step") === "responden");
     }, [searchParams]);
 
     useEffect(() => {
-        const snapshotKey = getRiskSnapshotKey(activeRisk, progressRecord);
-        const fallbackSnapshot = snapshotKey ? riskAnswersRef.current[snapshotKey] ?? null : null;
-        setAnswers(buildAnswersFromRisk(activeRespondent, activeRisk, perusahaan, fallbackSnapshot));
+        const nextAnswers = buildAnswersFromRisk(activeRespondent, activeRisk, perusahaan, persistedSnapshot);
+        setAnswers(nextAnswers);
+
+        if (snapshotKey && hasPersistedRiskAnswer(activeRisk)) {
+            savedRiskAnswersRef.current[snapshotKey] = snapshotFromAnswers(nextAnswers);
+        }
 
         if (respondentStepPinned) {
             setStep(0);
@@ -284,24 +345,7 @@ export default function SurveiProfil() {
         }
 
         setStep(0);
-    }, [activeRespondent, activeRisk, perusahaan, respondentStepPinned, user?.email]);
-
-    useEffect(() => {
-        const snapshotKey = getRiskSnapshotKey(resolvedRisk, progressRecord);
-        if (!snapshotKey || step !== 1) return;
-
-        riskAnswersRef.current[snapshotKey] = {
-            q1: answers.q1,
-            q1_alasan: answers.q1_alasan,
-            dampak_reputasi: answers.dampak_reputasi,
-            dampak_operasional: answers.dampak_operasional,
-            dampak_finansial: answers.dampak_finansial,
-            dampak_hukum: answers.dampak_hukum,
-            frekuensi: answers.frekuensi,
-            q4: answers.q4,
-            q5: answers.q5,
-        };
-    }, [answers, progressRecord, resolvedRisk, step]);
+    }, [activeRespondent, activeRisk, perusahaan, persistedSnapshot, respondentStepPinned, snapshotKey, user?.email]);
 
     useEffect(() => {
         setIsFinished(Boolean(activeProgress?.completed || activeProgress?.finished_at));
@@ -360,6 +404,9 @@ export default function SurveiProfil() {
             answers.q4 &&
             (answers.q4 === "tidak" || answers.q5?.trim())
         );
+    const currentRiskSnapshot = snapshotFromAnswers(answers);
+    const isRiskAlreadySaved = Boolean(persistedSnapshot && isSameRiskAnswer(persistedSnapshot, currentRiskSnapshot));
+    const shouldSaveCurrentRisk = step === 1 && !isRiskAlreadySaved;
 
     const submitRisk = async (direction: "next" | "prev") => {
         if (!currentRespondent?.id) {
@@ -382,47 +429,100 @@ export default function SurveiProfil() {
             return false;
         }
 
-        const shouldFinish = direction === "next" && !hasNextRisk(currentRisk, progressState as Record<string, any> | null);
-        const result = await saveRiskStep({
-            responden_id: currentRespondent.id,
-            current_risk: getCurrentRiskIndex(resolvedRisk, progressState as Record<string, any> | null),
-            direction,
-            finish: shouldFinish,
-            risiko_id: risikoId,
-            custom_risiko_id: customRisikoId,
-            pernah_terjadi: answers.q1 === "ya",
-            alasan: answers.q1_alasan || "",
-            dampak_reputasi: IMPACT_TO_API[answers.dampak_reputasi] ?? 1,
-            dampak_operasional: IMPACT_TO_API[answers.dampak_operasional] ?? 2,
-            dampak_finansial: IMPACT_TO_API[answers.dampak_finansial] ?? 2,
-            dampak_hukum: IMPACT_TO_API[answers.dampak_hukum] ?? 2,
-            frekuensi: FREQUENCY_TO_API[answers.frekuensi] ?? 2,
-            ada_pengendalian: answers.q4 === "ya",
-            deskripsi_pengendalian: answers.q4 === "ya" ? answers.q5 || "" : "",
-        });
-
-        if (!result.success) {
-            toast({
-                title: "Gagal menyimpan jawaban",
-                description: result.error || "Jawaban survei belum berhasil dikirim.",
-                variant: "destructive",
+        const shouldFinish = direction === "next" && !hasNextRisk(resolvedRisk, progressState as Record<string, any> | null);
+        if (shouldSaveCurrentRisk) {
+            const result = await saveRiskStep({
+                responden_id: currentRespondent.id,
+                current_risk: getCurrentRiskIndex(resolvedRisk, progressState as Record<string, any> | null),
+                direction,
+                finish: shouldFinish,
+                risiko_id: risikoId,
+                custom_risiko_id: customRisikoId,
+                pernah_terjadi: answers.q1 === "ya",
+                alasan: answers.q1_alasan || "",
+                dampak_reputasi: IMPACT_TO_API[answers.dampak_reputasi] ?? 1,
+                dampak_operasional: IMPACT_TO_API[answers.dampak_operasional] ?? 2,
+                dampak_finansial: IMPACT_TO_API[answers.dampak_finansial] ?? 2,
+                dampak_hukum: IMPACT_TO_API[answers.dampak_hukum] ?? 2,
+                frekuensi: FREQUENCY_TO_API[answers.frekuensi] ?? 2,
+                ada_pengendalian: answers.q4 === "ya",
+                deskripsi_pengendalian: answers.q4 === "ya" ? answers.q5 || "" : "",
             });
-            return false;
+
+            if (!result.success) {
+                toast({
+                    title: "Gagal menyimpan jawaban",
+                    description: result.error || "Jawaban survei belum berhasil dikirim.",
+                    variant: "destructive",
+                });
+                return false;
+            }
+
+            if (snapshotKey) {
+                savedRiskAnswersRef.current[snapshotKey] = currentRiskSnapshot;
+            }
         }
 
         if (shouldFinish) {
+            if (!shouldSaveCurrentRisk) {
+                const finishResult = await finishSurvey(currentRespondent.id);
+                if (!finishResult.success) {
+                    toast({
+                        title: "Gagal menyelesaikan survei",
+                        description: finishResult.error || "Survei belum berhasil diselesaikan.",
+                        variant: "destructive",
+                    });
+                    return false;
+                }
+            }
+
             setIsFinished(true);
             toast({
                 title: "Survei selesai",
                 description: "Seluruh jawaban survei profil risiko berhasil dikirim.",
             });
+            navigate("/survei-resiko", { replace: true });
             return true;
         }
 
+        if (!shouldSaveCurrentRisk && direction === "next") {
+            const result = await navigateRisk({
+                respondenId: currentRespondent.id,
+                currentRisk: getCurrentRiskIndex(resolvedRisk, progressState as Record<string, any> | null),
+                direction: "next",
+            });
+
+            if (!result.success) {
+                toast({
+                    title: "Gagal membuka risiko berikutnya",
+                    description: result.error || "Coba lagi beberapa saat lagi.",
+                    variant: "destructive",
+                });
+                return false;
+            }
+        }
+
+        if (!shouldSaveCurrentRisk && direction === "prev") {
+            const result = await navigateRisk({
+                respondenId: currentRespondent.id,
+                currentRisk: getCurrentRiskIndex(resolvedRisk, progressState as Record<string, any> | null),
+                direction: "previous",
+            });
+
+            if (!result.success) {
+                toast({
+                    title: "Gagal membuka risiko sebelumnya",
+                    description: result.error || "Coba lagi beberapa saat lagi.",
+                    variant: "destructive",
+                });
+                return false;
+            }
+        }
+
         toast({
-            title: direction === "next" ? "Jawaban tersimpan" : "Kembali ke risiko sebelumnya",
+            title: direction === "next" ? (shouldSaveCurrentRisk ? "Jawaban tersimpan" : "Berikutnya") : "Kembali ke risiko sebelumnya",
             description: direction === "next"
-                ? "Progress survei risiko berhasil diperbarui."
+                ? (shouldSaveCurrentRisk ? "Progress survei risiko berhasil diperbarui." : "Lanjut ke risiko berikutnya.")
                 : "Data risiko saat ini sudah tersimpan.",
         });
         return true;
@@ -542,14 +642,7 @@ export default function SurveiProfil() {
         ? resolvedRisk.deskripsi
         : DEFAULT_RISK_DESCRIPTION;
     const isRiskUnavailable = step === 1 && !isLoadingMode && !isFinished && !resolvedRisk;
-    const currentRiskNumber = getCurrentRiskIndex(resolvedRisk, activeProgress as Record<string, any> | null) + 1;
-    const totalRiskCount = typeof resolvedRisk?.total_risks === "number"
-        ? resolvedRisk.total_risks
-        : typeof activeProgress?.total_risks === "number"
-            ? activeProgress.total_risks
-            : typeof activeProgress?.total_steps === "number"
-                ? activeProgress.total_steps
-                : undefined;
+    const totalRiskCount = getTotalRiskCount(resolvedRisk, activeProgress as Record<string, any> | null);
     const progress = step === 0
         ? 0
         : typeof totalRiskCount === "number" && totalRiskCount > 0
@@ -559,6 +652,8 @@ export default function SurveiProfil() {
         ? "Simpan & Lanjut"
         : isFinished
             ? "Survei Selesai"
+            : isRiskAlreadySaved
+                ? (hasNextRisk(resolvedRisk, activeProgress as Record<string, any> | null) ? "Berikutnya" : "Selesai")
             : hasNextRisk(resolvedRisk, activeProgress as Record<string, any> | null)
                 ? "Simpan & Berikutnya"
                 : "Simpan & Selesaikan";
@@ -713,7 +808,7 @@ export default function SurveiProfil() {
                                 initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.4 }}
                             >
                                 {/* Intro Card */}
-                                    <div className="dashboard-section-emphasis relative mb-10 overflow-hidden rounded-[1.5rem] p-7 text-[15px] leading-relaxed shadow-sm backdrop-blur-md sm:p-9" style={{ color: "var(--dashboard-text-soft)" }}>
+                                <div className="dashboard-section-emphasis relative mb-10 overflow-hidden rounded-[1.5rem] p-7 text-[15px] leading-relaxed shadow-sm backdrop-blur-md sm:p-9" style={{ color: "var(--dashboard-text-soft)" }}>
                                     <div className="relative z-10">
                                         <div className="dashboard-chip-info mb-6 inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm font-semibold shadow-sm">
                                             <AlertTriangle className="dashboard-chip-warning h-4 w-4 rounded-full border p-0.5" />
@@ -737,7 +832,7 @@ export default function SurveiProfil() {
                                 <div className="space-y-8">
                                     {isFinished && (
                                         <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm font-medium text-emerald-800 shadow-sm">
-                                            Survei profil risiko sudah ditandai selesai. Anda masih dapat meninjau jawaban terakhir yang tersimpan.
+                                            Survei profil risiko sudah ditandai selesai dan form pertanyaan saat ini dikunci.
                                         </div>
                                     )}
                                     {isRiskUnavailable && (
@@ -745,6 +840,44 @@ export default function SurveiProfil() {
                                             Risiko aktif belum tersedia dari backend. Muat ulang halaman beberapa saat lagi atau hubungi admin bila masalah berlanjut.
                                         </div>
                                     )}
+                                    {isFinished && (
+                                        <div className={`${PANEL_CLS} backdrop-blur-sm`}>
+                                            <h3 className="text-lg font-black tracking-tight" style={{ color: "var(--dashboard-text)" }}>
+                                                Akses Pertanyaan Dikunci
+                                            </h3>
+                                            <p className="mt-3 text-sm leading-7" style={{ color: "var(--dashboard-text-soft)" }}>
+                                                Jawaban survei sudah difinalisasi, jadi pengguna tidak bisa lagi membuka atau mengubah pertanyaan dari halaman ini. Tahap berikutnya akan disiapkan lewat fitur pengajuan perubahan data setelah endpoint backend tersedia.
+                                            </p>
+                                            <div className="mt-6 grid gap-4 md:grid-cols-3">
+                                                <div className="dashboard-table-surface rounded-2xl border p-4">
+                                                    <p className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--dashboard-text-muted)" }}>
+                                                        Status Survei
+                                                    </p>
+                                                    <p className="mt-2 text-sm font-bold text-emerald-700">
+                                                        Selesai dan terkunci
+                                                    </p>
+                                                </div>
+                                                <div className="dashboard-table-surface rounded-2xl border p-4">
+                                                    <p className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--dashboard-text-muted)" }}>
+                                                        Risiko Terakhir
+                                                    </p>
+                                                    <p className="mt-2 text-sm font-bold" style={{ color: "var(--dashboard-text)" }}>
+                                                        Risiko {currentRiskNumber}{typeof totalRiskCount === "number" ? ` dari ${totalRiskCount}` : ""}
+                                                    </p>
+                                                </div>
+                                                <div className="dashboard-table-surface rounded-2xl border p-4">
+                                                    <p className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--dashboard-text-muted)" }}>
+                                                        Langkah Berikutnya
+                                                    </p>
+                                                    <p className="mt-2 text-sm font-bold" style={{ color: "var(--dashboard-text)" }}>
+                                                        Menunggu fitur ajukan perubahan data
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                    {!isFinished && (
+                                        <>
                                     {/* Question 1 */}
                                     <div className={`${PANEL_CLS} backdrop-blur-sm transition-all duration-300 hover:shadow-[var(--dashboard-card-hover-shadow)]`}>
                                         <p className="mb-4 flex items-start gap-2 text-base font-semibold" style={{ color: "var(--dashboard-text)" }}>
@@ -985,6 +1118,8 @@ export default function SurveiProfil() {
                                             </div>
                                         </motion.div>
                                     )}
+                                        </>
+                                    )}
 
                                 </div>
                             </motion.div>
@@ -992,28 +1127,43 @@ export default function SurveiProfil() {
                     </AnimatePresence>
 
                     {/* Navigation Footer */}
-                    <motion.div 
-                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}
-                        className="dashboard-divider relative z-10 mt-12 mb-10 flex flex-col-reverse items-center justify-between gap-4 border-t pt-8 sm:flex-row"
-                    >
-                        <button
-                            onClick={() => { void handlePrev(); }}
-                            className={`${SECONDARY_BUTTON_CLS} ${step === 0 || isLoadingMode ? 'pointer-events-none opacity-0' : 'opacity-100'} w-full gap-2 sm:w-auto`}
+                    {step === 1 && isFinished ? (
+                        <motion.div
+                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}
+                            className="dashboard-divider relative z-10 mt-12 mb-10 flex justify-end border-t pt-8"
                         >
-                            <ArrowLeft className="w-4 h-4" />
-                            {hasPreviousRisk(activeRisk, activeProgress as Record<string, any> | null) ? "Risiko Sebelumnya" : "Kembali ke Responden"}
-                        </button>
-                        
-                        <button
-                            onClick={() => { void handleNext(); }}
-                            disabled={saving || isLoadingMode || isFinished || (step === 0 ? !isStep0Valid : !isStep1Valid || isRiskUnavailable)}
-                            className={`${PRIMARY_BUTTON_CLS} group w-full cursor-pointer sm:w-auto`}
+                            <button
+                                type="button"
+                                onClick={() => navigate("/survei-resiko")}
+                                className={SECONDARY_BUTTON_CLS}
+                            >
+                                Kembali ke Ringkasan
+                            </button>
+                        </motion.div>
+                    ) : (
+                        <motion.div 
+                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}
+                            className="dashboard-divider relative z-10 mt-12 mb-10 flex flex-col-reverse items-center justify-between gap-4 border-t pt-8 sm:flex-row"
                         >
-                            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                            {nextLabel}
-                            {!saving ? <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" /> : null}
-                        </button>
-                    </motion.div>
+                            <button
+                                onClick={() => { void handlePrev(); }}
+                                className={`${SECONDARY_BUTTON_CLS} ${step === 0 || isLoadingMode ? 'pointer-events-none opacity-0' : 'opacity-100'} w-full gap-2 sm:w-auto`}
+                            >
+                                <ArrowLeft className="w-4 h-4" />
+                                {hasPreviousRisk(activeRisk, activeProgress as Record<string, any> | null) ? "Risiko Sebelumnya" : "Kembali ke Responden"}
+                            </button>
+                            
+                            <button
+                                onClick={() => { void handleNext(); }}
+                                disabled={saving || isLoadingMode || isFinished || (step === 0 ? !isStep0Valid : !isStep1Valid || isRiskUnavailable)}
+                                className={`${PRIMARY_BUTTON_CLS} group w-full cursor-pointer sm:w-auto`}
+                            >
+                                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                                {nextLabel}
+                                {!saving ? <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" /> : null}
+                            </button>
+                        </motion.div>
+                    )}
                     </div>
 
                 </div>

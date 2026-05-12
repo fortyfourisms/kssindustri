@@ -74,12 +74,12 @@ export default function SurveiRisikoOverview() {
     const statusDescription = !hasRespondent
         ? "Lengkapi data responden terlebih dahulu agar sistem dapat menyiapkan alur penilaian risiko yang sesuai dengan organisasi Anda."
         : surveyCompleted
-            ? "Jawaban terakhir sudah tersimpan. Anda masih bisa meninjau hasil terakhir atau memperbarui data responden bila diperlukan."
+            ? "Anda telah selesai mengisi survei."
             : "Data responden sudah tersedia. Anda dapat langsung melanjutkan pengisian risiko dari progres terakhir.";
     const primaryLabel = !hasRespondent
         ? "Isi Data Responden"
         : surveyCompleted
-            ? "Tinjau Jawaban Terakhir"
+            ? null
             : "Lanjutkan Survei";
     const primaryAction = () => {
         navigate(hasRespondent ? "/survei-resiko/form" : "/survei-resiko/form?step=responden");
@@ -133,11 +133,6 @@ export default function SurveiRisikoOverview() {
                     : "Akan tersedia setelah data responden lengkap.",
             done: surveyCompleted,
         },
-        {
-            title: "Tindak Lanjut",
-            description: recommendation,
-            done: surveyCompleted,
-        },
     ];
 
     return (
@@ -177,7 +172,7 @@ export default function SurveiRisikoOverview() {
                                 </div>
                                 <div className="space-y-3">
                                     <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--dashboard-text-muted)" }}>
-                                        <span>Progres estimasi</span>
+                                        <span>Progress</span>
                                         <span>{progressPercent}%</span>
                                     </div>
                                     <div className="h-3 overflow-hidden rounded-full" style={{ background: "var(--dashboard-progress-track)" }}>
@@ -190,25 +185,24 @@ export default function SurveiRisikoOverview() {
                                         />
                                     </div>
                                 </div>
-                                <div className="flex flex-col gap-3 sm:flex-row">
-                                    <button type="button" onClick={primaryAction} className={PRIMARY_BUTTON_CLS}>
-                                        {primaryLabel}
-                                        <ArrowRight className="h-4 w-4" />
-                                    </button>
-                                    <button type="button" onClick={secondaryAction} className={SECONDARY_BUTTON_CLS}>
-                                        {secondaryLabel}
-                                        <ChevronRight className="h-4 w-4" />
-                                    </button>
-                                </div>
+                                {!surveyCompleted ? (
+                                    <div className="flex flex-col gap-3 sm:flex-row">
+                                        <button type="button" onClick={primaryAction} className={PRIMARY_BUTTON_CLS}>
+                                            {primaryLabel}
+                                            <ArrowRight className="h-4 w-4" />
+                                        </button>
+                                        <button type="button" onClick={secondaryAction} className={SECONDARY_BUTTON_CLS}>
+                                            {secondaryLabel}
+                                            <ChevronRight className="h-4 w-4" />
+                                        </button>
+                                    </div>
+                                ) : null}
                             </div>
 
                             <div className={`${CARD_CLS} space-y-4`} style={{ borderColor: "var(--dashboard-border)" }}>
                                 <div>
                                     <p className="text-xs font-black uppercase tracking-[0.18em]" style={{ color: "var(--dashboard-text-muted)" }}>
                                         Ringkasan
-                                    </p>
-                                    <p className="mt-2 text-sm leading-6" style={{ color: "var(--dashboard-text-soft)" }}>
-                                        Halaman ini menyesuaikan langkah berikutnya berdasarkan data responden dan progres survei yang sudah tersimpan.
                                     </p>
                                 </div>
                                 <div className="space-y-3">
@@ -242,7 +236,7 @@ export default function SurveiRisikoOverview() {
                         </div>
                     </motion.section>
 
-                    <section className="grid gap-5 lg:grid-cols-3">
+                    <section className="grid gap-5 lg:grid-cols-2">
                         {phases.map((phase, index) => (
                             <motion.article
                                 key={phase.title}

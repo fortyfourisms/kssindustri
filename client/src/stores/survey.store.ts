@@ -140,6 +140,15 @@ function resolveRiskForIndex(
     return buildRiskAtIndex(targetIndex, preferredRisk ?? fallbackRisk);
 }
 
+function resolveProgressState(
+    fetched: SurveyProgress | null,
+    fallback: SurveyProgress | null,
+): SurveyProgress | null {
+    if (fetched?.completed || fetched?.finished_at) return fetched;
+    if (fallback?.completed || fallback?.finished_at) return fallback;
+    return fetched ?? fallback;
+}
+
 export const useSurveyStore = create<SurveyStoreState>()((set, get) => ({
     ...initialState,
 
@@ -159,6 +168,7 @@ export const useSurveyStore = create<SurveyStoreState>()((set, get) => ({
     fetchCurrentRespondent: async (userId) => {
         set({ loading: true, error: null });
         try {
+            const existingProgress = get().progress;
             const respondent = await surveyService.getMyRespondentOrNull(userId);
             if (!respondent) {
                 set({ currentRespondent: null, progress: null, currentRisk: null, nextStep: null, loading: false });
@@ -174,12 +184,13 @@ export const useSurveyStore = create<SurveyStoreState>()((set, get) => ({
                 surveyService.getMyProgressOrNull(respondent.id),
                 surveyService.getMyRiskOrNull(),
             ]);
+            const resolvedProgress = resolveProgressState(progress, existingProgress);
 
             set({
                 currentRespondent: respondent,
-                progress,
+                progress: resolvedProgress,
                 currentRisk,
-                nextStep: extractNextStep(currentRisk ?? progress) ?? get().nextStep,
+                nextStep: extractNextStep(currentRisk ?? resolvedProgress) ?? get().nextStep,
                 loading: false,
             });
 
@@ -219,15 +230,17 @@ export const useSurveyStore = create<SurveyStoreState>()((set, get) => ({
     loadSurveyContext: async (respondenId) => {
         set({ loading: true, error: null });
         try {
+            const existingProgress = get().progress;
             const [progress, currentRisk] = await Promise.all([
                 surveyService.getMyProgressOrNull(respondenId),
                 surveyService.getMyRiskOrNull(),
             ]);
+            const resolvedProgress = resolveProgressState(progress, existingProgress);
 
             set({
-                progress,
+                progress: resolvedProgress,
                 currentRisk,
-                nextStep: extractNextStep(currentRisk ?? progress) ?? get().nextStep,
+                nextStep: extractNextStep(currentRisk ?? resolvedProgress) ?? get().nextStep,
                 loading: false,
             });
 
@@ -308,14 +321,15 @@ export const useSurveyStore = create<SurveyStoreState>()((set, get) => ({
         try {
             const result = await surveyService.finishSurvey({ responden_id: Number(respondenId) });
             const progress = await surveyService.getMyProgressOrNull(respondenId);
+            const resolvedProgress = resolveProgressState(progress, result);
 
             set({
-                progress: progress ?? result,
-                nextStep: extractNextStep(progress ?? result) ?? get().nextStep,
+                progress: resolvedProgress,
+                nextStep: extractNextStep(resolvedProgress ?? result) ?? get().nextStep,
                 saving: false,
             });
 
-            return { success: true, data: progress ?? result };
+            return { success: true, data: resolvedProgress ?? result };
         } catch (error: unknown) {
             const message = error instanceof Error ? error.message : "Gagal menyelesaikan survei";
             set({ saving: false, error: message });

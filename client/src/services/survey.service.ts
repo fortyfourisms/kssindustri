@@ -261,6 +261,35 @@ function normalizeRiskResponse(res: unknown): SurveyRiskResponse | null {
     return sanitizeRiskResponseByBranch(normalizedRisk);
 }
 
+function normalizeSurveyProgress(res: unknown): SurveyProgress | null {
+    const normalized = normalizeOne<unknown>(res);
+    const record = asRecord(normalized);
+    if (!record || Object.keys(record).length === 0) return null;
+
+    const completed = readBoolean(
+        record.completed,
+        record.selesai,
+        record.finished,
+        record.is_completed,
+        record.isFinished,
+    );
+
+    return {
+        ...(record as Record<string, unknown>),
+        responden_id: readNumber(record.responden_id, record.respondent_id, record.respondenId),
+        current_risk: readNumber(record.current_risk, record.currentRisk, record.index, record.urutan),
+        completed: completed ?? false,
+        finished_at: readString(record.finished_at, record.finishedAt, record.submitted_at, record.submittedAt)
+            ?? (completed ? readString(record.updated_at, record.updatedAt, record.created_at, record.createdAt) ?? null : null),
+        updated_at: readString(record.updated_at, record.updatedAt),
+        total_risks: readNumber(record.total_risks, record.totalRisks),
+        total_steps: readNumber(record.total_steps, record.totalSteps),
+        has_next: readBoolean(record.has_next, record.hasNext),
+        has_previous: readBoolean(record.has_previous, record.hasPrevious),
+        next_step: readString(record.next_step, record.nextStep, record.langkah_saat_ini, record.current_step),
+    };
+}
+
 export const surveyService = {
     async getRespondents(): Promise<SurveyRespondent[]> {
         const res = await apiClient.get<unknown>("/api/survey/responden");
@@ -336,13 +365,13 @@ export const surveyService = {
     async getProgress(respondenId: number | string): Promise<SurveyProgress | null> {
         const res = await apiClient.get<unknown>(`/api/survey/progress/${respondenId}`);
         if (!res) return null;
-        return normalizeOne<SurveyProgress>(res);
+        return normalizeSurveyProgress(res);
     },
 
     async getMyProgress(): Promise<SurveyProgress | null> {
         const res = await apiClient.get<unknown>("/api/survey/progress");
         if (!res) return null;
-        return normalizeOne<SurveyProgress>(res);
+        return normalizeSurveyProgress(res);
     },
 
     async getProgressOrNull(respondenId?: number | string | null): Promise<SurveyProgress | null> {
@@ -434,15 +463,16 @@ export const surveyService = {
     },
 
     async saveProgress(payload: SurveyRiskNavigationPayload): Promise<SurveyProgress> {
-        return apiClient.post<SurveyProgress>("/api/survey/save-progress", {
+        const res = await apiClient.post<unknown>("/api/survey/save-progress", {
             ...payload,
             direction: normalizeDirection(payload.direction),
         });
+        return normalizeSurveyProgress(res) ?? {};
     },
 
     async finishSurvey(payload: SurveyRiskFinishPayload): Promise<SurveyProgress> {
-        void payload;
-        return apiClient.post<SurveyProgress>("/api/survey/finish", {});
+        const res = await apiClient.post<unknown>("/api/survey/finish", payload);
+        return normalizeSurveyProgress(res) ?? {};
     },
 
     async saveRiskStep(payload: SaveSurveyRiskStepPayload): Promise<SurveyRiskResponse | SurveyProgress> {
