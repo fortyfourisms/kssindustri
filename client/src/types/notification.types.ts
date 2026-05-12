@@ -20,10 +20,26 @@ const NOTIFICATION_TITLE_MAP: Record<string, string> = {
     "ikas validated": "Data IKAS Terverifikasi",
     ikas_verified: "Data IKAS Terverifikasi",
     "ikas verified": "Data IKAS Terverifikasi",
+    resource_created: "Data Baru Ditambahkan",
+    "resource created": "Data Baru Ditambahkan",
+    resource_updated: "Data Berhasil Diperbarui",
+    "resource updated": "Data Berhasil Diperbarui",
     kse_edit_actioned: "Permintaan Edit KSE Diperbarui",
     kse_edit_requested: "Permintaan Edit KSE Baru",
     kse_edit_approved: "Permintaan Edit KSE Disetujui",
     kse_edit_rejected: "Permintaan Edit KSE Ditolak",
+    kse_validated: "Data KSE Terverifikasi",
+    "kse validated": "Data KSE Terverifikasi",
+    kse_verified: "Data KSE Terverifikasi",
+    "kse verified": "Data KSE Terverifikasi",
+};
+
+const NOTIFICATION_DESCRIPTION_MAP: Record<string, string> = {
+    "ikas berhasil diperbarui": "Data IKAS berhasil diperbarui.",
+    "kse berhasil diperbarui": "Data KSE berhasil diperbarui.",
+    "se baru berhasil ditambahkan": "Data baru berhasil ditambahkan.",
+    "resource created": "Data baru berhasil ditambahkan.",
+    "resource updated": "Data berhasil diperbarui.",
 };
 
 function toRecord(value: unknown): Record<string, unknown> | null {
@@ -71,6 +87,17 @@ function humanizeNotificationTitle(value: string) {
             return segment.charAt(0).toUpperCase() + segment.slice(1);
         })
         .join(" ");
+}
+
+function humanizeNotificationDescription(value: string) {
+    const trimmed = value.trim();
+    if (!trimmed) return "";
+
+    const normalized = trimmed.toLowerCase();
+    const mappedDescription = NOTIFICATION_DESCRIPTION_MAP[normalized];
+    if (mappedDescription) return mappedDescription;
+
+    return trimmed;
 }
 
 function fallbackNotificationId(record: Record<string, unknown>) {
@@ -127,7 +154,7 @@ export function normalizeNotification(value: unknown): NotificationItem | null {
     return {
         id,
         title: humanizeNotificationTitle(rawTitle),
-        description,
+        description: humanizeNotificationDescription(description),
         timestamp,
         read,
     };

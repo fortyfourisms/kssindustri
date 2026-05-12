@@ -4,6 +4,7 @@
 // No external HTTP library — zero dependencies.
 
 import { authService } from "@/services/auth.service";
+import { sanitizeApiErrorMessage } from "@/lib/error";
 
 export const API_BASE_URL =
     (window as any)._env_?.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE_URL || '';
@@ -55,12 +56,8 @@ function isSafeRetryMethod(method?: string): boolean {
 
 async function createHttpError(res: Response, retryAfterMs?: number): Promise<any> {
     const errData = await res.json().catch(() => null);
-    const message =
-        errData?.message ||
-        errData?.error ||
-        (res.status === 429
-            ? 'Terlalu banyak permintaan. Silakan coba lagi beberapa saat.'
-            : res.statusText || `HTTP ${res.status}`);
+    const rawMessage = errData?.message || errData?.error || res.statusText || `HTTP ${res.status}`;
+    const message = sanitizeApiErrorMessage(res.status, rawMessage);
 
     const error = new Error(message) as any;
     error.status = res.status;
@@ -187,7 +184,6 @@ async function request<T>(
         const retryAfterMs = getRetryAfterMs(res, backoffMs);
 
         if (isSafeRetryMethod(init.method) && retryCount < MAX_429_RETRIES) {
-            console.warn(`Rate limited for ${path}. Retrying in ${retryAfterMs}ms...`);
             await sleep(retryAfterMs);
             return request<T>(path, init, retryCount + 1, backoffMs * 2);
         }

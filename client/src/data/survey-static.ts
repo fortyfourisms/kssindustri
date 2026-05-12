@@ -97,10 +97,4 @@ export const STATIC_SURVEY_RISKS: StaticSurveyRiskItem[] = [
         deskripsi:
             "Serangan brute force adalah metode serangan siber di mana pelaku mencoba menebak kredensial login seperti username dan password melalui berbagai kombinasi secara terus-menerus hingga menemukan yang benar. Serangan ini sering terjadi akibat lemahnya keamanan autentikasi dan tidak diterapkannya pembatasan percobaan login atau MFA.",
     },
-    {
-        id: 14,
-        nama_risiko: "Lainnya",
-        deskripsi:
-            "Gunakan bagian ini untuk menilai risiko lain yang tidak tercakup pada daftar sebelumnya. Mohon berikan jawaban yang mencerminkan kondisi aktual perusahaan Anda terhadap risiko tambahan tersebut.",
-    },
 ];

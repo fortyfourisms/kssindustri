@@ -653,7 +653,6 @@ function DownloadDocModal({ fileUrl, fileName, csirtName, onClose }: { fileUrl: 
             window.URL.revokeObjectURL(url);
             onClose();
         } catch (error) {
-            console.error("Download failed:", error);
             toast({ title: "Gagal Mengunduh", description: "Browser memblokir unduhan lintas domain. File akan dibuka di tab baru.", variant: "destructive" });
             const fallbackLink = document.createElement("a");
             fallbackLink.href = fileUrl;

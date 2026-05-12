@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { OTPInput, SlotProps } from "input-otp";
 import { cn } from "@/lib/utils";
 import { getDefaultAuthenticatedRoute } from "@/lib/access-control";
+import { getUserFacingErrorMessage } from "@/lib/error";
 import { useNavigate, Link } from "react-router-dom";
 
 // ─── OTP Slot ────────────────────────────────────────────────────────────────
@@ -152,15 +153,12 @@ export default function MfaVerify() {
             navigate(getDefaultAuthenticatedRoute(useAuthStore.getState().currentUser));
         } catch (err: unknown) {
             const axiosError = err as any;
-            const apiMsg = axiosError?.response?.data?.message || axiosError?.response?.data?.error;
             const status = axiosError?.status ?? axiosError?.response?.status;
 
             if (status === 400 || status === 401 || status === 403) {
                 setVerifyError("Kode verifikasi salah atau kedaluwarsa. Silakan coba lagi.");
-            } else if (apiMsg) {
-                setVerifyError(apiMsg);
             } else {
-                setVerifyError("Terjadi kesalahan sistem. Silakan coba lagi beberapa saat lagi.");
+                setVerifyError(getUserFacingErrorMessage(err));
             }
             shouldRefocusOtpRef.current = true;
             setOtpValue("");

@@ -15,6 +15,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useLogout } from "@/hooks/useAuth";
 import { useAuthStore } from "@/stores/auth.store";
+import { useSurveyStore } from "@/stores/survey.store";
 import { getUserRole, ROLE_USER } from "@/lib/access-control";
 import { LogoutConfirmDialog } from "@/components/auth/LogoutConfirmDialog";
 import { getCoursesRoute } from "@/features/lms/lib/lms-routes";
@@ -54,6 +55,7 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
     const logout = useLogout();
     const currentUser = useAuthStore((state) => state.currentUser);
     const role = getUserRole(currentUser);
+    const resetSurvey = useSurveyStore((state) => state.reset);
 
     const navItems = role === ROLE_USER
         ? [
@@ -124,7 +126,15 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
                         <NavLink
                             key={item.href}
                             to={item.href}
-                            onClick={forMobile ? onClose : undefined}
+                            onClick={() => {
+                                const leavingSurvey = location.pathname.startsWith("/survei-resiko") && !item.href.startsWith("/survei-resiko");
+                                if (leavingSurvey) {
+                                    resetSurvey();
+                                }
+                                if (forMobile) {
+                                    onClose?.();
+                                }
+                            }}
                             title={!forMobile && collapsed ? item.label : ""}
                             className={cn(
                                 "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group relative",
@@ -242,7 +252,7 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
             {/* ── DESKTOP SIDEBAR ── */}
             <aside
                 className={cn(
-                    "fixed top-0 left-0 z-40 hidden h-screen flex-col overflow-hidden transition-all duration-300 lg:flex",
+                    "fixed top-0 left-0 z-40 hidden h-screen flex-col overflow-visible transition-all duration-300 lg:flex",
                     "border-r shadow-2xl",
                     collapsed ? "w-[72px]" : "w-64"
                 )}
@@ -252,7 +262,9 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
                     boxShadow: "var(--dashboard-sidebar-shadow)",
                 }}
             >
-                <NavContent />
+                <div className="flex h-full flex-col overflow-hidden">
+                    <NavContent />
+                </div>
 
                 {/* Collapse Toggle */}
                 <button

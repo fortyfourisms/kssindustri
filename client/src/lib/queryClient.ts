@@ -1,4 +1,5 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import { sanitizeApiErrorMessage } from "@/lib/error";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
 const DEFAULT_429_BACKOFF_MS = 1000;
@@ -37,10 +38,7 @@ async function throwIfResNotOk(res: Response, retryAfterMs?: number) {
   if (!res.ok) {
     const err = await res.json().catch(() => ({ message: res.statusText }));
     const error = new Error(
-      err.message ??
-      (res.status === 429
-        ? "Terlalu banyak permintaan. Silakan coba lagi beberapa saat."
-        : `${res.status}: ${res.statusText}`)
+      sanitizeApiErrorMessage(res.status, err.message ?? err.error ?? res.statusText)
     ) as Error & { status?: number; retryAfterMs?: number };
 
     error.status = res.status;
@@ -61,7 +59,6 @@ async function fetchWithRetryAfter(
     const retryAfterMs = getRetryAfterMs(res, backoffMs);
 
     if (isSafeRetryMethod(init.method) && retryCount < MAX_429_RETRIES) {
-      console.warn(`Rate limited for ${input}. Retrying in ${retryAfterMs}ms...`);
       await sleep(retryAfterMs);
       return fetchWithRetryAfter(input, init, retryCount + 1, backoffMs * 2);
     }

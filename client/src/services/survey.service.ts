@@ -144,6 +144,10 @@ function isNotFoundError(error: unknown): boolean {
     return typeof error === "object" && error !== null && "status" in error && (error as { status?: number }).status === 404;
 }
 
+function isForbiddenError(error: unknown): boolean {
+    return typeof error === "object" && error !== null && "status" in error && (error as { status?: number }).status === 403;
+}
+
 function mergeNextStep<T extends SurveyRiskResponse | SurveyProgress>(result: T, fallback: SurveyRiskResponse | SurveyProgress | null): T {
     if (result?.next_step || !fallback?.next_step) return result;
     return {
@@ -161,6 +165,38 @@ function withRiskIdentity(payload: {
         responden_id: payload.responden_id,
         risiko_id: payload.risiko_id,
         custom_risiko_id: payload.custom_risiko_id,
+    };
+}
+
+function hasPersistedRiskAnswer(risk: SurveyRiskResponse): boolean {
+    if (risk.pernah_terjadi === true) return true;
+    if (risk.pernah_terjadi === false && typeof risk.alasan === "string" && risk.alasan.trim()) {
+        return true;
+    }
+
+    return Boolean(
+        typeof risk.dampak_reputasi === "number" ||
+        typeof risk.dampak_operasional === "number" ||
+        typeof risk.dampak_finansial === "number" ||
+        typeof risk.dampak_hukum === "number" ||
+        typeof risk.frekuensi === "number" ||
+        typeof risk.ada_pengendalian === "boolean" ||
+        (typeof risk.deskripsi_pengendalian === "string" && risk.deskripsi_pengendalian.trim())
+    );
+}
+
+function sanitizeRiskResponseByBranch(risk: SurveyRiskResponse): SurveyRiskResponse {
+    if (risk.pernah_terjadi !== false || !hasPersistedRiskAnswer(risk)) return risk;
+
+    return {
+        ...risk,
+        dampak_reputasi: undefined,
+        dampak_operasional: undefined,
+        dampak_finansial: undefined,
+        dampak_hukum: undefined,
+        frekuensi: undefined,
+        ada_pengendalian: undefined,
+        deskripsi_pengendalian: undefined,
     };
 }
 
@@ -189,7 +225,7 @@ function normalizeRiskResponse(res: unknown): SurveyRiskResponse | null {
         customRisikoRecord?.id,
     );
 
-    return {
+    const normalizedRisk = {
         ...record,
         id: readNumber(record.id),
         risiko_id: risikoId,
@@ -220,6 +256,37 @@ function normalizeRiskResponse(res: unknown): SurveyRiskResponse | null {
         ada_pengendalian: readBoolean(record.ada_pengendalian, record.adaPengendalian),
         deskripsi_pengendalian: readString(record.deskripsi_pengendalian, record.deskripsiPengendalian),
         next_step: readString(record.next_step, record.nextStep),
+    };
+
+    return sanitizeRiskResponseByBranch(normalizedRisk);
+}
+
+function normalizeSurveyProgress(res: unknown): SurveyProgress | null {
+    const normalized = normalizeOne<unknown>(res);
+    const record = asRecord(normalized);
+    if (!record || Object.keys(record).length === 0) return null;
+
+    const completed = readBoolean(
+        record.completed,
+        record.selesai,
+        record.finished,
+        record.is_completed,
+        record.isFinished,
+    );
+
+    return {
+        ...(record as Record<string, unknown>),
+        responden_id: readNumber(record.responden_id, record.respondent_id, record.respondenId),
+        current_risk: readNumber(record.current_risk, record.currentRisk, record.index, record.urutan),
+        completed: completed ?? false,
+        finished_at: readString(record.finished_at, record.finishedAt, record.submitted_at, record.submittedAt)
+            ?? (completed ? readString(record.updated_at, record.updatedAt, record.created_at, record.createdAt) ?? null : null),
+        updated_at: readString(record.updated_at, record.updatedAt),
+        total_risks: readNumber(record.total_risks, record.totalRisks),
+        total_steps: readNumber(record.total_steps, record.totalSteps),
+        has_next: readBoolean(record.has_next, record.hasNext),
+        has_previous: readBoolean(record.has_previous, record.hasPrevious),
+        next_step: readString(record.next_step, record.nextStep, record.langkah_saat_ini, record.current_step),
     };
 }
 
@@ -298,7 +365,13 @@ export const surveyService = {
     async getProgress(respondenId: number | string): Promise<SurveyProgress | null> {
         const res = await apiClient.get<unknown>(`/api/survey/progress/${respondenId}`);
         if (!res) return null;
-        return normalizeOne<SurveyProgress>(res);
+        return normalizeSurveyProgress(res);
+    },
+
+    async getMyProgress(): Promise<SurveyProgress | null> {
+        const res = await apiClient.get<unknown>("/api/survey/progress");
+        if (!res) return null;
+        return normalizeSurveyProgress(res);
     },
 
     async getProgressOrNull(respondenId?: number | string | null): Promise<SurveyProgress | null> {
@@ -313,8 +386,28 @@ export const surveyService = {
         }
     },
 
+    async getMyProgressOrNull(fallbackRespondentId?: number | string | null): Promise<SurveyProgress | null> {
+        try {
+            return await surveyService.getMyProgress();
+        } catch (error: unknown) {
+            if (isNotFoundError(error)) {
+                return null;
+            }
+            if (isForbiddenError(error) && fallbackRespondentId !== null && fallbackRespondentId !== undefined && String(fallbackRespondentId).trim() !== "") {
+                return surveyService.getProgressOrNull(fallbackRespondentId);
+            }
+            throw error;
+        }
+    },
+
     async getRiskByRespondent(respondenId: number | string): Promise<SurveyRiskResponse | null> {
         const res = await apiClient.get<unknown>(`/api/survey/risiko/${respondenId}`);
+        if (!res) return null;
+        return normalizeRiskResponse(res);
+    },
+
+    async getMyRisk(): Promise<SurveyRiskResponse | null> {
+        const res = await apiClient.get<unknown>("/api/survey/risiko/me");
         if (!res) return null;
         return normalizeRiskResponse(res);
     },
@@ -323,6 +416,17 @@ export const surveyService = {
         if (respondenId === null || respondenId === undefined || String(respondenId).trim() === "") return null;
         try {
             return await surveyService.getRiskByRespondent(respondenId);
+        } catch (error: unknown) {
+            if (isNotFoundError(error)) {
+                return null;
+            }
+            throw error;
+        }
+    },
+
+    async getMyRiskOrNull(): Promise<SurveyRiskResponse | null> {
+        try {
+            return await surveyService.getMyRisk();
         } catch (error: unknown) {
             if (isNotFoundError(error)) {
                 return null;
@@ -352,22 +456,23 @@ export const surveyService = {
     },
 
     async navigateRisk(payload: SurveyRiskNavigationPayload): Promise<SurveyRiskResponse> {
-        return apiClient.post<SurveyRiskResponse>("/api/survey/risiko/navigate", {
+        return apiClient.post<SurveyRiskResponse>("/api/survey/navigate", {
             ...payload,
             direction: normalizeDirection(payload.direction),
         });
     },
 
     async saveProgress(payload: SurveyRiskNavigationPayload): Promise<SurveyProgress> {
-        return apiClient.post<SurveyProgress>("/api/survey/risiko/save-progress", {
+        const res = await apiClient.post<unknown>("/api/survey/save-progress", {
             ...payload,
             direction: normalizeDirection(payload.direction),
         });
+        return normalizeSurveyProgress(res) ?? {};
     },
 
     async finishSurvey(payload: SurveyRiskFinishPayload): Promise<SurveyProgress> {
-        void payload;
-        return apiClient.post<SurveyProgress>("/api/survey/risiko/finish", {});
+        const res = await apiClient.post<unknown>("/api/survey/finish", payload);
+        return normalizeSurveyProgress(res) ?? {};
     },
 
     async saveRiskStep(payload: SaveSurveyRiskStepPayload): Promise<SurveyRiskResponse | SurveyProgress> {

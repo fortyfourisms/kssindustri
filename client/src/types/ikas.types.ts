@@ -404,6 +404,13 @@ export interface JawabanGulih extends BaseJawaban {
     jawaban_gulih: number;
 }
 
+export interface JawabanCollectionResponse<T> {
+    completion_percentage?: number;
+    count?: number;
+    data: T[];
+    is_draft?: boolean;
+}
+
 export interface CreateIkasPayload {
     id_perusahaan: string | number;
     jabatan: string;
@@ -411,6 +418,7 @@ export interface CreateIkasPayload {
     tanggal: string;
     target_nilai: number;
     telepon: string;
+    is_draft?: boolean;
     kategori_kematangan_keamanan_siber?: string;
 }
 
@@ -418,6 +426,7 @@ export interface UpdateIkasPayload extends Partial<CreateIkasPayload> {}
 
 export interface SaveJawabanPayload {
     ikas_id: string | number;
+    perusahaan_id?: string | number;
     pertanyaan_id: number;
     jawaban: number;
     evidence?: string;
@@ -450,6 +459,7 @@ export interface IkasData {
     tanggal: string;
     target_nilai: number;
     telepon: string;
+    is_draft?: boolean;
     is_validated?: boolean;
     edit_request_status?: string | null;
     status_edit_request?: string | null;

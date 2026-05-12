@@ -23,6 +23,8 @@ function formatNotificationTime(timestamp: string) {
 }
 
 export function NotificationBell() {
+    const [isOpen, setIsOpen] = useState(false);
+    const [showAllNotifications, setShowAllNotifications] = useState(false);
     const [expandedNotificationId, setExpandedNotificationId] = useState<string | null>(null);
     const {
         notifications,
@@ -42,7 +44,17 @@ export function NotificationBell() {
     };
 
     return (
-        <DropdownMenu>
+        <DropdownMenu
+            open={isOpen}
+            onOpenChange={(open) => {
+                setIsOpen(open);
+
+                if (!open) {
+                    setShowAllNotifications(false);
+                    setExpandedNotificationId(null);
+                }
+            }}
+        >
             <DropdownMenuTrigger asChild>
                 <button
                     className="relative flex h-10 w-10 items-center justify-center rounded-2xl border transition"
@@ -99,21 +111,26 @@ export function NotificationBell() {
                         </div>
                     </div>
 
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="h-11 w-full rounded-xl px-3 text-xs hover:bg-[var(--dashboard-action-soft-hover)] hover:text-[var(--dashboard-action-soft-fg-strong)] sm:h-auto sm:w-auto sm:px-2 sm:py-1"
-                        style={{ color: "var(--dashboard-action-soft-fg)" }}
-                        onClick={() => void markAllAsRead()}
-                        disabled={unreadCount === 0 || !isAvailable}
-                    >
-                        <CheckCheck className="h-3.5 w-3.5" />
-                        Tandai semua
-                    </Button>
+                    <div className="flex w-full flex-col gap-2 sm:w-auto">
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-11 w-full rounded-xl px-3 text-xs hover:bg-[var(--dashboard-action-soft-hover)] hover:text-[var(--dashboard-action-soft-fg-strong)] sm:h-auto sm:w-auto sm:px-2 sm:py-1"
+                            style={{ color: "var(--dashboard-action-soft-fg)" }}
+                            onClick={() => void markAllAsRead()}
+                            disabled={unreadCount === 0 || !isAvailable}
+                        >
+                            <CheckCheck className="h-3.5 w-3.5" />
+                            Tandai semua
+                        </Button>
+                    </div>
                 </div>
 
-                <ScrollArea className="max-h-[min(70vh,420px)]">
+                <ScrollArea className={cn(
+                    "transition-all",
+                    showAllNotifications ? "max-h-[min(80vh,640px)]" : "max-h-[min(55vh,420px)]"
+                )}>
                     <div className="space-y-2 p-2 pr-3 sm:pr-4">
                         {!isAvailable ? (
                             <div
@@ -220,6 +237,21 @@ export function NotificationBell() {
                         )}
                     </div>
                 </ScrollArea>
+
+                {notifications.length > 3 ? (
+                    <div className="border-t px-4 py-3" style={{ borderColor: "var(--dashboard-border)" }}>
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-11 w-full rounded-xl px-3 text-xs hover:bg-[var(--dashboard-action-soft-hover)] hover:text-[var(--dashboard-action-soft-fg-strong)]"
+                            style={{ color: "var(--dashboard-action-soft-fg)" }}
+                            onClick={() => setShowAllNotifications((current) => !current)}
+                        >
+                            {showAllNotifications ? "Ringkas daftar" : "Lihat semua"}
+                        </Button>
+                    </div>
+                ) : null}
             </DropdownMenuContent>
         </DropdownMenu>
     );

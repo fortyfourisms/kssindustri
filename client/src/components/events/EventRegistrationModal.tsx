@@ -250,7 +250,7 @@ export function EventRegistrationModal({
                   onError={clearTurnstileState}
                   onTimeout={clearTurnstileState}
                   theme="light"
-                  size="flexible"
+                  size="normal"
                   retry="auto"
                   retryInterval={8000}
                 />
