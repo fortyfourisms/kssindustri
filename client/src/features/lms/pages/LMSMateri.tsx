@@ -135,7 +135,7 @@ export default function LMS() {
                                 </div>
                                 <div className="absolute top-4 right-4 z-10 opacity-80 flex gap-1.5 items-center">
                                     <Shield className="w-3.5 h-3.5 text-blue-800" />
-                                    <span className="text-[10px] font-black text-blue-900 tracking-wider">BSSN</span>
+                                    <span className="text-[10px] font-black text-blue-900 tracking-wider">CYBER</span>
                                 </div>
 
                                 <h3 className="text-center font-black text-slate-800 text-lg relative z-10 max-w-[95%] leading-snug drop-shadow-sm group-hover:scale-105 transition-transform duration-500">
@@ -158,15 +158,6 @@ export default function LMS() {
                                 <h4 className="text-[15px] font-bold text-slate-900 leading-snug mb-5 group-hover:text-blue-600 transition-colors">
                                     {title}
                                 </h4>
-
-                                <div className="mt-auto space-y-3 pt-2">
-                                    <div className="flex items-center gap-3 text-slate-600">
-                                        <div className="w-7 h-7 rounded-lg bg-blue-50 border border-blue-100/50 flex items-center justify-center shrink-0">
-                                            <Shield className="w-3.5 h-3.5 text-blue-600" />
-                                        </div>
-                                        <span className="text-xs font-semibold text-slate-600">Badan Siber dan Sandi Negara</span>
-                                    </div>
-                                </div>
                             </div>
                         </motion.div>
                     );

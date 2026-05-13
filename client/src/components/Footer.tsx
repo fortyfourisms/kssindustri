@@ -109,7 +109,7 @@ export function Footer() {
               {/* Description */}
               <div className="flex justify-center">
                 <p className="max-w-prose text-sm font-medium leading-relaxed text-slate-600 md:text-base">
-                  Platform resmi Direktorat Keamanan Siber dan Sandi Industri, mendukung transformasi digital yang aman dan terpercaya.
+                  Mendukung penilaian kematangan keamanan siber organisasi secara terstruktur dan terpercaya.
                 </p>
               </div>
 
