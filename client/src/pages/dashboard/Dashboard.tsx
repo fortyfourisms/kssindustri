@@ -20,6 +20,7 @@ import { getMediaUrl } from "@/lib/utils";
 import { csirtService } from "@/services/csirt.service";
 import { lmsService } from "@/features/lms/services/lms.service";
 import { surveyService } from "@/services/survey.service";
+import { STATIC_SURVEY_RISKS } from "@/data/survey-static";
 import type { IkasData } from "@/types/ikas.types";
 import type { SurveyProgress, SurveyRespondent } from "@/types/survey.types";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -380,11 +381,7 @@ export default function Dashboard() {
     const surveyCompleted = Boolean(surveyProgress?.completed || surveyProgress?.finished_at);
     const surveyStatus = getSurveyStatus(surveyProgress ?? null, surveyRespondent ?? null);
     const surveyCurrentRisk = typeof surveyProgress?.current_risk === "number" ? surveyProgress.current_risk + 1 : null;
-    const surveyTotalRisks = typeof surveyProgress?.total_risks === "number"
-        ? surveyProgress.total_risks
-        : typeof surveyProgress?.total_steps === "number"
-            ? surveyProgress.total_steps
-            : null;
+    const surveyTotalRisks = STATIC_SURVEY_RISKS.length;
     const lmsProgressByCourse = lmsCourses.map((course, index) => {
         const detail = lmsCourseDetailsMap[String(course.id)];
         const materi = detail?.materi ?? [];

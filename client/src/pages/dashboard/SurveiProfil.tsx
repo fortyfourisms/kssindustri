@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { RequireCompanyProfile } from "@/components/RequireCompanyProfile";
-import { Info, UserCircle2, ArrowRight, ArrowLeft, AlertTriangle, Loader2, Building2 } from "lucide-react";
+import { Info, UserCircle2, ArrowRight, ArrowLeft, AlertTriangle, Loader2, Building2, Save } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useUser } from "@/hooks/useAuth";
 import { useCompanyProfile } from "@/hooks/useCompanyProfile";
@@ -16,6 +16,7 @@ const LABEL_CLS = "dashboard-label mb-2 block text-sm font-semibold tracking-wid
 const PANEL_CLS = "dashboard-section-card rounded-2xl p-6 sm:p-8";
 const TABLE_PANEL_CLS = "dashboard-table-surface rounded-2xl shadow-sm overflow-hidden";
 const SECONDARY_BUTTON_CLS = "button-force-white dashboard-secondary-button inline-flex items-center justify-center rounded-xl border px-6 py-3 text-sm font-semibold transition-all hover:-translate-y-0.5";
+const WARNING_BUTTON_CLS = "button-force-white dashboard-warning-button inline-flex items-center justify-center rounded-xl px-6 py-3 text-sm font-semibold transition-all hover:-translate-y-0.5 disabled:pointer-events-none disabled:opacity-50";
 const PRIMARY_BUTTON_CLS = "button-force-white dashboard-primary-button flex items-center justify-center gap-2 rounded-xl px-8 py-3 text-[15px] font-semibold transition-all hover:-translate-y-0.5 disabled:pointer-events-none disabled:opacity-50";
 const SELECTED_CARD_CLS = "dashboard-option-selected";
 const SELECTED_TEXT_CLS = "dashboard-option-selected-text";
@@ -127,15 +128,31 @@ function hasPersistedRiskAnswer(activeRisk: SurveyRiskResponse | null): boolean 
     );
 }
 
+function getRiskDataFromItems(activeRisk: SurveyRiskResponse | null): SurveyRiskResponse | null {
+    if (!activeRisk || !Array.isArray(activeRisk.items) || activeRisk.items.length === 0) return activeRisk;
+
+    const targetRiskId = typeof activeRisk.risiko_id === "number" ? activeRisk.risiko_id : typeof activeRisk.id === "number" ? activeRisk.id : null;
+    if (targetRiskId === null) return activeRisk;
+
+    const matchedRisk = activeRisk.items.find((item) => item?.risiko_id === targetRiskId || item?.id === targetRiskId) ?? null;
+    if (!matchedRisk) return activeRisk;
+
+    return {
+        ...activeRisk,
+        ...matchedRisk,
+    };
+}
+
 function buildAnswersFromRisk(
     activeRespondent: Record<string, any> | null,
     activeRisk: SurveyRiskResponse | null,
     perusahaan: Record<string, any> | null | undefined,
     fallbackSnapshot?: RiskAnswerSnapshot | null,
 ) {
-    const hasPersistedAnswer = hasPersistedRiskAnswer(activeRisk);
-    const pernahTerjadi = hasPersistedAnswer && typeof activeRisk?.pernah_terjadi === "boolean"
-        ? activeRisk.pernah_terjadi
+    const resolvedRisk = getRiskDataFromItems(activeRisk);
+    const hasPersistedAnswer = hasPersistedRiskAnswer(resolvedRisk);
+    const pernahTerjadi = hasPersistedAnswer && typeof resolvedRisk?.pernah_terjadi === "boolean"
+        ? resolvedRisk.pernah_terjadi
         : null;
     const baseRiskAnswers = fallbackSnapshot ?? DEFAULT_ANSWERS;
 
@@ -149,27 +166,27 @@ function buildAnswersFromRisk(
         responden_sektor: activeRespondent?.nama_sub_sektor || activeRespondent?.sektor || perusahaan?.sub_sektor?.nama_sub_sektor || perusahaan?.sektor || DEFAULT_ANSWERS.responden_sektor,
         responden_sertifikat: activeRespondent?.sertifikat_training || DEFAULT_ANSWERS.responden_sertifikat,
         q1: pernahTerjadi === null ? baseRiskAnswers.q1 : (pernahTerjadi ? "ya" : "tidak"),
-        q1_alasan: typeof activeRisk?.alasan === "string" ? activeRisk.alasan : baseRiskAnswers.q1_alasan,
-        dampak_reputasi: pernahTerjadi === true && typeof activeRisk?.dampak_reputasi === "number"
-            ? (API_TO_IMPACT[activeRisk.dampak_reputasi] || baseRiskAnswers.dampak_reputasi)
+        q1_alasan: typeof resolvedRisk?.alasan === "string" ? resolvedRisk.alasan : baseRiskAnswers.q1_alasan,
+        dampak_reputasi: pernahTerjadi === true && typeof resolvedRisk?.dampak_reputasi === "number"
+            ? (API_TO_IMPACT[resolvedRisk.dampak_reputasi] || baseRiskAnswers.dampak_reputasi)
             : baseRiskAnswers.dampak_reputasi,
-        dampak_operasional: pernahTerjadi === true && typeof activeRisk?.dampak_operasional === "number"
-            ? (API_TO_IMPACT[activeRisk.dampak_operasional] || baseRiskAnswers.dampak_operasional)
+        dampak_operasional: pernahTerjadi === true && typeof resolvedRisk?.dampak_operasional === "number"
+            ? (API_TO_IMPACT[resolvedRisk.dampak_operasional] || baseRiskAnswers.dampak_operasional)
             : baseRiskAnswers.dampak_operasional,
-        dampak_finansial: pernahTerjadi === true && typeof activeRisk?.dampak_finansial === "number"
-            ? (API_TO_IMPACT[activeRisk.dampak_finansial] || baseRiskAnswers.dampak_finansial)
+        dampak_finansial: pernahTerjadi === true && typeof resolvedRisk?.dampak_finansial === "number"
+            ? (API_TO_IMPACT[resolvedRisk.dampak_finansial] || baseRiskAnswers.dampak_finansial)
             : baseRiskAnswers.dampak_finansial,
-        dampak_hukum: pernahTerjadi === true && typeof activeRisk?.dampak_hukum === "number"
-            ? (API_TO_IMPACT[activeRisk.dampak_hukum] || baseRiskAnswers.dampak_hukum)
+        dampak_hukum: pernahTerjadi === true && typeof resolvedRisk?.dampak_hukum === "number"
+            ? (API_TO_IMPACT[resolvedRisk.dampak_hukum] || baseRiskAnswers.dampak_hukum)
             : baseRiskAnswers.dampak_hukum,
-        frekuensi: pernahTerjadi === true && typeof activeRisk?.frekuensi === "number"
-            ? (API_TO_FREQUENCY[activeRisk.frekuensi] || baseRiskAnswers.frekuensi)
+        frekuensi: pernahTerjadi === true && typeof resolvedRisk?.frekuensi === "number"
+            ? (API_TO_FREQUENCY[resolvedRisk.frekuensi] || baseRiskAnswers.frekuensi)
             : baseRiskAnswers.frekuensi,
-        q4: pernahTerjadi === true && typeof activeRisk?.ada_pengendalian === "boolean"
-            ? (activeRisk.ada_pengendalian ? "ya" : "tidak")
+        q4: pernahTerjadi === true && typeof resolvedRisk?.ada_pengendalian === "boolean"
+            ? (resolvedRisk.ada_pengendalian ? "ya" : "tidak")
             : baseRiskAnswers.q4,
-        q5: pernahTerjadi === true && typeof activeRisk?.deskripsi_pengendalian === "string"
-            ? activeRisk.deskripsi_pengendalian
+        q5: pernahTerjadi === true && typeof resolvedRisk?.deskripsi_pengendalian === "string"
+            ? resolvedRisk.deskripsi_pengendalian
             : baseRiskAnswers.q5,
     };
 }
@@ -279,8 +296,11 @@ export default function SurveiProfil() {
     const navigate = useNavigate();
     const [answers, setAnswers] = useState<Record<string, any>>(DEFAULT_ANSWERS);
     const savedRiskAnswersRef = useRef<Record<string, RiskAnswerSnapshot>>({});
+    const lastRespondentHydrationKeyRef = useRef<string | null>(null);
+    const lastRiskHydrationKeyRef = useRef<string | null>(null);
     const [searchParams, setSearchParams] = useSearchParams();
     const [respondentStepPinned, setRespondentStepPinned] = useState(searchParams.get("step") === "responden");
+    const [activeSubmitAction, setActiveSubmitAction] = useState<"next" | "draft" | null>(null);
 
     const { data: user } = useUser();
     const { perusahaanId, perusahaan } = useCompanyProfile(user ?? null);
@@ -295,6 +315,7 @@ export default function SurveiProfil() {
     const loadSurveyContext = useSurveyStore((state) => state.loadSurveyContext);
     const fetchCurrentRespondent = useSurveyStore((state) => state.fetchCurrentRespondent);
     const saveRiskStep = useSurveyStore((state) => state.saveRiskStep);
+    const saveRiskDraft = useSurveyStore((state) => state.saveRiskDraft);
     const navigateRisk = useSurveyStore((state) => state.navigateRisk);
     const finishSurvey = useSurveyStore((state) => state.finishSurvey);
     const resetSurvey = useSurveyStore((state) => state.reset);
@@ -307,10 +328,10 @@ export default function SurveiProfil() {
     const activeProgress = progressState;
     const isLoadingMode = loading;
     const progressRecord = activeProgress as Record<string, any> | null;
-    const resolvedRisk = getResolvedRisk(activeRisk, progressRecord);
-    const snapshotKey = getRiskSnapshotKey(resolvedRisk, progressRecord);
+    const resolvedRisk = useMemo(() => getResolvedRisk(activeRisk, progressRecord), [activeRisk, progressRecord]);
+    const snapshotKey = useMemo(() => getRiskSnapshotKey(resolvedRisk, progressRecord), [resolvedRisk, progressRecord]);
     const persistedSnapshot = snapshotKey ? savedRiskAnswersRef.current[snapshotKey] ?? null : null;
-    const currentRiskNumber = getDisplayRiskNumber(resolvedRisk, progressRecord);
+    const currentRiskNumber = useMemo(() => getDisplayRiskNumber(resolvedRisk, progressRecord), [resolvedRisk, progressRecord]);
 
     useEffect(() => {
         void fetchCurrentRespondent();
@@ -327,10 +348,68 @@ export default function SurveiProfil() {
     }, [searchParams]);
 
     useEffect(() => {
-        const nextAnswers = buildAnswersFromRisk(activeRespondent, activeRisk, perusahaan, persistedSnapshot);
-        setAnswers(nextAnswers);
+        const nextAnswers = buildAnswersFromRisk(activeRespondent, resolvedRisk, perusahaan, persistedSnapshot);
+        const respondentHydrationKey = [
+            activeRespondent?.id ?? "none",
+            activeRespondent?.updated_at ?? activeRespondent?.email ?? "stable",
+            perusahaan?.nama_perusahaan ?? "no-company",
+            perusahaan?.sub_sektor?.nama_sub_sektor ?? perusahaan?.sektor ?? "no-sector",
+        ].join("|");
+        const riskHydrationKey = [
+            snapshotKey ?? "no-risk",
+            resolvedRisk?.updated_at ?? "stable",
+            resolvedRisk?.pernah_terjadi ?? "unset",
+            resolvedRisk?.alasan ?? "",
+            resolvedRisk?.dampak_reputasi ?? "",
+            resolvedRisk?.dampak_operasional ?? "",
+            resolvedRisk?.dampak_finansial ?? "",
+            resolvedRisk?.dampak_hukum ?? "",
+            resolvedRisk?.frekuensi ?? "",
+            resolvedRisk?.ada_pengendalian ?? "",
+            resolvedRisk?.deskripsi_pengendalian ?? "",
+        ].join("|");
 
-        if (snapshotKey && hasPersistedRiskAnswer(activeRisk)) {
+        setAnswers((prev) => {
+            const shouldHydrateRespondent = lastRespondentHydrationKeyRef.current !== respondentHydrationKey;
+            const shouldHydrateRisk = lastRiskHydrationKeyRef.current !== riskHydrationKey;
+
+            if (!shouldHydrateRespondent && !shouldHydrateRisk) {
+                return prev;
+            }
+
+            lastRespondentHydrationKeyRef.current = respondentHydrationKey;
+            lastRiskHydrationKeyRef.current = riskHydrationKey;
+
+            return {
+                ...prev,
+                ...(shouldHydrateRespondent
+                    ? {
+                        responden_nama: nextAnswers.responden_nama,
+                        responden_jabatan: nextAnswers.responden_jabatan,
+                        responden_perusahaan: nextAnswers.responden_perusahaan,
+                        responden_email: nextAnswers.responden_email,
+                        responden_telepon: nextAnswers.responden_telepon,
+                        responden_sektor: nextAnswers.responden_sektor,
+                        responden_sertifikat: nextAnswers.responden_sertifikat,
+                    }
+                    : {}),
+                ...(shouldHydrateRisk
+                    ? {
+                        q1: nextAnswers.q1,
+                        q1_alasan: nextAnswers.q1_alasan,
+                        dampak_reputasi: nextAnswers.dampak_reputasi,
+                        dampak_operasional: nextAnswers.dampak_operasional,
+                        dampak_finansial: nextAnswers.dampak_finansial,
+                        dampak_hukum: nextAnswers.dampak_hukum,
+                        frekuensi: nextAnswers.frekuensi,
+                        q4: nextAnswers.q4,
+                        q5: nextAnswers.q5,
+                    }
+                    : {}),
+            };
+        });
+
+        if (snapshotKey && hasPersistedRiskAnswer(resolvedRisk)) {
             savedRiskAnswersRef.current[snapshotKey] = snapshotFromAnswers(nextAnswers);
         }
 
@@ -345,7 +424,7 @@ export default function SurveiProfil() {
         }
 
         setStep(0);
-    }, [activeRespondent, activeRisk, perusahaan, persistedSnapshot, respondentStepPinned, snapshotKey, user?.email]);
+    }, [activeRespondent, resolvedRisk, perusahaan, persistedSnapshot, respondentStepPinned, snapshotKey, user?.email]);
 
     useEffect(() => {
         setIsFinished(Boolean(activeProgress?.completed || activeProgress?.finished_at));
@@ -529,62 +608,67 @@ export default function SurveiProfil() {
     };
 
     const handleNext = async () => {
-        if (step === 0 && isStep0Valid) {
-            const resolvedPerusahaanId = String(perusahaanId ?? "").trim();
-            if (!resolvedPerusahaanId) {
+        setActiveSubmitAction("next");
+        try {
+            if (step === 0 && isStep0Valid) {
+                const resolvedPerusahaanId = String(perusahaanId ?? "").trim();
+                if (!resolvedPerusahaanId) {
+                    toast({
+                        title: "Perusahaan belum tersedia",
+                        description: "Profil perusahaan belum lengkap sehingga data responden belum bisa dikirim ke backend.",
+                        variant: "destructive",
+                    });
+                    return;
+                }
+
+                const respondentPayload: UpsertSurveyRespondentPayload = {
+                    id_perusahaan: resolvedPerusahaanId,
+                    nama_lengkap: answers.responden_nama,
+                    jabatan: answers.responden_jabatan,
+                    email: answers.responden_email,
+                    no_telepon: answers.responden_telepon,
+                    sertifikat_training: answers.responden_sertifikat || '',
+                };
+
+                const respondentResult = await saveRespondent(respondentPayload, currentRespondent?.id);
+                if (!respondentResult.success || !respondentResult.data) {
+                    toast({
+                        title: "Gagal menyimpan responden",
+                        description: respondentResult.error || "Data responden belum dapat disimpan.",
+                        variant: "destructive",
+                    });
+                    return;
+                }
+
+                if (respondentStepPinned) {
+                    setRespondentStepPinned(false);
+                    setSearchParams({}, { replace: true });
+                }
+
+                await loadSurveyContext(respondentResult.data.id);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                setStep(1);
                 toast({
-                    title: "Perusahaan belum tersedia",
-                    description: "Profil perusahaan belum lengkap sehingga data responden belum bisa dikirim ke backend.",
-                    variant: "destructive",
+                    title: "Data responden tersimpan",
+                    description: "Lanjutkan pengisian survei risiko.",
                 });
                 return;
             }
 
-            const respondentPayload: UpsertSurveyRespondentPayload = {
-                id_perusahaan: resolvedPerusahaanId,
-                nama_lengkap: answers.responden_nama,
-                jabatan: answers.responden_jabatan,
-                email: answers.responden_email,
-                no_telepon: answers.responden_telepon,
-                sertifikat_training: answers.responden_sertifikat || '',
-            };
-
-            const respondentResult = await saveRespondent(respondentPayload, currentRespondent?.id);
-            if (!respondentResult.success || !respondentResult.data) {
-                toast({
-                    title: "Gagal menyimpan responden",
-                    description: respondentResult.error || "Data responden belum dapat disimpan.",
-                    variant: "destructive",
-                });
-                return;
+            if (step === 1) {
+                if (!isStep1Valid) {
+                    toast({
+                        title: "Jawaban belum lengkap",
+                        description: "Lengkapi jawaban risiko sebelum melanjutkan.",
+                        variant: "destructive",
+                    });
+                    return;
+                }
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                await submitRisk("next");
             }
-
-            if (respondentStepPinned) {
-                setRespondentStepPinned(false);
-                setSearchParams({}, { replace: true });
-            }
-
-            await loadSurveyContext(respondentResult.data.id);
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-            setStep(1);
-            toast({
-                title: "Data responden tersimpan",
-                description: "Lanjutkan pengisian survei risiko.",
-            });
-            return;
-        }
-
-        if (step === 1) {
-            if (!isStep1Valid) {
-                toast({
-                    title: "Jawaban belum lengkap",
-                    description: "Lengkapi jawaban risiko sebelum melanjutkan.",
-                    variant: "destructive",
-                });
-                return;
-            }
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-            await submitRisk("next");
+        } finally {
+            setActiveSubmitAction(null);
         }
     };
 
@@ -620,6 +704,88 @@ export default function SurveiProfil() {
         }
     };
 
+    const handleSaveDraftAndExit = async () => {
+        setActiveSubmitAction("draft");
+        try {
+            if (step !== 1) {
+                navigate("/survei-resiko", { replace: true });
+                return;
+            }
+
+            if (!currentRespondent?.id) {
+                toast({
+                    title: "Responden belum tersedia",
+                    description: "Simpan data responden terlebih dahulu sebelum keluar dari survei.",
+                    variant: "destructive",
+                });
+                return;
+            }
+
+            if (!isStep1Valid) {
+                toast({
+                    title: "Jawaban belum lengkap",
+                    description: "Lengkapi jawaban pada risiko aktif agar progres bisa disimpan sementara.",
+                    variant: "destructive",
+                });
+                return;
+            }
+
+            if (isRiskAlreadySaved) {
+                navigate("/survei-resiko", { replace: true });
+                return;
+            }
+
+            const risikoId = getRiskId(resolvedRisk);
+            const customRisikoId = getCustomRiskId(resolvedRisk);
+            if (!risikoId && !customRisikoId) {
+                toast({
+                    title: "Identitas risiko belum tersedia",
+                    description: "Backend belum mengirim risiko aktif untuk responden ini.",
+                    variant: "destructive",
+                });
+                return;
+            }
+
+            const result = await saveRiskDraft({
+                responden_id: currentRespondent.id,
+                current_risk: getCurrentRiskIndex(resolvedRisk, progressState as Record<string, any> | null),
+                direction: "next",
+                risiko_id: risikoId,
+                custom_risiko_id: customRisikoId,
+                pernah_terjadi: answers.q1 === "ya",
+                alasan: answers.q1_alasan || "",
+                dampak_reputasi: IMPACT_TO_API[answers.dampak_reputasi] ?? 1,
+                dampak_operasional: IMPACT_TO_API[answers.dampak_operasional] ?? 2,
+                dampak_finansial: IMPACT_TO_API[answers.dampak_finansial] ?? 2,
+                dampak_hukum: IMPACT_TO_API[answers.dampak_hukum] ?? 2,
+                frekuensi: FREQUENCY_TO_API[answers.frekuensi] ?? 2,
+                ada_pengendalian: answers.q4 === "ya",
+                deskripsi_pengendalian: answers.q4 === "ya" ? answers.q5 || "" : "",
+            });
+
+            if (!result.success) {
+                toast({
+                    title: "Gagal menyimpan sementara",
+                    description: result.error || "Progress survei belum berhasil disimpan.",
+                    variant: "destructive",
+                });
+                return;
+            }
+
+            if (snapshotKey) {
+                savedRiskAnswersRef.current[snapshotKey] = currentRiskSnapshot;
+            }
+
+            toast({
+                title: "Progress tersimpan",
+                description: "Jawaban risiko aktif berhasil disimpan. Anda bisa melanjutkan lagi dari halaman ringkasan.",
+            });
+            navigate("/survei-resiko", { replace: true });
+        } finally {
+            setActiveSubmitAction(null);
+        }
+    };
+
     let totalFields = 8;
     const activeAnswers = { ...answers };
 
@@ -643,10 +809,17 @@ export default function SurveiProfil() {
         : DEFAULT_RISK_DESCRIPTION;
     const isRiskUnavailable = step === 1 && !isLoadingMode && !isFinished && !resolvedRisk;
     const totalRiskCount = getTotalRiskCount(resolvedRisk, activeProgress as Record<string, any> | null);
+    const answeredRiskCount = Array.isArray(activeProgress?.items)
+        ? activeProgress.items.filter((item) => hasPersistedRiskAnswer(item as SurveyRiskResponse)).length
+        : Array.isArray(resolvedRisk?.items)
+            ? resolvedRisk.items.filter((item) => hasPersistedRiskAnswer(item as SurveyRiskResponse)).length
+            : 0;
     const progress = step === 0
         ? 0
-        : typeof totalRiskCount === "number" && totalRiskCount > 0
-            ? Math.round((currentRiskNumber / totalRiskCount) * 100)
+        : typeof totalRiskCount === "number" && totalRiskCount > 0 && answeredRiskCount > 0
+            ? Math.round((answeredRiskCount / totalRiskCount) * 100)
+            : typeof totalRiskCount === "number" && totalRiskCount > 0
+                ? Math.round((currentRiskNumber / totalRiskCount) * 100)
             : Math.round((answeredFields / totalFields) * 100);
     const nextLabel = step === 0
         ? "Simpan & Lanjut"
@@ -657,6 +830,7 @@ export default function SurveiProfil() {
             : hasNextRisk(resolvedRisk, activeProgress as Record<string, any> | null)
                 ? "Simpan & Berikutnya"
                 : "Simpan & Selesaikan";
+    const draftButtonDisabled = saving || isLoadingMode || isFinished || step !== 1 || isRiskUnavailable || !isStep1Valid;
     const pageTitle = "Survei Profil Risiko";
     const nextStepLabel = typeof nextStep === "string" && nextStep.trim() ? nextStep.trim() : null;
     const pageSubtitle = step === 0
@@ -1152,15 +1326,27 @@ export default function SurveiProfil() {
                                 <ArrowLeft className="w-4 h-4" />
                                 {hasPreviousRisk(activeRisk, activeProgress as Record<string, any> | null) ? "Risiko Sebelumnya" : "Kembali ke Responden"}
                             </button>
+
+                            {step === 1 ? (
+                                <button
+                                    type="button"
+                                    onClick={() => { void handleSaveDraftAndExit(); }}
+                                    disabled={draftButtonDisabled}
+                                    className={`${WARNING_BUTTON_CLS} w-full gap-2 sm:w-auto`}
+                                >
+                                    {activeSubmitAction === "draft" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                                    Simpan Sementara
+                                </button>
+                            ) : null}
                             
                             <button
                                 onClick={() => { void handleNext(); }}
                                 disabled={saving || isLoadingMode || isFinished || (step === 0 ? !isStep0Valid : !isStep1Valid || isRiskUnavailable)}
                                 className={`${PRIMARY_BUTTON_CLS} group w-full cursor-pointer sm:w-auto`}
                             >
-                                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                                {activeSubmitAction === "next" ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                                 {nextLabel}
-                                {!saving ? <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" /> : null}
+                                {activeSubmitAction !== "next" ? <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" /> : null}
                             </button>
                         </motion.div>
                     )}

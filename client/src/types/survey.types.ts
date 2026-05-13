@@ -88,6 +88,7 @@ export interface SurveyProgress {
     has_next?: boolean;
     has_previous?: boolean;
     next_step?: string;
+    items?: SurveyRiskResponse[];
     [key: string]: unknown;
 }
 
@@ -114,6 +115,8 @@ export interface SurveyRiskResponse {
     ada_pengendalian?: boolean;
     deskripsi_pengendalian?: string;
     next_step?: string;
+    responden_id?: number;
+    items?: SurveyRiskResponse[];
     [key: string]: unknown;
 }
 
@@ -134,3 +137,5 @@ export interface SaveSurveyRiskStepPayload {
     ada_pengendalian: boolean;
     deskripsi_pengendalian: string;
 }
+
+export interface SaveSurveyRiskDraftPayload extends SaveSurveyRiskStepPayload {}
