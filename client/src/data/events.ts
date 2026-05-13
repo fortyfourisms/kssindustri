@@ -1,9 +1,9 @@
 import type { EventItem } from "@/types/event.types";
 
 export const industrySectorOptions = [
-  "IKFT",
-  "ILMATE",
-  "AGRO",
+  "Industri Kimia, Farmasi, dan Tekstil",
+  "Industri Logam, Mesin, Alat Transportasi, dan Elektronika",
+  "Industri Agro, Surveyor, dan Jasa Konstruksi",
   "Kawasan Industri",
 ] as const;
 

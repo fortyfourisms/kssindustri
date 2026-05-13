@@ -216,7 +216,7 @@ export function EventRegistrationModal({
                   />
                 </div>
                 <div>
-                  <label className="mb-2 block text-sm font-semibold text-slate-700">Sektor industri</label>
+                  <label className="mb-2 block text-sm font-semibold text-slate-700">Sektor</label>
                   <select
                     required
                     value={form.industrySector}
