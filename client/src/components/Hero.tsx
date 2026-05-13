@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 export function Hero() {
   const navigate = useNavigate();
   const [displayText, setDisplayText] = useState("");
-  const slogans = ["#JagaRuangSiber", "#NyamanKarenaAman"];
+  const slogans = ["#NyamanKarenaAman"];
   const [activeSloganIndex, setActiveSloganIndex] = useState(0);
   const fullText = slogans[activeSloganIndex];
   const [isDeleting, setIsDeleting] = useState(false);
@@ -39,21 +39,22 @@ export function Hero() {
   }, [displayText, fullText, isDeleting, slogans.length, typingSpeed]);
 
   return (
-    <section className="relative flex min-h-[78vh] items-center overflow-hidden bg-transparent pb-12 pt-24 sm:min-h-[82vh] sm:pb-16 lg:min-h-[88vh] lg:pb-20 lg:pt-36 xl:pt-44">
-      {/* Subtle overlay for better text contrast */}
-      <div className="absolute inset-0 bg-white/10 backdrop-blur-[0.5px] z-[1]" />
+    <section className="relative isolate flex min-h-[84vh] items-center overflow-hidden bg-transparent pb-16 pt-28 sm:min-h-[88vh] sm:pb-20 lg:min-h-[92vh] lg:pb-24 lg:pt-36 xl:pt-40">
+      <div className="absolute inset-0 z-[1] bg-[radial-gradient(circle_at_top,rgba(96,239,255,0.12),transparent_32%),linear-gradient(to_bottom,rgba(255,255,255,0.65),rgba(255,255,255,0.15)_40%,transparent_100%)]" />
+      <div className="absolute left-1/2 top-24 z-[1] h-72 w-72 -translate-x-1/2 rounded-full bg-cyan-300/10 blur-3xl" />
+      <div className="absolute bottom-0 left-1/2 z-[1] h-56 w-[42rem] -translate-x-1/2 rounded-full bg-blue-400/10 blur-3xl" />
 
       <div className="relative z-10 mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="mx-auto flex max-w-4xl flex-col items-center text-center">
+        <div className="mx-auto flex max-w-5xl flex-col items-center text-center">
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.1 }}
-            className="mb-3 max-w-4xl text-balance font-display text-[clamp(2.125rem,9vw,5.75rem)] font-bold leading-[1.05] tracking-tight text-slate-900 drop-shadow-sm"
+            className="max-w-5xl text-balance font-display text-[clamp(2.4rem,8vw,6rem)] font-black leading-[0.98] tracking-tight text-slate-900 drop-shadow-sm sm:leading-[0.95]"
           >
-            Platform Penilaian Keamanan Siber <br />
-            <span className="text-primary bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-cyan-500">
-              Sektor Industri
+            <span className="block">Safeguarding Critical</span>
+            <span className="block bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-500 bg-clip-text text-transparent">
+              Industrial Infrastructure
             </span>
           </motion.h1>
 
@@ -61,9 +62,9 @@ export function Hero() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.5 }}
-            className="mb-6 flex min-h-[2.75rem] items-center sm:min-h-[3rem]"
+            className="mt-5 flex min-h-[2.75rem] items-center justify-center sm:mt-6 sm:min-h-[3rem]"
           >
-            <h2 className="bg-gradient-to-r from-blue-600 to-cyan-500 bg-clip-text text-[clamp(1rem,4vw,1.875rem)] font-bold text-slate-800 text-transparent">
+            <h2 className="bg-gradient-to-r from-blue-600 to-cyan-500 bg-clip-text text-[clamp(1rem,3vw,1.6rem)] font-bold text-transparent">
               <i>{displayText}</i>
               <span className="ml-1 inline-block h-7 w-[3px] animate-pulse bg-blue-600 sm:h-8" />
             </h2>
@@ -82,11 +83,11 @@ export function Hero() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.3 }}
-            className="flex w-full flex-col justify-center gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:gap-4"
+            className="mt-3 flex w-full flex-col justify-center gap-3 sm:mt-4 sm:w-auto sm:flex-row sm:flex-wrap sm:gap-4"
           >
             <button 
               onClick={() => navigate("/register")}
-              className="h-11 w-full rounded-full bg-slate-900 px-6 text-sm font-bold text-white shadow-lg shadow-slate-200 transition-all duration-300 hover:scale-[1.01] hover:bg-black active:scale-[0.99] sm:w-auto sm:px-10 sm:text-base"
+              className="h-12 w-full rounded-full bg-slate-900 px-8 text-sm font-bold text-white shadow-[0_18px_40px_rgba(15,23,42,0.18)] transition-all duration-300 hover:scale-[1.01] hover:bg-black active:scale-[0.99] sm:w-auto sm:px-10 sm:text-base"
             >
               Mulai Sekarang
             </button>

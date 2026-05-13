@@ -681,7 +681,7 @@ export const assessmentData: AssessmentData = {
                                         2: 'Tim response ada namun peran tidak jelas',
                                         3: 'CSIRT formal dengan peran dan prosedur jelas',
                                         4: 'CSIRT terlatih dengan koordinasi eksternal',
-                                        5: 'CSIRT tersertifikasi dengan integrasi BSSN/ID-SIRTII'
+                                        5: 'CSIRT tersertifikasi dengan integrasi ke ekosistem CSIRT nasional'
                                     }
                                 }
                             ]
@@ -710,7 +710,7 @@ export const assessmentData: AssessmentData = {
                                         2: 'Prosedur pelaporan ada namun tidak konsisten',
                                         3: 'Prosedur pelaporan terdokumentasi dan diterapkan',
                                         4: 'Pelaporan otomatis dengan sistem ticketing',
-                                        5: 'Pelaporan terintegrasi dengan regulasi (BSSN, OJK, BI)'
+                                        5: 'Pelaporan terintegrasi dengan regulasi dan otoritas terkait'
                                     }
                                 },
                                 {

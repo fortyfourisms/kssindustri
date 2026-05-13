@@ -25,7 +25,6 @@ const SECONDARY_BUTTON_CLS = "button-force-white dashboard-secondary-button inli
 const PRIMARY_BUTTON_CLS = "button-force-white dashboard-primary-button inline-flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-bold transition disabled:opacity-50";
 const WARNING_BUTTON_CLS = "button-force-white dashboard-warning-button inline-flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-bold transition disabled:opacity-50";
 const SUCCESS_BUTTON_CLS = "button-force-white inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-700 via-emerald-600 to-green-500 py-2.5 text-sm font-bold transition hover:from-emerald-800 hover:via-emerald-700 hover:to-green-600 disabled:opacity-50";
-const SELECTED_BUTTON_CLS = "dashboard-option-selected";
 const TAG_INPUT_BUTTON_CLS = "dashboard-table-surface dashboard-text-soft rounded-xl border p-2.5 transition hover:border-[var(--dashboard-selection-border)] hover:bg-[var(--dashboard-surface)] disabled:cursor-not-allowed disabled:opacity-50";
 const TAG_CHIP_CLS = "dashboard-chip-info flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-bold";
 const ACTION_EDIT_BUTTON_CLS = "dashboard-chip-warning rounded-xl p-2 transition-colors";
@@ -53,11 +52,6 @@ function hasAllowedExtension(fileName: string, allowedExtensions: string[]) {
 function RequiredMark() {
     return <span className="text-red-500">*</span>;
 }
-
-type CsirtReadinessState = {
-    hasCsirt: "ya" | "tidak" | null;
-    isRegisteredNational: "ya" | "tidak" | null;
-};
 
 type FileUploadFieldProps = {
     label: React.ReactNode;
@@ -118,101 +112,6 @@ function FileUploadField({
     );
 }
 
-function CsirtReadinessModal({
-    value,
-    onChange,
-    onClose,
-    onContinue,
-}: {
-    value: CsirtReadinessState;
-    onChange: (value: CsirtReadinessState) => void;
-    onClose: () => void;
-    onContinue: () => void;
-}) {
-    const canContinue = value.hasCsirt !== null && value.isRegisteredNational !== null;
-
-    const renderQuestion = (
-        key: keyof CsirtReadinessState,
-        question: string,
-        description: string,
-    ) => (
-        <div className="dashboard-section-muted rounded-2xl border p-4">
-            <p className="text-sm font-bold" style={{ color: "var(--dashboard-text)" }}>{question}</p>
-            <p className="mt-1 text-sm" style={{ color: "var(--dashboard-text-muted)" }}>{description}</p>
-            <div className="mt-4 grid grid-cols-2 gap-3">
-                {(["ya", "tidak"] as const).map((option) => {
-                    const selected = value[key] === option;
-                    return (
-                        <button
-                            key={option}
-                            type="button"
-                            onClick={() => onChange({ ...value, [key]: option })}
-                            className={`rounded-xl border px-4 py-3 text-sm font-bold transition ${selected
-                                ? SELECTED_BUTTON_CLS
-                                : "dashboard-table-surface dashboard-text-soft hover:border-[var(--dashboard-input-border-hover)] hover:bg-[var(--dashboard-surface)]"
-                                }`}
-                        >
-                            {option === "ya" ? "Ya" : "Tidak"}
-                        </button>
-                    );
-                })}
-            </div>
-        </div>
-    );
-
-    return (
-        <div className={MODAL_BACKDROP_CLS}>
-            <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                className={`${MODAL_PANEL_CLS} max-w-2xl`}
-            >
-                <div className="flex items-center justify-between mb-6">
-                    <div>
-                        <h3 className="font-display text-xl font-black" style={{ color: "var(--dashboard-text)" }}>Informasi Awal CSIRT</h3>
-                        <p className="mt-1 text-sm" style={{ color: "var(--dashboard-text-muted)" }}>Jawaban ini hanya dipakai untuk alur tampilan form dan tidak disimpan ke database.</p>
-                    </div>
-                    <button onClick={onClose} className={CLOSE_BUTTON_CLS}>
-                        <X className="w-5 h-5" />
-                    </button>
-                </div>
-
-                <div className="space-y-4">
-                    {renderQuestion(
-                        "hasCsirt",
-                        "Apakah perusahaan anda sudah memiliki CSIRT?",
-                        "Pilih sesuai kondisi perusahaan saat ini."
-                    )}
-                    {renderQuestion(
-                        "isRegisteredNational",
-                        "Apakah CSIRT perusahaan anda sudah teregistrasi pada National-CSIRT?",
-                        "Informasi ini hanya sebagai konfirmasi awal sebelum mengisi profil."
-                    )}
-                </div>
-
-                <div className="flex flex-col-reverse gap-3 pt-6 sm:flex-row">
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        className={`${SECONDARY_BUTTON_CLS} flex-1`}
-                    >
-                        Batal
-                    </button>
-                    <button
-                        type="button"
-                        onClick={onContinue}
-                        disabled={!canContinue}
-                        className={`${PRIMARY_BUTTON_CLS} flex-1`}
-                    >
-                        Lanjut Isi Profil
-                    </button>
-                </div>
-            </motion.div>
-        </div>
-    );
-}
-
 // ─── Modal: CSIRT Profile Create ──────────────────────────────────────────────
 function CreateCsirtModal({ onSubmit, onClose, loading, idPerusahaan }: any) {
     const [formData, setFormData] = useState({ nama_csirt: "", web_csirt: "", telepon_csirt: "", email_csirt: "" });
@@ -246,7 +145,7 @@ function CreateCsirtModal({ onSubmit, onClose, loading, idPerusahaan }: any) {
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
                         <label className={LABEL_CLS}>Nama CSIRT <RequiredMark /></label>
-                        <input value={formData.nama_csirt} onChange={(e) => setFormData({ ...formData, nama_csirt: e.target.value })} required className={INPUT_CLS} placeholder="Contoh: CSIRT-BSSN" />
+                        <input value={formData.nama_csirt} onChange={(e) => setFormData({ ...formData, nama_csirt: e.target.value })} required className={INPUT_CLS} placeholder="Contoh: CSIRT-Perusahaan" />
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
@@ -349,7 +248,7 @@ function EditCsirtModal({ initial, onSubmit, onClose, loading, idPerusahaan }: a
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
                         <label className={LABEL_CLS}>Nama CSIRT <RequiredMark /></label>
-                        <input value={formData.nama_csirt} onChange={(e) => setFormData({ ...formData, nama_csirt: e.target.value })} required className={INPUT_CLS} placeholder="Contoh: CSIRT-BSSN" />
+                        <input value={formData.nama_csirt} onChange={(e) => setFormData({ ...formData, nama_csirt: e.target.value })} required className={INPUT_CLS} placeholder="Contoh: CSIRT-Perusahaan" />
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
@@ -701,17 +600,12 @@ export default function CSIRT() {
     const { createMutation, updateMutation } = useCsirtProfile();
 
     // ── Modal state ─────────────────────────────────────────────────────────
-    const [showReadinessModal, setShowReadinessModal] = useState(false);
     const [showForm, setShowForm] = useState(false);
     const [editing, setEditing] = useState<any>(null);
     const [showSdmModal, setShowSdmModal] = useState(false);
     const [editingSdm, setEditingSdm] = useState<SdmCsirt | null>(null);
     const [viewingSe, setViewingSe] = useState<SeCsirt | null>(null);
     const [downloadDoc, setDownloadDoc] = useState<{ url: string; name: string; csirtName?: string } | null>(null);
-    const [csirtReadiness, setCsirtReadiness] = useState<CsirtReadinessState>({
-        hasCsirt: null,
-        isRegisteredNational: null,
-    });
 
     // ── Queries ─────────────────────────────────────────────────────────────
     const { data: user } = useUser();
@@ -800,12 +694,6 @@ export default function CSIRT() {
 
     const handleStartCreateCsirt = () => {
         setEditing(null);
-        setCsirtReadiness({ hasCsirt: null, isRegisteredNational: null });
-        setShowReadinessModal(true);
-    };
-
-    const handleContinueCreateCsirt = () => {
-        setShowReadinessModal(false);
         setShowForm(true);
     };
 
@@ -1178,14 +1066,6 @@ export default function CSIRT() {
 
             {/* ── Modals ── */}
             <AnimatePresence>
-                {showReadinessModal && (
-                    <CsirtReadinessModal
-                        value={csirtReadiness}
-                        onChange={setCsirtReadiness}
-                        onClose={() => setShowReadinessModal(false)}
-                        onContinue={handleContinueCreateCsirt}
-                    />
-                )}
                 {showForm && !editing && (
                     <CreateCsirtModal idPerusahaan={idPerusahaan} onSubmit={handleCreate} onClose={() => setShowForm(false)} loading={createMutation.isPending} />
                 )}

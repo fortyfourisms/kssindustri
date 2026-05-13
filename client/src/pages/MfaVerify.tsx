@@ -38,7 +38,7 @@ function OtpSlot({ char, hasFakeCaret, isActive }: SlotProps) {
 // ─── MfaVerify Component ─────────────────────────────────────────────────────
 
 /**
- * Mirrors D:\Magang BSSN\vuefront\src\components\pages\authentication\two-step-verification\basic.vue
+ * Mirrors the legacy Vue two-step verification component.
  *
  * Route: /mfa?mode=setup  → first-time MFA setup (shows QR code first)
  * Route: /mfa?mode=verify → returning user verification (just OTP input)
