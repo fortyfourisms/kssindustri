@@ -1,6 +1,8 @@
 import { apiClient } from "@/services/apiClient";
+import { STATIC_SURVEY_RISKS } from "@/data/survey-static";
 import type {
     SaveSurveyRiskStepPayload,
+    SaveSurveyRiskDraftPayload,
     SurveyCustomRiskPayload,
     SurveyProgress,
     SurveyRespondent,
@@ -70,6 +72,32 @@ function normalizeOne<T>(res: unknown): T {
 function normalizeDirection(direction?: string): "next" | "prev" {
     if (direction === "previous" || direction === "prev") return "prev";
     return "next";
+}
+
+function normalizeImpactValue(value: unknown): number | undefined {
+    const numericValue = readNumber(value);
+    if (typeof numericValue === "number") return numericValue;
+
+    const normalized = String(value ?? "").trim().toLowerCase();
+    if (!normalized) return undefined;
+    if (normalized.includes("sangat signifikan")) return 4;
+    if (normalized.includes("signifikan")) return 3;
+    if (normalized.includes("cukup")) return 2;
+    if (normalized.includes("tidak")) return 1;
+    return undefined;
+}
+
+function normalizeFrequencyValue(value: unknown): number | undefined {
+    const numericValue = readNumber(value);
+    if (typeof numericValue === "number") return numericValue;
+
+    const normalized = String(value ?? "").trim().toLowerCase();
+    if (!normalized) return undefined;
+    if (normalized.includes("sangat besar")) return 4;
+    if (normalized.includes("besar")) return 3;
+    if (normalized.includes("sedang")) return 2;
+    if (normalized.includes("kecil")) return 1;
+    return undefined;
 }
 
 function normalizeRespondent(res: unknown): SurveyRespondent {
@@ -144,6 +172,40 @@ function isNotFoundError(error: unknown): boolean {
     return typeof error === "object" && error !== null && "status" in error && (error as { status?: number }).status === 404;
 }
 
+function extractErrorMessage(error: unknown): string | null {
+    if (error instanceof Error && typeof error.message === "string" && error.message.trim()) {
+        return error.message.trim();
+    }
+
+    const record = asRecord(error);
+    const response = asRecord(record?.response);
+    const data = asRecord(response?.data);
+    return readString(
+        data?.message,
+        data?.error,
+        record?.message,
+    ) ?? null;
+}
+
+function isSemanticNotFoundError(error: unknown): boolean {
+    if (isNotFoundError(error)) return true;
+
+    const status = typeof error === "object" && error !== null && "status" in error
+        ? (error as { status?: number }).status
+        : undefined;
+    if (status !== 400) return false;
+
+    const message = extractErrorMessage(error)?.toLowerCase();
+    return Boolean(
+        message &&
+        (
+            message.includes("data tidak ditemukan") ||
+            message.includes("responden tidak ditemukan") ||
+            message.includes("not found")
+        )
+    );
+}
+
 function isForbiddenError(error: unknown): boolean {
     return typeof error === "object" && error !== null && "status" in error && (error as { status?: number }).status === 403;
 }
@@ -200,6 +262,40 @@ function sanitizeRiskResponseByBranch(risk: SurveyRiskResponse): SurveyRiskRespo
     };
 }
 
+function normalizeRiskItems(items: unknown): SurveyRiskResponse[] {
+    if (!Array.isArray(items)) return [];
+    return items
+        .map((item) => normalizeRiskResponse(item))
+        .filter((item): item is SurveyRiskResponse => Boolean(item));
+}
+
+function deriveProgressFromRiskItems(items: SurveyRiskResponse[]) {
+    const totalRiskCount = Math.max(items.length, STATIC_SURVEY_RISKS.length);
+
+    if (items.length === 0) {
+        return {
+            current_risk: undefined,
+            total_risks: undefined,
+            completed: false,
+        };
+    }
+
+    const answeredCount = items.filter((item) => hasPersistedRiskAnswer(item)).length;
+    return {
+        current_risk: answeredCount,
+        total_risks: totalRiskCount,
+        completed: answeredCount >= totalRiskCount,
+    };
+}
+
+function getRiskIndexFromRiskId(riskId: unknown): number | undefined {
+    const normalizedRiskId = readNumber(riskId);
+    if (typeof normalizedRiskId !== "number") return undefined;
+
+    const riskIndex = STATIC_SURVEY_RISKS.findIndex((item) => item.id === normalizedRiskId);
+    return riskIndex >= 0 ? riskIndex : undefined;
+}
+
 function normalizeRiskResponse(res: unknown): SurveyRiskResponse | null {
     const normalized = normalizeOne<unknown>(res);
     const record = asRecord(normalized);
@@ -207,6 +303,7 @@ function normalizeRiskResponse(res: unknown): SurveyRiskResponse | null {
 
     const risikoRecord = asRecord(record.risiko) ?? asRecord(record.risk) ?? asRecord(record.active_risk);
     const customRisikoRecord = asRecord(record.custom_risiko) ?? asRecord(record.customRisk);
+    const items = normalizeRiskItems(record.items);
 
     const risikoId = readNumber(
         record.risiko_id,
@@ -248,17 +345,23 @@ function normalizeRiskResponse(res: unknown): SurveyRiskResponse | null {
         deskripsi: readString(record.deskripsi, record.description, risikoRecord?.deskripsi, risikoRecord?.description),
         pernah_terjadi: readBoolean(record.pernah_terjadi, record.pernahTerjadi),
         alasan: readString(record.alasan, record.reason),
-        dampak_reputasi: readNumber(record.dampak_reputasi, record.dampakReputasi),
-        dampak_operasional: readNumber(record.dampak_operasional, record.dampakOperasional),
-        dampak_finansial: readNumber(record.dampak_finansial, record.dampakFinansial),
-        dampak_hukum: readNumber(record.dampak_hukum, record.dampakHukum),
-        frekuensi: readNumber(record.frekuensi, record.frequency),
+        dampak_reputasi: normalizeImpactValue(record.dampak_reputasi ?? record.dampakReputasi),
+        dampak_operasional: normalizeImpactValue(record.dampak_operasional ?? record.dampakOperasional),
+        dampak_finansial: normalizeImpactValue(record.dampak_finansial ?? record.dampakFinansial),
+        dampak_hukum: normalizeImpactValue(record.dampak_hukum ?? record.dampakHukum),
+        frekuensi: normalizeFrequencyValue(record.frekuensi ?? record.frequency),
         ada_pengendalian: readBoolean(record.ada_pengendalian, record.adaPengendalian),
         deskripsi_pengendalian: readString(record.deskripsi_pengendalian, record.deskripsiPengendalian),
         next_step: readString(record.next_step, record.nextStep),
+        responden_id: readNumber(record.responden_id, record.respondent_id, record.respondenId),
+        items,
     };
+    const derivedProgress = deriveProgressFromRiskItems(items);
 
-    return sanitizeRiskResponseByBranch(normalizedRisk);
+    return sanitizeRiskResponseByBranch({
+        ...normalizedRisk,
+        total_risks: normalizedRisk.total_risks ?? derivedProgress.total_risks,
+    });
 }
 
 function normalizeSurveyProgress(res: unknown): SurveyProgress | null {
@@ -273,20 +376,24 @@ function normalizeSurveyProgress(res: unknown): SurveyProgress | null {
         record.is_completed,
         record.isFinished,
     );
+    const riskIndexFromRiskId = getRiskIndexFromRiskId(record.risiko_id ?? record.risk_id ?? record.id_risiko);
+    const items = normalizeRiskItems(record.items);
+    const derivedProgress = deriveProgressFromRiskItems(items);
 
     return {
         ...(record as Record<string, unknown>),
         responden_id: readNumber(record.responden_id, record.respondent_id, record.respondenId),
-        current_risk: readNumber(record.current_risk, record.currentRisk, record.index, record.urutan),
-        completed: completed ?? false,
+        current_risk: readNumber(record.current_risk, record.currentRisk, record.index, record.urutan, riskIndexFromRiskId, derivedProgress.current_risk),
+        completed: completed ?? derivedProgress.completed,
         finished_at: readString(record.finished_at, record.finishedAt, record.submitted_at, record.submittedAt)
             ?? (completed ? readString(record.updated_at, record.updatedAt, record.created_at, record.createdAt) ?? null : null),
         updated_at: readString(record.updated_at, record.updatedAt),
-        total_risks: readNumber(record.total_risks, record.totalRisks),
+        total_risks: readNumber(record.total_risks, record.totalRisks, derivedProgress.total_risks) ?? STATIC_SURVEY_RISKS.length,
         total_steps: readNumber(record.total_steps, record.totalSteps),
         has_next: readBoolean(record.has_next, record.hasNext),
         has_previous: readBoolean(record.has_previous, record.hasPrevious),
         next_step: readString(record.next_step, record.nextStep, record.langkah_saat_ini, record.current_step),
+        items,
     };
 }
 
@@ -307,7 +414,7 @@ export const surveyService = {
             if (!respondent || !respondent.id) return null;
             return respondent;
         } catch (error: unknown) {
-            if (isNotFoundError(error)) {
+            if (isSemanticNotFoundError(error)) {
                 return null;
             }
             throw error;
@@ -324,7 +431,7 @@ export const surveyService = {
         try {
             return await surveyService.getRespondentById(id);
         } catch (error: unknown) {
-            if (isNotFoundError(error)) {
+            if (isSemanticNotFoundError(error)) {
                 return null;
             }
             throw error;
@@ -346,7 +453,7 @@ export const surveyService = {
             const res = await apiClient.post<unknown>("/api/survey/responden/me", payload);
             return normalizeRespondent(res);
         } catch (error: unknown) {
-            if (!isNotFoundError(error)) {
+            if (!isSemanticNotFoundError(error)) {
                 throw error;
             }
 
@@ -379,7 +486,7 @@ export const surveyService = {
         try {
             return await surveyService.getProgress(respondenId);
         } catch (error: unknown) {
-            if (isNotFoundError(error)) {
+            if (isSemanticNotFoundError(error)) {
                 return null;
             }
             throw error;
@@ -390,7 +497,7 @@ export const surveyService = {
         try {
             return await surveyService.getMyProgress();
         } catch (error: unknown) {
-            if (isNotFoundError(error)) {
+            if (isSemanticNotFoundError(error)) {
                 return null;
             }
             if (isForbiddenError(error) && fallbackRespondentId !== null && fallbackRespondentId !== undefined && String(fallbackRespondentId).trim() !== "") {
@@ -417,7 +524,7 @@ export const surveyService = {
         try {
             return await surveyService.getRiskByRespondent(respondenId);
         } catch (error: unknown) {
-            if (isNotFoundError(error)) {
+            if (isSemanticNotFoundError(error)) {
                 return null;
             }
             throw error;
@@ -428,7 +535,7 @@ export const surveyService = {
         try {
             return await surveyService.getMyRisk();
         } catch (error: unknown) {
-            if (isNotFoundError(error)) {
+            if (isSemanticNotFoundError(error)) {
                 return null;
             }
             throw error;
@@ -523,5 +630,45 @@ export const surveyService = {
             direction: normalizeDirection(payload.direction),
         });
         return mergeNextStep(navigationResult, lastResponse);
+    },
+
+    async saveRiskDraft(payload: SaveSurveyRiskDraftPayload): Promise<SurveyRiskResponse | SurveyProgress> {
+        const identity = withRiskIdentity(payload);
+        let lastResponse: SurveyRiskResponse | SurveyProgress | null = null;
+
+        lastResponse = await surveyService.saveEligibility({
+            ...identity,
+            pernah_terjadi: payload.pernah_terjadi,
+        });
+
+        if (!payload.pernah_terjadi) {
+            lastResponse = await surveyService.saveReason({
+                ...identity,
+                alasan: payload.alasan?.trim() || "",
+            });
+        } else {
+            lastResponse = await surveyService.saveImpact({
+                ...identity,
+                dampak_finansial: payload.dampak_finansial,
+                dampak_hukum: payload.dampak_hukum,
+                dampak_operasional: payload.dampak_operasional,
+                dampak_reputasi: payload.dampak_reputasi,
+                frekuensi: payload.frekuensi,
+            });
+
+            lastResponse = await surveyService.saveControl({
+                ...identity,
+                ada_pengendalian: payload.ada_pengendalian,
+                deskripsi_pengendalian: payload.deskripsi_pengendalian?.trim() || "",
+            });
+        }
+
+        await surveyService.saveProgress({
+            responden_id: payload.responden_id,
+            current_risk: payload.current_risk,
+            direction: normalizeDirection(payload.direction),
+        });
+
+        return mergeNextStep(lastResponse ?? {}, lastResponse);
     },
 };

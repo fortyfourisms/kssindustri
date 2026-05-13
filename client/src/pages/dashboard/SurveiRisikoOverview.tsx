@@ -17,9 +17,11 @@ import { PageHeader } from "@/components/dashboard/PageHeader";
 import { useCompanyProfile } from "@/hooks/useCompanyProfile";
 import { useUser } from "@/hooks/useAuth";
 import { useSurveyStore } from "@/stores/survey.store";
+import { STATIC_SURVEY_RISKS } from "@/data/survey-static";
 
 const PRIMARY_BUTTON_CLS = "button-force-white dashboard-primary-button inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3 text-sm font-semibold transition-all hover:-translate-y-0.5 disabled:pointer-events-none disabled:opacity-50";
 const SECONDARY_BUTTON_CLS = "button-force-white dashboard-secondary-button inline-flex items-center justify-center gap-2 rounded-xl border px-6 py-3 text-sm font-semibold transition-all hover:-translate-y-0.5";
+const WARNING_BUTTON_CLS = "button-force-white dashboard-warning-button inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3 text-sm font-semibold transition-all hover:-translate-y-0.5";
 const CARD_CLS = "dashboard-section-card rounded-[1.75rem] border p-6 shadow-sm";
 
 function getSurveyStatusLabel(
@@ -30,9 +32,6 @@ function getSurveyStatusLabel(
 ) {
     if (!hasRespondent) return "Belum dimulai";
     if (completed) return "Survei selesai";
-    if (currentRiskNumber !== null) {
-        return `Sedang di Risiko ${currentRiskNumber}${totalRiskCount ? ` dari ${totalRiskCount}` : ""}`;
-    }
     return "Data responden sudah tersimpan";
 }
 
@@ -53,16 +52,12 @@ export default function SurveiRisikoOverview() {
     const hasRespondent = Boolean(currentRespondent?.id);
     const surveyCompleted = Boolean(progress?.completed || progress?.finished_at);
     const currentRiskNumber = typeof progress?.current_risk === "number" ? progress.current_risk + 1 : null;
-    const totalRiskCount = typeof progress?.total_risks === "number"
-        ? progress.total_risks
-        : typeof progress?.total_steps === "number"
-            ? progress.total_steps
-            : null;
+    const totalRiskCount = STATIC_SURVEY_RISKS.length;
     const progressPercent = !hasRespondent
         ? 0
         : surveyCompleted
             ? 100
-            : currentRiskNumber !== null && totalRiskCount
+            : currentRiskNumber !== null && totalRiskCount > 0
                 ? Math.round((currentRiskNumber / totalRiskCount) * 100)
                 : 12;
     const surveyStatus = getSurveyStatusLabel(hasRespondent, surveyCompleted, currentRiskNumber, totalRiskCount);
@@ -158,10 +153,6 @@ export default function SurveiRisikoOverview() {
                         <div className="absolute inset-0 opacity-70" style={{ background: "var(--dashboard-page-header-overlay)" }} />
                         <div className="relative grid gap-8 lg:grid-cols-[1.35fr_0.9fr] lg:items-center">
                             <div className="space-y-5">
-                                <div className="dashboard-chip-info inline-flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em]">
-                                    {surveyCompleted ? <CheckCircle2 className="h-4 w-4" /> : <CircleDashed className="h-4 w-4" />}
-                                    {surveyStatus}
-                                </div>
                                 <div className="space-y-3">
                                     <h2 className="text-2xl font-black tracking-tight sm:text-3xl" style={{ color: "var(--dashboard-text)" }}>
                                         {statusTitle}
@@ -191,7 +182,7 @@ export default function SurveiRisikoOverview() {
                                             {primaryLabel}
                                             <ArrowRight className="h-4 w-4" />
                                         </button>
-                                        <button type="button" onClick={secondaryAction} className={SECONDARY_BUTTON_CLS}>
+                                        <button type="button" onClick={secondaryAction} className={hasRespondent ? WARNING_BUTTON_CLS : SECONDARY_BUTTON_CLS}>
                                             {secondaryLabel}
                                             <ChevronRight className="h-4 w-4" />
                                         </button>

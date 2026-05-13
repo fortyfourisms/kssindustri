@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { surveyService } from "@/services/survey.service";
 import { STATIC_SURVEY_RISKS } from "@/data/survey-static";
 import type {
+    SaveSurveyRiskDraftPayload,
     SaveSurveyRiskStepPayload,
     SurveyProgress,
     SurveyRespondent,
@@ -31,6 +32,7 @@ interface SurveyStoreState {
     saveRespondent: (payload: UpsertSurveyRespondentPayload, existingId?: number | string | null) => Promise<ActionResult<SurveyRespondent>>;
     loadSurveyContext: (respondenId: number | string) => Promise<ActionResult<{ progress: SurveyProgress | null; currentRisk: SurveyRiskResponse | null }>>;
     saveRiskStep: (payload: SaveSurveyRiskStepPayload) => Promise<ActionResult<SurveyRiskResponse | SurveyProgress>>;
+    saveRiskDraft: (payload: SaveSurveyRiskDraftPayload) => Promise<ActionResult<SurveyRiskResponse | SurveyProgress>>;
     navigateRisk: (payload: { respondenId: number | string; currentRisk: number; direction: string }) => Promise<ActionResult<SurveyRiskResponse>>;
     finishSurvey: (respondenId: number | string) => Promise<ActionResult<SurveyProgress>>;
     reset: () => void;
@@ -68,6 +70,77 @@ function getStaticRiskIdAtIndex(index: number | null | undefined): number | null
     return STATIC_SURVEY_RISKS[index]?.id ?? null;
 }
 
+function getRiskItems(risk: SurveyRiskResponse | null | undefined): SurveyRiskResponse[] {
+    return Array.isArray(risk?.items) ? risk.items : [];
+}
+
+function hasPersistedRiskAnswer(risk: SurveyRiskResponse | null | undefined): boolean {
+    if (!risk) return false;
+    if (risk.pernah_terjadi === true) return true;
+    if (risk.pernah_terjadi === false && typeof risk.alasan === "string" && risk.alasan.trim()) return true;
+
+    return Boolean(
+        typeof risk.dampak_reputasi === "number" ||
+        typeof risk.dampak_operasional === "number" ||
+        typeof risk.dampak_finansial === "number" ||
+        typeof risk.dampak_hukum === "number" ||
+        typeof risk.frekuensi === "number" ||
+        typeof risk.ada_pengendalian === "boolean" ||
+        (typeof risk.deskripsi_pengendalian === "string" && risk.deskripsi_pengendalian.trim())
+    );
+}
+
+function getResumeRiskIndex(risk: SurveyRiskResponse | null | undefined, progress: SurveyProgress | null | undefined): number | null {
+    const items = getRiskItems(risk);
+    if (items.length === 0) return typeof progress?.current_risk === "number" ? Math.max(progress.current_risk - 1, 0) : null;
+
+    for (let index = STATIC_SURVEY_RISKS.length - 1; index >= 0; index -= 1) {
+        const targetRiskId = getStaticRiskIdAtIndex(index);
+        const matchedItem = targetRiskId === null
+            ? null
+            : items.find((item) => extractRiskId(item) === targetRiskId) ?? null;
+
+        if (hasPersistedRiskAnswer(matchedItem)) {
+            return index;
+        }
+    }
+
+    if (typeof progress?.current_risk === "number") {
+        return Math.max(progress.current_risk - 1, 0);
+    }
+
+    return items.length > 0 ? 0 : null;
+}
+
+function findRiskItemForIndex(risk: SurveyRiskResponse | null | undefined, targetIndex: number | null | undefined): SurveyRiskResponse | null {
+    if (!risk || typeof targetIndex !== "number" || !Number.isFinite(targetIndex) || targetIndex < 0) return null;
+
+    const items = getRiskItems(risk);
+    if (items.length === 0) return null;
+
+    const targetRiskId = getStaticRiskIdAtIndex(targetIndex);
+    const byRiskId = targetRiskId === null
+        ? null
+        : items.find((item) => extractRiskId(item) === targetRiskId) ?? null;
+
+    if (byRiskId) {
+        return {
+            ...risk,
+            ...byRiskId,
+            current_risk: targetIndex,
+        };
+    }
+
+    const byIndex = items[targetIndex] ?? null;
+    return byIndex
+        ? {
+            ...risk,
+            ...byIndex,
+            current_risk: targetIndex,
+        }
+        : null;
+}
+
 function matchesTargetRisk(risk: SurveyRiskResponse | null | undefined, targetIndex: number | null | undefined): boolean {
     if (!risk || typeof targetIndex !== "number" || !Number.isFinite(targetIndex) || targetIndex < 0) return false;
 
@@ -87,6 +160,11 @@ function resolvePreferredRisk(
     if (!fetchedRisk) return fallbackRisk;
     if (!fallbackRisk) return fetchedRisk;
 
+    const fetchedItemsCount = getRiskItems(fetchedRisk).length;
+    const fallbackItemsCount = getRiskItems(fallbackRisk).length;
+    if (fetchedItemsCount > 0 && fallbackItemsCount === 0) return fetchedRisk;
+    if (fallbackItemsCount > 0 && fetchedItemsCount === 0) return fallbackRisk;
+
     const progressIndex = typeof progress?.current_risk === "number" ? progress.current_risk : null;
     const fetchedIndex = extractRiskIndex(fetchedRisk);
     const fallbackIndex = extractRiskIndex(fallbackRisk);
@@ -103,22 +181,59 @@ function buildRiskAtIndex(index: number, seedRisk: SurveyRiskResponse | null): S
     if (!Number.isFinite(index) || index < 0) return seedRisk;
 
     const staticRisk = STATIC_SURVEY_RISKS[index];
-    const shouldPreserveAnswers = matchesTargetRisk(seedRisk, index);
+    const matchedItem = findRiskItemForIndex(seedRisk, index);
+    const sourceRisk = matchedItem ?? seedRisk;
+    const shouldPreserveAnswers = matchesTargetRisk(sourceRisk, index);
     return {
-        ...(seedRisk ?? {}),
+        ...(sourceRisk ?? {}),
         current_risk: index,
-        risiko_id: staticRisk?.id ?? seedRisk?.risiko_id,
-        nama_risiko: staticRisk?.nama_risiko ?? seedRisk?.nama_risiko,
-        deskripsi: staticRisk?.deskripsi ?? seedRisk?.deskripsi,
-        pernah_terjadi: shouldPreserveAnswers ? seedRisk?.pernah_terjadi : undefined,
-        alasan: shouldPreserveAnswers ? seedRisk?.alasan : undefined,
-        dampak_reputasi: shouldPreserveAnswers ? seedRisk?.dampak_reputasi : undefined,
-        dampak_operasional: shouldPreserveAnswers ? seedRisk?.dampak_operasional : undefined,
-        dampak_finansial: shouldPreserveAnswers ? seedRisk?.dampak_finansial : undefined,
-        dampak_hukum: shouldPreserveAnswers ? seedRisk?.dampak_hukum : undefined,
-        frekuensi: shouldPreserveAnswers ? seedRisk?.frekuensi : undefined,
-        ada_pengendalian: shouldPreserveAnswers ? seedRisk?.ada_pengendalian : undefined,
-        deskripsi_pengendalian: shouldPreserveAnswers ? seedRisk?.deskripsi_pengendalian : undefined,
+        risiko_id: staticRisk?.id ?? sourceRisk?.risiko_id,
+        nama_risiko: staticRisk?.nama_risiko ?? sourceRisk?.nama_risiko,
+        deskripsi: staticRisk?.deskripsi ?? sourceRisk?.deskripsi,
+        pernah_terjadi: shouldPreserveAnswers ? sourceRisk?.pernah_terjadi : undefined,
+        alasan: shouldPreserveAnswers ? sourceRisk?.alasan : undefined,
+        dampak_reputasi: shouldPreserveAnswers ? sourceRisk?.dampak_reputasi : undefined,
+        dampak_operasional: shouldPreserveAnswers ? sourceRisk?.dampak_operasional : undefined,
+        dampak_finansial: shouldPreserveAnswers ? sourceRisk?.dampak_finansial : undefined,
+        dampak_hukum: shouldPreserveAnswers ? sourceRisk?.dampak_hukum : undefined,
+        frekuensi: shouldPreserveAnswers ? sourceRisk?.frekuensi : undefined,
+        ada_pengendalian: shouldPreserveAnswers ? sourceRisk?.ada_pengendalian : undefined,
+        deskripsi_pengendalian: shouldPreserveAnswers ? sourceRisk?.deskripsi_pengendalian : undefined,
+    };
+}
+
+function deriveProgressFromRisk(risk: SurveyRiskResponse | null): SurveyProgress | null {
+    if (!risk) return null;
+
+    const items = getRiskItems(risk);
+    if (items.length === 0) return null;
+    const totalRiskCount = Math.max(items.length, STATIC_SURVEY_RISKS.length);
+
+    const currentRisk = typeof risk.current_risk === "number"
+        ? risk.current_risk
+        : items.filter((item) => {
+            if (item.pernah_terjadi === true) return true;
+            if (item.pernah_terjadi === false && typeof item.alasan === "string" && item.alasan.trim()) return true;
+
+            return Boolean(
+                typeof item.dampak_reputasi === "number" ||
+                typeof item.dampak_operasional === "number" ||
+                typeof item.dampak_finansial === "number" ||
+                typeof item.dampak_hukum === "number" ||
+                typeof item.frekuensi === "number" ||
+                typeof item.ada_pengendalian === "boolean" ||
+                (typeof item.deskripsi_pengendalian === "string" && item.deskripsi_pengendalian.trim())
+            );
+        }).length;
+    return {
+        responden_id: risk.responden_id,
+        current_risk: currentRisk,
+        total_risks: risk.total_risks ?? totalRiskCount,
+        completed: Boolean(risk.completed ?? (typeof risk.total_risks === "number" ? currentRisk >= risk.total_risks : currentRisk >= totalRiskCount)),
+        has_next: typeof risk.total_risks === "number" ? currentRisk < risk.total_risks : currentRisk < totalRiskCount,
+        has_previous: currentRisk > 0,
+        next_step: risk.next_step,
+        items,
     };
 }
 
@@ -130,10 +245,12 @@ function resolveRiskForIndex(
 ): SurveyRiskResponse | null {
     const preferredRisk = resolvePreferredRisk(fetchedRisk, fallbackRisk, progress);
     const progressIndex = typeof progress?.current_risk === "number" ? progress.current_risk : null;
-    const targetIndex = progressIndex ?? optimisticIndex ?? null;
+    const targetIndex = optimisticIndex ?? progressIndex ?? null;
 
     if (targetIndex === null) return preferredRisk;
-    if (extractRiskIndex(preferredRisk) === targetIndex) return preferredRisk;
+    if (extractRiskIndex(preferredRisk) === targetIndex) {
+        return buildRiskAtIndex(targetIndex, preferredRisk) ?? preferredRisk;
+    }
     if (matchesTargetRisk(fallbackRisk, targetIndex)) return buildRiskAtIndex(targetIndex, fallbackRisk);
     if (matchesTargetRisk(fetchedRisk, targetIndex)) return buildRiskAtIndex(targetIndex, fetchedRisk);
 
@@ -184,13 +301,28 @@ export const useSurveyStore = create<SurveyStoreState>()((set, get) => ({
                 surveyService.getMyProgressOrNull(respondent.id),
                 surveyService.getMyRiskOrNull(),
             ]);
-            const resolvedProgress = resolveProgressState(progress, existingProgress);
+            const resolvedProgress = resolveProgressState(progress ?? deriveProgressFromRisk(currentRisk), existingProgress);
+            const progressWithItems = resolvedProgress?.items
+                ? resolvedProgress
+                : currentRisk?.items
+                    ? ({ ...(resolvedProgress ?? {}), items: currentRisk.items } as SurveyProgress)
+                    : resolvedProgress;
+            const resumeRiskIndex = getResumeRiskIndex(currentRisk, progressWithItems);
+            const baseCurrentRisk = resolveRiskForIndex(
+                currentRisk,
+                currentRisk,
+                progressWithItems,
+                typeof progressWithItems?.current_risk === "number" ? progressWithItems.current_risk : null,
+            );
+            const resolvedCurrentRisk = resumeRiskIndex === null
+                ? baseCurrentRisk
+                : buildRiskAtIndex(resumeRiskIndex, currentRisk ?? baseCurrentRisk) ?? baseCurrentRisk;
 
             set({
                 currentRespondent: respondent,
-                progress: resolvedProgress,
-                currentRisk,
-                nextStep: extractNextStep(currentRisk ?? resolvedProgress) ?? get().nextStep,
+                progress: progressWithItems,
+                currentRisk: resolvedCurrentRisk,
+                nextStep: extractNextStep(resolvedCurrentRisk ?? progressWithItems) ?? get().nextStep,
                 loading: false,
             });
 
@@ -235,18 +367,33 @@ export const useSurveyStore = create<SurveyStoreState>()((set, get) => ({
                 surveyService.getMyProgressOrNull(respondenId),
                 surveyService.getMyRiskOrNull(),
             ]);
-            const resolvedProgress = resolveProgressState(progress, existingProgress);
+            const resolvedProgress = resolveProgressState(progress ?? deriveProgressFromRisk(currentRisk), existingProgress);
+            const progressWithItems = resolvedProgress?.items
+                ? resolvedProgress
+                : currentRisk?.items
+                    ? ({ ...(resolvedProgress ?? {}), items: currentRisk.items } as SurveyProgress)
+                    : resolvedProgress;
+            const resumeRiskIndex = getResumeRiskIndex(currentRisk, progressWithItems);
+            const baseCurrentRisk = resolveRiskForIndex(
+                currentRisk,
+                currentRisk,
+                progressWithItems,
+                typeof progressWithItems?.current_risk === "number" ? progressWithItems.current_risk : null,
+            );
+            const resolvedCurrentRisk = resumeRiskIndex === null
+                ? baseCurrentRisk
+                : buildRiskAtIndex(resumeRiskIndex, currentRisk ?? baseCurrentRisk) ?? baseCurrentRisk;
 
             set({
-                progress: resolvedProgress,
-                currentRisk,
-                nextStep: extractNextStep(currentRisk ?? resolvedProgress) ?? get().nextStep,
+                progress: progressWithItems,
+                currentRisk: resolvedCurrentRisk,
+                nextStep: extractNextStep(resolvedCurrentRisk ?? progressWithItems) ?? get().nextStep,
                 loading: false,
             });
 
             return {
                 success: true,
-                data: { progress, currentRisk },
+                data: { progress: progressWithItems, currentRisk: resolvedCurrentRisk },
             };
         } catch (error: unknown) {
             const message = error instanceof Error ? error.message : "Gagal memuat progress survei";
@@ -281,6 +428,29 @@ export const useSurveyStore = create<SurveyStoreState>()((set, get) => ({
             return { success: true, data: result };
         } catch (error: unknown) {
             const message = error instanceof Error ? error.message : "Gagal menyimpan jawaban survei";
+            set({ saving: false, error: message });
+            return { success: false, error: message };
+        }
+    },
+
+    saveRiskDraft: async (payload) => {
+        set({ saving: true, error: null });
+        try {
+            const result = await surveyService.saveRiskDraft(payload);
+            const progress = await surveyService.getMyProgressOrNull(payload.responden_id);
+            const fetchedRisk = await surveyService.getMyRiskOrNull();
+            const currentRisk = resolveRiskForIndex(fetchedRisk, result as SurveyRiskResponse, progress, payload.current_risk);
+
+            set({
+                progress,
+                currentRisk,
+                nextStep: extractNextStep(result ?? currentRisk ?? progress) ?? get().nextStep,
+                saving: false,
+            });
+
+            return { success: true, data: result };
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : "Gagal menyimpan draft survei";
             set({ saving: false, error: message });
             return { success: false, error: message };
         }
