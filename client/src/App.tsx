@@ -65,7 +65,7 @@ const router = createBrowserRouter([
   { path: "/blog", element: <Blogs /> },
   { path: "/blog/:slug", element: <BlogArticle /> },
   { path: "/events", element: <Events /> },
-  { path: "/events/:eventId", element: <EventDetail /> },
+  { path: "/events/:eventSlug", element: <EventDetail /> },
   {
     path: "/onboarding-perusahaan",
     element: (
