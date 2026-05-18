@@ -120,6 +120,12 @@ export interface SurveyRiskResponse {
     [key: string]: unknown;
 }
 
+export interface SurveyRiskCatalogItem {
+    id: number;
+    nama_risiko: string;
+    deskripsi: string;
+}
+
 export interface SaveSurveyRiskStepPayload {
     responden_id: number;
     current_risk: number;

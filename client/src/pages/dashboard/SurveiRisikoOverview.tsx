@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { RequireCompanyProfile } from "@/components/RequireCompanyProfile";
 import { PageHeader } from "@/components/dashboard/PageHeader";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useCompanyProfile } from "@/hooks/useCompanyProfile";
 import { useUser } from "@/hooks/useAuth";
 import { useSurveyStore } from "@/stores/survey.store";
@@ -38,7 +39,7 @@ function getSurveyStatusLabel(
 export default function SurveiRisikoOverview() {
     const navigate = useNavigate();
     const { data: user } = useUser();
-    const { perusahaan } = useCompanyProfile(user ?? null);
+    const { perusahaan, isResolvingPerusahaan } = useCompanyProfile(user ?? null);
     const fetchCurrentRespondent = useSurveyStore((state) => state.fetchCurrentRespondent);
     const currentRespondent = useSurveyStore((state) => state.currentRespondent);
     const progress = useSurveyStore((state) => state.progress);
@@ -91,21 +92,29 @@ export default function SurveiRisikoOverview() {
                 ? `Tahap berikutnya yang terdeteksi: ${nextStep}.`
                 : "Lanjutkan ke risiko berikutnya sesuai progres terakhir yang tersimpan.";
 
+    const isRespondentLoading = loading && !currentRespondent;
+    const isSurveyStatusLoading = loading && hasRespondent && !progress;
+    const instansiValue = currentRespondent?.nama_perusahaan || perusahaan?.nama_perusahaan || null;
+    const isInstansiLoading = !instansiValue && (loading || isResolvingPerusahaan);
+
     const summaryItems = [
         {
             label: "Status Responden",
-            value: hasRespondent ? "Sudah tersedia" : loading ? "Memuat data..." : "Belum tersedia",
+            value: hasRespondent ? "Sudah tersedia" : "Belum tersedia",
             icon: UserRound,
+            loading: isRespondentLoading,
         },
         {
             label: "Status Survei",
             value: surveyStatus,
             icon: surveyCompleted ? CheckCircle2 : Clock3,
+            loading: isSurveyStatusLoading,
         },
         {
             label: "Instansi",
-            value: currentRespondent?.nama_perusahaan || perusahaan?.nama_perusahaan || "Belum tersedia",
+            value: instansiValue || "Belum tersedia",
             icon: ShieldCheck,
+            loading: isInstansiLoading,
         },
     ];
 
@@ -215,9 +224,13 @@ export default function SurveiRisikoOverview() {
                                                     <p className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--dashboard-text-muted)" }}>
                                                         {item.label}
                                                     </p>
-                                                    <p className="mt-1 text-sm font-semibold" style={{ color: "var(--dashboard-text)" }}>
-                                                        {item.value}
-                                                    </p>
+                                                    {item.loading ? (
+                                                        <Skeleton className="mt-2 h-5 w-32 rounded-lg" />
+                                                    ) : (
+                                                        <p className="mt-1 text-sm font-semibold" style={{ color: "var(--dashboard-text)" }}>
+                                                            {item.value}
+                                                        </p>
+                                                    )}
                                                 </div>
                                             </div>
                                         );

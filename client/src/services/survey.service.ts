@@ -4,6 +4,7 @@ import type {
     SaveSurveyRiskStepPayload,
     SaveSurveyRiskDraftPayload,
     SurveyCustomRiskPayload,
+    SurveyRiskCatalogItem,
     SurveyProgress,
     SurveyRespondent,
     SurveyRiskControlPayload,
@@ -67,6 +68,28 @@ function normalizeOne<T>(res: unknown): T {
         return (data ?? {}) as T;
     }
     return (res ?? {}) as T;
+}
+
+function normalizeRiskCatalogItem(item: unknown): SurveyRiskCatalogItem | null {
+    const record = asRecord(item);
+    if (!record) return null;
+
+    const id = readNumber(record.id, record.risiko_id, record.risk_id);
+    const nama_risiko = readString(
+        record.nama_risiko,
+        record.namaRisiko,
+        record.judul,
+        record.title,
+    );
+    const deskripsi = readString(record.deskripsi, record.description);
+
+    if (typeof id !== "number" || !nama_risiko || !deskripsi) return null;
+
+    return {
+        id,
+        nama_risiko,
+        deskripsi,
+    };
 }
 
 function normalizeDirection(direction?: string): "next" | "prev" {
@@ -398,6 +421,19 @@ function normalizeSurveyProgress(res: unknown): SurveyProgress | null {
 }
 
 export const surveyService = {
+    async getRiskCatalog(): Promise<SurveyRiskCatalogItem[]> {
+        try {
+            const res = await apiClient.get<unknown>("/api/survey/risiko");
+            const items = normalizeList<unknown>(res)
+                .map((item) => normalizeRiskCatalogItem(item))
+                .filter((item): item is SurveyRiskCatalogItem => Boolean(item));
+
+            return items.length > 0 ? items : STATIC_SURVEY_RISKS;
+        } catch {
+            return STATIC_SURVEY_RISKS;
+        }
+    },
+
     async getRespondents(): Promise<SurveyRespondent[]> {
         const res = await apiClient.get<unknown>("/api/survey/responden");
         return normalizeList<unknown>(res).map((item) => normalizeRespondent(item));

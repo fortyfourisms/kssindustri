@@ -6,6 +6,7 @@ import type {
     SaveSurveyRiskStepPayload,
     SurveyProgress,
     SurveyRespondent,
+    SurveyRiskCatalogItem,
     SurveyRiskResponse,
     UpsertSurveyRespondentPayload,
 } from "@/types/survey.types";
@@ -19,6 +20,7 @@ interface ActionResult<T = unknown> {
 
 interface SurveyStoreState {
     respondents: SurveyRespondent[];
+    riskCatalog: SurveyRiskCatalogItem[];
     currentRespondent: SurveyRespondent | null;
     progress: SurveyProgress | null;
     currentRisk: SurveyRiskResponse | null;
@@ -27,6 +29,7 @@ interface SurveyStoreState {
     saving: boolean;
     error: string | null;
     fetchRespondents: () => Promise<void>;
+    fetchRiskCatalog: () => Promise<void>;
     hydrateByUserId: (userId?: number | string | null) => Promise<ActionResult<SurveyRespondent>>;
     fetchCurrentRespondent: (userId?: number | string | null) => Promise<ActionResult<SurveyRespondent>>;
     saveRespondent: (payload: UpsertSurveyRespondentPayload, existingId?: number | string | null) => Promise<ActionResult<SurveyRespondent>>;
@@ -40,6 +43,7 @@ interface SurveyStoreState {
 
 const initialState = {
     respondents: [] as SurveyRespondent[],
+    riskCatalog: STATIC_SURVEY_RISKS as SurveyRiskCatalogItem[],
     currentRespondent: null as SurveyRespondent | null,
     progress: null as SurveyProgress | null,
     currentRisk: null as SurveyRiskResponse | null,
@@ -282,12 +286,23 @@ export const useSurveyStore = create<SurveyStoreState>()((set, get) => ({
         }
     },
 
+    fetchRiskCatalog: async () => {
+        try {
+            const riskCatalog = await surveyService.getRiskCatalog();
+            set({ riskCatalog: riskCatalog.length > 0 ? riskCatalog : STATIC_SURVEY_RISKS });
+        } catch {
+            set({ riskCatalog: STATIC_SURVEY_RISKS });
+        }
+    },
+
     fetchCurrentRespondent: async (userId) => {
         set({ loading: true, error: null });
         try {
             const existingProgress = get().progress;
+            const riskCatalogPromise = get().fetchRiskCatalog();
             const respondent = await surveyService.getMyRespondentOrNull(userId);
             if (!respondent) {
+                await riskCatalogPromise;
                 set({ currentRespondent: null, progress: null, currentRisk: null, nextStep: null, loading: false });
                 return { success: false, error: "Responden survei belum ditemukan", reason: "not_found" };
             }
@@ -300,6 +315,7 @@ export const useSurveyStore = create<SurveyStoreState>()((set, get) => ({
             const [progress, currentRisk] = await Promise.all([
                 surveyService.getMyProgressOrNull(respondent.id),
                 surveyService.getMyRiskOrNull(),
+                riskCatalogPromise,
             ]);
             const resolvedProgress = resolveProgressState(progress ?? deriveProgressFromRisk(currentRisk), existingProgress);
             const progressWithItems = resolvedProgress?.items
@@ -363,9 +379,11 @@ export const useSurveyStore = create<SurveyStoreState>()((set, get) => ({
         set({ loading: true, error: null });
         try {
             const existingProgress = get().progress;
+            const riskCatalogPromise = get().fetchRiskCatalog();
             const [progress, currentRisk] = await Promise.all([
                 surveyService.getMyProgressOrNull(respondenId),
                 surveyService.getMyRiskOrNull(),
+                riskCatalogPromise,
             ]);
             const resolvedProgress = resolveProgressState(progress ?? deriveProgressFromRisk(currentRisk), existingProgress);
             const progressWithItems = resolvedProgress?.items

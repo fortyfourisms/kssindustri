@@ -8,8 +8,7 @@ import { useCompanyProfile } from "@/hooks/useCompanyProfile";
 import { useSurveyStore } from "@/stores/survey.store";
 import { useToast } from "@/hooks/use-toast";
 import { PageHeader } from "@/components/dashboard/PageHeader";
-import { STATIC_SURVEY_RISKS } from "@/data/survey-static";
-import type { SurveyRiskResponse, SurveyScaleValue, UpsertSurveyRespondentPayload } from "@/types/survey.types";
+import type { SurveyRiskCatalogItem, SurveyRiskResponse, SurveyScaleValue, UpsertSurveyRespondentPayload } from "@/types/survey.types";
 
 const INPUT_CLS = "dashboard-input w-full rounded-xl border px-4 py-3 text-sm transition-all duration-300";
 const LABEL_CLS = "dashboard-label mb-2 block text-sm font-semibold tracking-wide";
@@ -191,8 +190,12 @@ function buildAnswersFromRisk(
     };
 }
 
-function hasNextRisk(risk: SurveyRiskResponse | null, progress: Record<string, any> | null): boolean {
-    const totalRisks = getTotalRiskCount(risk, progress);
+function hasNextRisk(
+    risk: SurveyRiskResponse | null,
+    progress: Record<string, any> | null,
+    riskCatalog: SurveyRiskCatalogItem[],
+): boolean {
+    const totalRisks = getTotalRiskCount(risk, progress, riskCatalog);
     const currentRiskIndex = getCurrentRiskIndex(risk, progress);
 
     if (typeof totalRisks === "number" && totalRisks > 0 && currentRiskIndex >= totalRisks - 1) {
@@ -235,16 +238,24 @@ function getCurrentRiskIndex(risk: SurveyRiskResponse | null, progress: Record<s
     return 0;
 }
 
-function getTotalRiskCount(risk: SurveyRiskResponse | null, progress: Record<string, any> | null): number | undefined {
+function getTotalRiskCount(
+    risk: SurveyRiskResponse | null,
+    progress: Record<string, any> | null,
+    riskCatalog: SurveyRiskCatalogItem[],
+): number | undefined {
     if (typeof risk?.total_risks === "number") return risk.total_risks;
     if (typeof progress?.total_risks === "number") return progress.total_risks;
     if (typeof progress?.total_steps === "number") return progress.total_steps;
-    return STATIC_SURVEY_RISKS.length || undefined;
+    return riskCatalog.length || undefined;
 }
 
-function getDisplayRiskNumber(risk: SurveyRiskResponse | null, progress: Record<string, any> | null): number {
+function getDisplayRiskNumber(
+    risk: SurveyRiskResponse | null,
+    progress: Record<string, any> | null,
+    riskCatalog: SurveyRiskCatalogItem[],
+): number {
     const currentRiskNumber = getCurrentRiskIndex(risk, progress) + 1;
-    const totalRiskCount = getTotalRiskCount(risk, progress);
+    const totalRiskCount = getTotalRiskCount(risk, progress, riskCatalog);
 
     if (typeof totalRiskCount === "number" && totalRiskCount > 0) {
         return Math.min(currentRiskNumber, totalRiskCount);
@@ -253,13 +264,17 @@ function getDisplayRiskNumber(risk: SurveyRiskResponse | null, progress: Record<
     return currentRiskNumber;
 }
 
-function getStaticRiskFallback(risk: SurveyRiskResponse | null, progress: Record<string, any> | null): SurveyRiskResponse | null {
+function getStaticRiskFallback(
+    risk: SurveyRiskResponse | null,
+    progress: Record<string, any> | null,
+    riskCatalog: SurveyRiskCatalogItem[],
+): SurveyRiskResponse | null {
     const resolvedRiskId = getRiskId(risk);
     const riskById = typeof resolvedRiskId === "number"
-        ? STATIC_SURVEY_RISKS.find((item) => item.id === resolvedRiskId)
+        ? riskCatalog.find((item) => item.id === resolvedRiskId)
         : undefined;
     const currentRiskIndex = getCurrentRiskIndex(risk, progress);
-    const riskByIndex = STATIC_SURVEY_RISKS[currentRiskIndex];
+    const riskByIndex = riskCatalog[currentRiskIndex];
     const fallback = riskById ?? riskByIndex;
 
     if (!fallback) return null;
@@ -271,14 +286,18 @@ function getStaticRiskFallback(risk: SurveyRiskResponse | null, progress: Record
             ? progress.total_risks
             : typeof progress?.total_steps === "number"
                 ? progress.total_steps
-                : STATIC_SURVEY_RISKS.length,
+                : riskCatalog.length,
         nama_risiko: fallback.nama_risiko,
         deskripsi: fallback.deskripsi,
     };
 }
 
-function getResolvedRisk(risk: SurveyRiskResponse | null, progress: Record<string, any> | null): SurveyRiskResponse | null {
-    const fallback = getStaticRiskFallback(risk, progress);
+function getResolvedRisk(
+    risk: SurveyRiskResponse | null,
+    progress: Record<string, any> | null,
+    riskCatalog: SurveyRiskCatalogItem[],
+): SurveyRiskResponse | null {
+    const fallback = getStaticRiskFallback(risk, progress, riskCatalog);
     if (!risk) return fallback;
     return {
         ...fallback,
@@ -306,6 +325,7 @@ export default function SurveiProfil() {
     const { perusahaanId, perusahaan } = useCompanyProfile(user ?? null);
     const { toast } = useToast();
     const currentRespondent = useSurveyStore((state) => state.currentRespondent);
+    const riskCatalog = useSurveyStore((state) => state.riskCatalog);
     const currentRisk = useSurveyStore((state) => state.currentRisk);
     const progressState = useSurveyStore((state) => state.progress);
     const nextStep = useSurveyStore((state) => state.nextStep);
@@ -314,6 +334,7 @@ export default function SurveiProfil() {
     const saveRespondent = useSurveyStore((state) => state.saveRespondent);
     const loadSurveyContext = useSurveyStore((state) => state.loadSurveyContext);
     const fetchCurrentRespondent = useSurveyStore((state) => state.fetchCurrentRespondent);
+    const fetchRiskCatalog = useSurveyStore((state) => state.fetchRiskCatalog);
     const saveRiskStep = useSurveyStore((state) => state.saveRiskStep);
     const saveRiskDraft = useSurveyStore((state) => state.saveRiskDraft);
     const navigateRisk = useSurveyStore((state) => state.navigateRisk);
@@ -328,14 +349,21 @@ export default function SurveiProfil() {
     const activeProgress = progressState;
     const isLoadingMode = loading;
     const progressRecord = activeProgress as Record<string, any> | null;
-    const resolvedRisk = useMemo(() => getResolvedRisk(activeRisk, progressRecord), [activeRisk, progressRecord]);
+    const resolvedRisk = useMemo(
+        () => getResolvedRisk(activeRisk, progressRecord, riskCatalog),
+        [activeRisk, progressRecord, riskCatalog],
+    );
     const snapshotKey = useMemo(() => getRiskSnapshotKey(resolvedRisk, progressRecord), [resolvedRisk, progressRecord]);
     const persistedSnapshot = snapshotKey ? savedRiskAnswersRef.current[snapshotKey] ?? null : null;
-    const currentRiskNumber = useMemo(() => getDisplayRiskNumber(resolvedRisk, progressRecord), [resolvedRisk, progressRecord]);
+    const currentRiskNumber = useMemo(
+        () => getDisplayRiskNumber(resolvedRisk, progressRecord, riskCatalog),
+        [resolvedRisk, progressRecord, riskCatalog],
+    );
 
     useEffect(() => {
+        void fetchRiskCatalog();
         void fetchCurrentRespondent();
-    }, [fetchCurrentRespondent]);
+    }, [fetchCurrentRespondent, fetchRiskCatalog]);
 
     useEffect(() => {
         return () => {
@@ -808,7 +836,7 @@ export default function SurveiProfil() {
         ? resolvedRisk.deskripsi
         : DEFAULT_RISK_DESCRIPTION;
     const isRiskUnavailable = step === 1 && !isLoadingMode && !isFinished && !resolvedRisk;
-    const totalRiskCount = getTotalRiskCount(resolvedRisk, activeProgress as Record<string, any> | null);
+    const totalRiskCount = getTotalRiskCount(resolvedRisk, activeProgress as Record<string, any> | null, riskCatalog);
     const answeredRiskCount = Array.isArray(activeProgress?.items)
         ? activeProgress.items.filter((item) => hasPersistedRiskAnswer(item as SurveyRiskResponse)).length
         : Array.isArray(resolvedRisk?.items)
@@ -821,16 +849,18 @@ export default function SurveiProfil() {
             : typeof totalRiskCount === "number" && totalRiskCount > 0
                 ? Math.round((currentRiskNumber / totalRiskCount) * 100)
             : Math.round((answeredFields / totalFields) * 100);
+    const isLastRisk = step === 1 && !hasNextRisk(resolvedRisk, activeProgress as Record<string, any> | null, riskCatalog);
     const nextLabel = step === 0
         ? "Simpan & Lanjut"
         : isFinished
             ? "Survei Selesai"
             : isRiskAlreadySaved
-                ? (hasNextRisk(resolvedRisk, activeProgress as Record<string, any> | null) ? "Berikutnya" : "Selesai")
-            : hasNextRisk(resolvedRisk, activeProgress as Record<string, any> | null)
-                ? "Simpan & Berikutnya"
-                : "Simpan & Selesaikan";
+                ? (isLastRisk ? "Selesai" : "Berikutnya")
+            : isLastRisk
+                ? "Simpan & Selesaikan"
+                : "Simpan & Berikutnya";
     const draftButtonDisabled = saving || isLoadingMode || isFinished || step !== 1 || isRiskUnavailable || !isStep1Valid;
+    const finishButtonDisabled = saving || isLoadingMode || isFinished || step !== 1 || isRiskUnavailable || !isStep1Valid;
     const pageTitle = "Survei Profil Risiko";
     const nextStepLabel = typeof nextStep === "string" && nextStep.trim() ? nextStep.trim() : null;
     const pageSubtitle = step === 0
@@ -1330,24 +1360,34 @@ export default function SurveiProfil() {
                             {step === 1 ? (
                                 <button
                                     type="button"
-                                    onClick={() => { void handleSaveDraftAndExit(); }}
-                                    disabled={draftButtonDisabled}
+                                    onClick={() => {
+                                        if (isLastRisk) {
+                                            void handleNext();
+                                            return;
+                                        }
+                                        void handleSaveDraftAndExit();
+                                    }}
+                                    disabled={isLastRisk ? finishButtonDisabled : draftButtonDisabled}
                                     className={`${WARNING_BUTTON_CLS} w-full gap-2 sm:w-auto`}
                                 >
-                                    {activeSubmitAction === "draft" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                                    Simpan Sementara
+                                    {activeSubmitAction === "draft" || (isLastRisk && activeSubmitAction === "next")
+                                        ? <Loader2 className="w-4 h-4 animate-spin" />
+                                        : <Save className="w-4 h-4" />}
+                                    {isLastRisk ? "Selesaikan" : "Simpan Sementara"}
                                 </button>
                             ) : null}
                             
-                            <button
-                                onClick={() => { void handleNext(); }}
-                                disabled={saving || isLoadingMode || isFinished || (step === 0 ? !isStep0Valid : !isStep1Valid || isRiskUnavailable)}
-                                className={`${PRIMARY_BUTTON_CLS} group w-full cursor-pointer sm:w-auto`}
-                            >
-                                {activeSubmitAction === "next" ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                                {nextLabel}
-                                {activeSubmitAction !== "next" ? <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" /> : null}
-                            </button>
+                            {!isLastRisk ? (
+                                <button
+                                    onClick={() => { void handleNext(); }}
+                                    disabled={saving || isLoadingMode || isFinished || (step === 0 ? !isStep0Valid : !isStep1Valid || isRiskUnavailable)}
+                                    className={`${PRIMARY_BUTTON_CLS} group w-full cursor-pointer sm:w-auto`}
+                                >
+                                    {activeSubmitAction === "next" ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                                    {nextLabel}
+                                    {activeSubmitAction !== "next" ? <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" /> : null}
+                                </button>
+                            ) : null}
                         </motion.div>
                     )}
                     </div>
