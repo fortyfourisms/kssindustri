@@ -18,10 +18,10 @@ function formatDate(value: string) {
 }
 
 export default function EventDetail() {
-  const { eventId } = useParams();
-  const { data: event, isLoading, isError } = useEventDetail(eventId);
+  const { eventSlug } = useParams();
+  const { data: event, isLoading, isError } = useEventDetail(eventSlug);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  useScrollToTop(eventId);
+  useScrollToTop(eventSlug);
 
   useEffect(() => {
     if (event?.status === "past" && isModalOpen) {

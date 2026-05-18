@@ -16,11 +16,11 @@ export function useUpcomingEvents() {
   });
 }
 
-export function useEventDetail(eventId?: string) {
+export function useEventDetail(eventSlug?: string) {
   return useQuery({
-    queryKey: ["events", "detail", eventId],
-    queryFn: () => eventsService.getEventDetail(eventId || ""),
-    enabled: Boolean(eventId),
+    queryKey: ["events", "detail", eventSlug],
+    queryFn: () => eventsService.getEventDetail(eventSlug || ""),
+    enabled: Boolean(eventSlug),
   });
 }
 

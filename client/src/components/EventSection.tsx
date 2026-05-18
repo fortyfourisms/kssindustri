@@ -23,7 +23,7 @@ function EventPreviewCard({
   showAction: boolean;
 }) {
   const navigate = useNavigate();
-  const targetUrl = `/events/${event.id}`;
+  const targetUrl = `/events/${event.slug}`;
 
   const handleOpenDetail = () => {
     navigate(targetUrl);

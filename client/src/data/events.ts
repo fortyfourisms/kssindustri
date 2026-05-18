@@ -10,6 +10,7 @@ export const industrySectorOptions = [
 export const eventItems: EventItem[] = [
   {
     id: "fortyfour-cyber-workshop-2026",
+    slug: "fortyfour-cyber-workshop-2026",
     title: "FortyFour Cyber Readiness Workshop 2026",
     shortDescription: "Workshop intensif untuk menyusun baseline kesiapan siber dan peta aksi 90 hari.",
     fullDescription:
@@ -22,6 +23,7 @@ export const eventItems: EventItem[] = [
   },
   {
     id: "tabletop-incident-drill-q2",
+    slug: "tabletop-incident-drill-q2",
     title: "Tabletop Incident Drill Q2",
     shortDescription: "Simulasi tabletop untuk memperkuat koordinasi respons insiden lintas fungsi.",
     fullDescription:
@@ -34,6 +36,7 @@ export const eventItems: EventItem[] = [
   },
   {
     id: "sectoral-ransomware-defense-briefing",
+    slug: "sectoral-ransomware-defense-briefing",
     title: "Sectoral Ransomware Defense Briefing",
     shortDescription: "Briefing strategis mengenai pola serangan dan penguatan kontrol pertahanan prioritas.",
     fullDescription:
@@ -46,6 +49,7 @@ export const eventItems: EventItem[] = [
   },
   {
     id: "ikas-readout-2025",
+    slug: "ikas-readout-2025",
     title: "IKAS Readout 2025",
     shortDescription: "Rangkuman temuan umum pengukuran maturitas dan peluang peningkatan per domain.",
     fullDescription:
@@ -58,6 +62,7 @@ export const eventItems: EventItem[] = [
   },
   {
     id: "secure-supply-chain-forum",
+    slug: "secure-supply-chain-forum",
     title: "Secure Supply Chain Forum",
     shortDescription: "Forum diskusi praktik mitigasi risiko pada vendor dan rantai pasok digital.",
     fullDescription:
@@ -70,6 +75,7 @@ export const eventItems: EventItem[] = [
   },
   {
     id: "csirt-collaboration-session",
+    slug: "csirt-collaboration-session",
     title: "CSIRT Collaboration Session",
     shortDescription: "Pertemuan kolaboratif antar praktisi untuk berbagi pola koordinasi penanganan insiden.",
     fullDescription:

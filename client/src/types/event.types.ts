@@ -6,6 +6,7 @@ export type EventApiItem = {
   id: number | string;
   judul?: string;
   lokasi?: string;
+  slug?: string;
   status?: string;
   tanggal?: string;
   updated_at?: string;
@@ -14,6 +15,7 @@ export type EventApiItem = {
 export type EventItem = {
   id: string;
   numericId?: number;
+  slug: string;
   title: string;
   shortDescription: string;
   fullDescription: string;

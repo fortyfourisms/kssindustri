@@ -21,14 +21,14 @@ export default function Events() {
   const { data, isLoading, isError } = useUpcomingEvents();
   useScrollToTop();
 
-  const handleOpenDetail = (eventId: string) => {
-    navigate(`/events/${eventId}`);
+  const handleOpenDetail = (eventSlug: string) => {
+    navigate(`/events/${eventSlug}`);
   };
 
-  const handleCardKeyDown = (eventKey: React.KeyboardEvent<HTMLElement>, eventId: string) => {
+  const handleCardKeyDown = (eventKey: React.KeyboardEvent<HTMLElement>, eventSlug: string) => {
     if (eventKey.key === "Enter" || eventKey.key === " ") {
       eventKey.preventDefault();
-      handleOpenDetail(eventId);
+      handleOpenDetail(eventSlug);
     }
   };
 
@@ -96,8 +96,8 @@ export default function Events() {
                     key={event.id}
                     role="link"
                     tabIndex={0}
-                    onClick={() => handleOpenDetail(event.id)}
-                    onKeyDown={(eventKey) => handleCardKeyDown(eventKey, event.id)}
+                    onClick={() => handleOpenDetail(event.slug)}
+                    onKeyDown={(eventKey) => handleCardKeyDown(eventKey, event.slug)}
                     className="group relative cursor-pointer overflow-hidden rounded-[2rem] border border-white/60 bg-white/90 p-6 shadow-[0_20px_80px_rgba(31,60,136,0.10)] backdrop-blur-sm transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_28px_100px_rgba(31,60,136,0.16)] focus:outline-none focus:ring-2 focus:ring-[#0061ff]/30 focus:ring-offset-2"
                   >
                     <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(96,239,255,0.12),transparent_42%)] opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
@@ -127,7 +127,7 @@ export default function Events() {
 
                       <div className="mt-8">
                         <button
-                          onClick={() => handleOpenDetail(event.id)}
+                          onClick={() => handleOpenDetail(event.slug)}
                           className="inline-flex items-center gap-2 rounded-full bg-[#0061ff] px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-blue-500/20 transition hover:bg-blue-700"
                         >
                           Join Event
