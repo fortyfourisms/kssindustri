@@ -18,6 +18,7 @@ interface GuidedTourProps {
     steps: GuidedTourStep[];
     storageKey: string;
     enabled?: boolean;
+    openSignal?: number;
     onFinish?: () => void;
 }
 
@@ -41,13 +42,14 @@ function getTargetElement(step: GuidedTourStep) {
     return document.querySelector(step.target) as HTMLElement | null;
 }
 
-export function GuidedTour({ steps, storageKey, enabled = true, onFinish }: GuidedTourProps) {
+export function GuidedTour({ steps, storageKey, enabled = true, openSignal = 0, onFinish }: GuidedTourProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [currentStepIndex, setCurrentStepIndex] = useState(0);
     const [targetRect, setTargetRect] = useState<RectBox | null>(null);
     const [mounted, setMounted] = useState(false);
     const tooltipRef = useRef<HTMLDivElement | null>(null);
     const hasCheckedStorageRef = useRef(false);
+    const lastOpenSignalRef = useRef(openSignal);
 
     const currentStep = steps[currentStepIndex];
     const totalSteps = steps.length;
@@ -103,6 +105,15 @@ export function GuidedTour({ steps, storageKey, enabled = true, onFinish }: Guid
             setIsOpen(true);
         }
     }, [enabled, storageKey]);
+
+    useEffect(() => {
+        if (!enabled) return;
+        if (openSignal === lastOpenSignalRef.current) return;
+
+        lastOpenSignalRef.current = openSignal;
+        setCurrentStepIndex(0);
+        setIsOpen(true);
+    }, [enabled, openSignal]);
 
     useEffect(() => {
         if (!isOpen || !currentStep || !currentStep.target || currentStep.placement === "center") return;
@@ -250,7 +261,7 @@ export function GuidedTour({ steps, storageKey, enabled = true, onFinish }: Guid
         <AnimatePresence>
             <div className="fixed inset-0 z-[140]">
                 <motion.div
-                    className="absolute inset-0 bg-slate-950/72 backdrop-blur-[2px]"
+                    className="absolute inset-0 bg-slate-950/72"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
@@ -258,7 +269,7 @@ export function GuidedTour({ steps, storageKey, enabled = true, onFinish }: Guid
 
                 {spotlightRect ? (
                     <motion.div
-                        className="pointer-events-none absolute rounded-[30px] bg-sky-400/10 blur-2xl"
+                        className="pointer-events-none absolute rounded-[30px] bg-sky-400/10"
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{
                             opacity: 1,

@@ -1,28 +1,28 @@
 import type { GuidedTourStep } from "@/components/tour/GuidedTour";
 
 export const LMS_DASHBOARD_TOUR_STEPS: GuidedTourStep[] = [
-    {
-        id: "sidebar",
-        target: '[data-tour-id="lms-sidebar-home"]',
-        title: "Navigasi Utama",
-        description:
-            "Di sini Anda dapat berpindah antar halaman seperti kelas, progress belajar, dan pengaturan akun.",
-        placement: "right",
+   {
+    id: "sidebar",
+    target: '[data-tour-id="lms-sidebar-home"]',
+    title: "Menu Navigasi",
+    description:
+        "Gunakan menu ini untuk berpindah ke halaman kelas, melihat progress belajar, atau mengatur akun Anda.",
+    placement: "right",
     },
     {
         id: "hero",
         target: '[data-tour-id="lms-dashboard-hero"]',
-        title: "Dashboard Belajar",
+        title: "Dashboard Utama",
         description:
-            "Ini adalah halaman utama untuk melihat kelas aktif dan rekomendasi pembelajaran Anda.",
+            "Ini adalah halaman utama Anda. Di sini Anda bisa melihat kelas yang sedang diikuti dan rekomendasi pembelajaran.",
         placement: "bottom",
     },
     {
         id: "categories",
         target: '[data-tour-id="lms-dashboard-categories"]',
-        title: "Filter Kategori Kelas",
+        title: "Filter Kategori",
         description:
-            "Gunakan filter ini untuk menampilkan kelas berdasarkan kategori tertentu.",
+            "Pilih kategori untuk menampilkan kelas sesuai minat atau kebutuhan belajar Anda.",
         placement: "bottom",
     },
     {
@@ -30,15 +30,15 @@ export const LMS_DASHBOARD_TOUR_STEPS: GuidedTourStep[] = [
         target: '[data-tour-id="lms-dashboard-course-card"]',
         title: "Kartu Kelas",
         description:
-            "Setiap kartu menampilkan jumlah materi, progres belajar, dan status kelas Anda.",
+            "Setiap kartu menampilkan ringkasan kelas seperti jumlah materi, progres belajar, dan status kelas.",
         placement: "bottom",
     },
     {
         id: "recommendation",
         target: '[data-tour-id="lms-dashboard-recommendation"]',
-        title: "Rekomendasi Kelas",
+        title: "Rekomendasi Untuk Anda",
         description:
-            "Kami merekomendasikan kelas berdasarkan aktivitas dan minat belajar Anda.",
+            "Kami menampilkan kelas yang mungkin cocok berdasarkan aktivitas belajar Anda.",
         placement: "left",
     },
     {
@@ -46,20 +46,20 @@ export const LMS_DASHBOARD_TOUR_STEPS: GuidedTourStep[] = [
         target: '[data-tour-id="lms-dashboard-progress"]',
         title: "Progress Belajar",
         description:
-            "Progress akan muncul setelah Anda mulai mempelajari kelas.",
+            "Progress akan terlihat setelah Anda mulai mengikuti kelas.",
         placement: "left",
     },
     {
         id: "table",
         target: '[data-tour-id="lms-dashboard-materials"]',
-        title: "Daftar Materi Anda",
+        title: "Daftar Kelas Anda",
         description:
-            "Di sini Anda dapat melihat semua kelas yang sedang Anda ikuti beserta progresnya.",
+            "Di sini Anda bisa melihat semua kelas yang sedang diikuti beserta progresnya.",
         placement: "top",
     },
     {
         id: "done",
-        title: "Anda Siap Belajar 🎉",
+        title: "Siap Mulai Belajar 🎉",
         description: "Sekarang Anda sudah mengenal dashboard. Yuk mulai belajar!",
         placement: "center",
         doneLabel: "Mulai Belajar",
