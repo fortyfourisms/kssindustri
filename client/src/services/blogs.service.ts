@@ -73,6 +73,11 @@ function normalizeTags(tags?: string[] | null) {
     .filter(Boolean);
 }
 
+function createLegacySlug(id: string, title: string) {
+  const baseSlug = slugify(title) || "berita";
+  return `${id}-${baseSlug}`;
+}
+
 function mapBlogItem(item: BlogApiItem): BlogItem {
   const title = item.judul?.trim() || "Berita tanpa judul";
   const descriptionHtml = toDescriptionHtml(item.deskripsi);
@@ -83,7 +88,7 @@ function mapBlogItem(item: BlogApiItem): BlogItem {
   return {
     id: String(item.id),
     numericId: Number.isFinite(numericId) ? numericId : undefined,
-    slug: `${String(item.id)}-${baseSlug}`,
+    slug: baseSlug,
     title,
     excerpt: toExcerpt(descriptionHtml),
     descriptionHtml,
@@ -98,10 +103,30 @@ function mapBlogItem(item: BlogApiItem): BlogItem {
   };
 }
 
+function ensureUniqueSlugs(items: BlogItem[]) {
+  const slugCount = new Map<string, number>();
+
+  return items.map((item) => {
+    const currentCount = slugCount.get(item.slug) ?? 0;
+    slugCount.set(item.slug, currentCount + 1);
+
+    if (currentCount === 0) {
+      return item;
+    }
+
+    return {
+      ...item,
+      slug: `${item.slug}-${currentCount + 1}`,
+    };
+  });
+}
+
 async function getAllBlogs() {
   const res = await apiClient.get<unknown>("/api/berita");
-  return normalizeList<BlogApiItem>(res)
-    .map(mapBlogItem)
+  return ensureUniqueSlugs(
+    normalizeList<BlogApiItem>(res)
+      .map(mapBlogItem)
+  )
     .sort((a, b) => {
       const dateA = new Date(a.createdAt || 0).getTime();
       const dateB = new Date(b.createdAt || 0).getTime();
@@ -116,7 +141,7 @@ export const blogsService = {
 
   async getBlogDetail(slug: string) {
     const blogs = await getAllBlogs();
-    const article = blogs.find((item) => item.slug === slug);
+    const article = blogs.find((item) => item.slug === slug || createLegacySlug(item.id, item.title) === slug);
 
     if (!article) {
       throw new Error("Berita tidak ditemukan.");
