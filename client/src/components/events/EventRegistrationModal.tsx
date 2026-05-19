@@ -4,13 +4,16 @@ import { TurnstileWidget, type TurnstileWidgetHandle } from "@/components/Turnst
 import { useToast } from "@/hooks/use-toast";
 import { useEventRegistration } from "@/hooks/useEvents";
 import { industrySectorOptions } from "@/data/events";
+import {
+  PHONE_NUMBER_MAX_LENGTH,
+  eventRegistrationSchema,
+  getPhoneDigits,
+} from "@/lib/form-validation";
 import type {
   EventItem,
   EventRegistrationPayload,
   EventRegistrationResult,
 } from "@/types/event.types";
-
-const PHONE_NUMBER_MAX_LENGTH = 15;
 
 const inputClassName =
   "w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30";
@@ -85,17 +88,17 @@ export function EventRegistrationModal({
   };
 
   const handlePhoneNumberChange = (value: string) => {
-    const digitsOnly = value.replace(/\D/g, "").slice(0, PHONE_NUMBER_MAX_LENGTH);
+    const digitsOnly = getPhoneDigits(value).slice(0, PHONE_NUMBER_MAX_LENGTH);
     handleChange("phoneNumber", digitsOnly);
   };
 
   const handleSubmit = async (eventForm: React.FormEvent) => {
     eventForm.preventDefault();
-
-    if (!/^\d{1,15}$/.test(form.phoneNumber)) {
+    const parsed = eventRegistrationSchema.safeParse(form);
+    if (!parsed.success) {
       setUiState({
         status: "error",
-        message: "Nomor HP harus berupa angka dan maksimal 15 karakter.",
+        message: parsed.error.issues[0]?.message || "Periksa kembali data registrasi.",
       });
       return;
     }
@@ -120,7 +123,7 @@ export function EventRegistrationModal({
 
     try {
       const result = await registrationMutation.mutateAsync({
-        ...form,
+        ...parsed.data,
         turnstileToken: turnstileToken || undefined,
       });
       setUiState({ status: "success", ticket: result });
@@ -207,7 +210,8 @@ export function EventRegistrationModal({
                     required
                     type="tel"
                     inputMode="numeric"
-                    pattern="[0-9]{1,15}"
+                    pattern="[0-9]{10,15}"
+                    minLength={10}
                     maxLength={PHONE_NUMBER_MAX_LENGTH}
                     value={form.phoneNumber}
                     onChange={(e) => handlePhoneNumberChange(e.target.value)}

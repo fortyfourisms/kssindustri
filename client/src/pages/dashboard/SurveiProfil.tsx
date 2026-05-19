@@ -8,6 +8,7 @@ import { useCompanyProfile } from "@/hooks/useCompanyProfile";
 import { useSurveyStore } from "@/stores/survey.store";
 import { useToast } from "@/hooks/use-toast";
 import { PageHeader } from "@/components/dashboard/PageHeader";
+import { surveyRespondentSchema } from "@/lib/form-validation";
 import type { SurveyRiskCatalogItem, SurveyRiskResponse, SurveyScaleValue, UpsertSurveyRespondentPayload } from "@/types/survey.types";
 
 const INPUT_CLS = "dashboard-input w-full rounded-xl border px-4 py-3 text-sm transition-all duration-300";
@@ -498,7 +499,24 @@ export default function SurveiProfil() {
         });
     };
 
-    const isStep0Valid = answers.responden_nama && answers.responden_jabatan && answers.responden_perusahaan && answers.responden_email && answers.responden_telepon && answers.responden_sektor;
+    const respondentValidation = surveyRespondentSchema.safeParse({
+        responden_nama: answers.responden_nama,
+        responden_jabatan: answers.responden_jabatan,
+        responden_perusahaan: answers.responden_perusahaan,
+        responden_email: answers.responden_email,
+        responden_telepon: answers.responden_telepon,
+        responden_sektor: answers.responden_sektor,
+        responden_sertifikat: answers.responden_sertifikat,
+    });
+    const respondentErrors = respondentValidation.success
+        ? {}
+        : Object.fromEntries(
+            respondentValidation.error.issues.map((issue) => [String(issue.path[0]), issue.message]),
+        ) as Record<string, string>;
+    const respondentErrorMessage = respondentValidation.success
+        ? null
+        : respondentValidation.error.issues[0]?.message || "Periksa kembali data responden.";
+    const isStep0Valid = respondentValidation.success;
     const isStep1Valid = answers.q1 === "tidak"
         ? Boolean(answers.q1_alasan?.trim())
         : Boolean(
@@ -536,7 +554,7 @@ export default function SurveiProfil() {
             return false;
         }
 
-        const shouldFinish = direction === "next" && !hasNextRisk(resolvedRisk, progressState as Record<string, any> | null);
+        const shouldFinish = direction === "next" && !hasNextRisk(resolvedRisk, progressState as Record<string, any> | null, riskCatalog);
         if (shouldSaveCurrentRisk) {
             const result = await saveRiskStep({
                 responden_id: currentRespondent.id,
@@ -649,13 +667,22 @@ export default function SurveiProfil() {
                     return;
                 }
 
+                if (!respondentValidation.success) {
+                    toast({
+                        title: "Data responden belum valid",
+                        description: respondentErrorMessage,
+                        variant: "destructive",
+                    });
+                    return;
+                }
+
                 const respondentPayload: UpsertSurveyRespondentPayload = {
                     id_perusahaan: resolvedPerusahaanId,
-                    nama_lengkap: answers.responden_nama,
-                    jabatan: answers.responden_jabatan,
-                    email: answers.responden_email,
-                    no_telepon: answers.responden_telepon,
-                    sertifikat_training: answers.responden_sertifikat || '',
+                    nama_lengkap: respondentValidation.data.responden_nama,
+                    jabatan: respondentValidation.data.responden_jabatan,
+                    email: respondentValidation.data.responden_email,
+                    no_telepon: respondentValidation.data.responden_telepon,
+                    sertifikat_training: respondentValidation.data.responden_sertifikat || '',
                 };
 
                 const respondentResult = await saveRespondent(respondentPayload, currentRespondent?.id);
@@ -976,6 +1003,9 @@ export default function SurveiProfil() {
                                             className={INPUT_CLS}
                                             placeholder="email@perusahaan.com"
                                         />
+                                        {respondentErrors.responden_email ? (
+                                            <p className="mt-2 text-xs text-[var(--dashboard-danger-soft-fg)]">{respondentErrors.responden_email}</p>
+                                        ) : null}
                                     </div>
 
                                     <div>
@@ -990,6 +1020,9 @@ export default function SurveiProfil() {
                                             className={INPUT_CLS}
                                             placeholder="081234567890"
                                         />
+                                        {respondentErrors.responden_telepon ? (
+                                            <p className="mt-2 text-xs text-[var(--dashboard-danger-soft-fg)]">{respondentErrors.responden_telepon}</p>
+                                        ) : null}
                                     </div>
 
                                     <div className="col-span-1 md:col-span-2 mt-2">
