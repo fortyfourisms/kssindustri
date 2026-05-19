@@ -137,3 +137,11 @@ export const csirtProfileSchema = z.object({
     telepon_csirt: phoneSchema,
     email_csirt: emailSchema,
 });
+
+export const csirtSdmSchema = z.object({
+    nama_personel: personNameSchema,
+    jabatan_csirt: positionSchema,
+    jabatan_perusahaan: positionSchema,
+    skill: normalizedString("Skill wajib diisi", 2, "Skill minimal 2 karakter", 120, "Skill maksimal 120 karakter"),
+    sertifikasi: z.string().trim().max(500, "Daftar sertifikasi maksimal 500 karakter").optional(),
+});

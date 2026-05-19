@@ -6,7 +6,7 @@ import ProgressBar from '@/components/assessment/ProgressBar';
 import PaginationControl from '@/components/assessment/PaginationControl';
 import { useToast } from '@/hooks/use-toast';
 import { ikasService } from '@/services/ikas.service';
-import type { DomainSlug } from '@/types/ikas.types';
+import type { DomainSlug, SaveJawabanPayload } from '@/types/ikas.types';
 import type { JawabanIdMap } from '@/hooks/useIkasAssessmentSetup';
 import { Skeleton, SkeletonForm, SkeletonText } from '@/components/ui/skeleton';
 
@@ -54,11 +54,7 @@ export default function AssessmentView({
   const persistAnswerWithThrottle = async (
     domainSlug: DomainSlug,
     existingJawabanId: number | null,
-    payload: {
-      ikas_id: string;
-      pertanyaan_id: number;
-      jawaban: number;
-    }
+    payload: SaveJawabanPayload
   ) => {
     const MAX_RETRIES = 4;
     let attempt = 0;

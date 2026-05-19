@@ -78,6 +78,10 @@ function createLegacySlug(id: string, title: string) {
   return `${id}-${baseSlug}`;
 }
 
+function findBlogBySlug(items: BlogItem[], slug: string) {
+  return items.find((item) => item.slug === slug || createLegacySlug(item.id, item.title) === slug);
+}
+
 function mapBlogItem(item: BlogApiItem): BlogItem {
   const title = item.judul?.trim() || "Berita tanpa judul";
   const descriptionHtml = toDescriptionHtml(item.deskripsi);
@@ -141,7 +145,7 @@ export const blogsService = {
 
   async getBlogDetail(slug: string) {
     const blogs = await getAllBlogs();
-    const article = blogs.find((item) => item.slug === slug || createLegacySlug(item.id, item.title) === slug);
+    const article = findBlogBySlug(blogs, slug);
 
     if (!article) {
       throw new Error("Berita tidak ditemukan.");
@@ -149,4 +153,6 @@ export const blogsService = {
 
     return article;
   },
+
+  findBlogBySlug,
 };

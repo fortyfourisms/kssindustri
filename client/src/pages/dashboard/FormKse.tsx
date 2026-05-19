@@ -131,8 +131,8 @@ export default function FormKse() {
 
     // Fetch the company's own CSIRT record to get id_csirt for new SE records
     const { data: csirtData } = useQuery<any>({
-        queryKey: ["csirt-by-perusahaan", perusahaanId],
-        queryFn: () => csirtService.getMembers(),
+        queryKey: ["csirt"],
+        queryFn: api.getCsirt,
         enabled: !!perusahaanId,
         select: (res: any) => {
             // Normalize to array then find the CSIRT belonging to this company
@@ -590,6 +590,9 @@ export default function FormKse() {
                 }
                 await queryClient.invalidateQueries({ queryKey: ["se"] });
                 await queryClient.invalidateQueries({ queryKey: ["se-edit-requests"] });
+                if (csirtId) {
+                    await queryClient.invalidateQueries({ queryKey: ["se_csirt", String(csirtId)] });
+                }
                 setIsSubmitted(true);
                 toast({ title: "Berhasil!", description: "Assessment berhasil diselesaikan dan disimpan." });
                 setTimeout(() => navigate('/dashboard/kse'), 1200);

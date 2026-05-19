@@ -12,7 +12,7 @@ import { RequireCompanyProfile } from "@/components/RequireCompanyProfile";
 import { motion, AnimatePresence } from "framer-motion";
 import { useCsirtProfile } from "@/hooks/useCsirtProfile";
 import { useUser } from "@/hooks/useAuth";
-import { csirtProfileSchema } from "@/lib/form-validation";
+import { csirtProfileSchema, csirtSdmSchema } from "@/lib/form-validation";
 import type { SdmCsirt, SeCsirt } from "@/types/csirt.types";
 
 const INPUT_CLS = "dashboard-input w-full rounded-xl border px-4 py-2.5 text-sm transition";
@@ -345,6 +345,7 @@ function CreateSdmModal({ csirtId, onSave, onClose, loading }: {
     onClose: () => void;
     loading: boolean;
 }) {
+    const { toast } = useToast();
     const [form, setForm] = useState({ nama_personel: "", jabatan_csirt: "", jabatan_perusahaan: "", skill: "" });
     const [sertifikasiList, setSertifikasiList] = useState<string[]>([]);
     const [sertInput, setSertInput] = useState("");
@@ -362,7 +363,19 @@ function CreateSdmModal({ csirtId, onSave, onClose, loading }: {
         setSertifikasiList(sertifikasiList.filter((_, i) => i !== idx));
     };
 
-    const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); onSave({ id_csirt: csirtId, ...form, sertifikasi: sertifikasiList.join(", ") }); };
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        const parsed = csirtSdmSchema.safeParse({ ...form, sertifikasi: sertifikasiList.join(", ") });
+        if (!parsed.success) {
+            toast({
+                title: "Data SDM belum valid",
+                description: parsed.error.issues[0]?.message || "Periksa kembali data SDM.",
+                variant: "destructive",
+            });
+            return;
+        }
+        onSave({ id_csirt: csirtId, ...parsed.data });
+    };
 
     return (
         <div className={MODAL_BACKDROP_CLS}>
@@ -429,6 +442,7 @@ function EditSdmModal({ initial, csirtId, onSave, onClose, loading }: {
     onClose: () => void;
     loading: boolean;
 }) {
+    const { toast } = useToast();
     const [form, setForm] = useState({
         nama_personel: initial.nama_personel || "",
         jabatan_csirt: initial.jabatan_csirt || "",
@@ -453,7 +467,19 @@ function EditSdmModal({ initial, csirtId, onSave, onClose, loading }: {
         setSertifikasiList(sertifikasiList.filter((_, i) => i !== idx));
     };
 
-    const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); onSave({ id_csirt: csirtId, ...form, sertifikasi: sertifikasiList.join(", ") }); };
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        const parsed = csirtSdmSchema.safeParse({ ...form, sertifikasi: sertifikasiList.join(", ") });
+        if (!parsed.success) {
+            toast({
+                title: "Data SDM belum valid",
+                description: parsed.error.issues[0]?.message || "Periksa kembali data SDM.",
+                variant: "destructive",
+            });
+            return;
+        }
+        onSave({ id_csirt: csirtId, ...parsed.data });
+    };
 
     return (
         <div className={MODAL_BACKDROP_CLS}>
@@ -660,7 +686,7 @@ export default function CSIRT() {
     });
 
     const { data: seList = [], isLoading: isLoadingSe } = useQuery({
-        queryKey: ["se", activeCsirtId],
+        queryKey: ["se_csirt", activeCsirtId],
         queryFn: () => csirtService.getSeByCsirtId(activeCsirtId as string),
         enabled: !!activeCsirtId,
     });
