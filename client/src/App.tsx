@@ -38,6 +38,7 @@ import SurveiProfil from "@/pages/dashboard/SurveiProfil";
 import SurveiRisikoOverview from "@/pages/dashboard/SurveiRisikoOverview";
 import EditProfil from "@/pages/dashboard/EditProfil";
 import PengaturanAkun from "@/pages/dashboard/PengaturanAkun";
+import NotificationsPage from "@/pages/dashboard/NotificationsPage";
 
 import { LMSDashboard } from "@/features/lms/pages/LMSDashboard";
 import LMSMateri from "@/features/lms/pages/LMSMateri";
@@ -139,6 +140,11 @@ const router = createBrowserRouter([
           </OrganizationRoute>
         ),
         handle: { title: "Form Survei Risiko" },
+      },
+      {
+        path: "/notifikasi",
+        element: <NotificationsPage />,
+        handle: { title: "Notifikasi" },
       },
       {
         path: "/dashboard/ikas",

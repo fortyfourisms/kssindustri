@@ -43,7 +43,7 @@ export function BlogSection() {
       <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px] lg:items-end lg:gap-10">
           <div className="max-w-3xl">
-            <h2 className="text-2xl font-display font-medium leading-tight text-slate-900 sm:text-3xl lg:text-5xl">
+            <h2 className="text-5xl md:text-6xl font-display font-medium text-slate-900 tracking-tight leading-tight">
               Artikel untuk memperkuat
               <span className="block text-slate-400">
                 pemahaman keamanan siber

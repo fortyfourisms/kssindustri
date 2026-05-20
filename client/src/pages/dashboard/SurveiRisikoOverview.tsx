@@ -25,6 +25,24 @@ const SECONDARY_BUTTON_CLS = "button-force-white dashboard-secondary-button inli
 const WARNING_BUTTON_CLS = "button-force-white dashboard-warning-button inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3 text-sm font-semibold transition-all hover:-translate-y-0.5";
 const CARD_CLS = "dashboard-section-card rounded-[1.75rem] border p-6 shadow-sm";
 
+function hasPersistedRiskAnswer(risk: Record<string, any> | null | undefined): boolean {
+    if (!risk) return false;
+    if (risk.pernah_terjadi === true) return true;
+    if (risk.pernah_terjadi === false && typeof risk.alasan === "string" && risk.alasan.trim()) {
+        return true;
+    }
+
+    return Boolean(
+        typeof risk.dampak_reputasi === "number" ||
+        typeof risk.dampak_operasional === "number" ||
+        typeof risk.dampak_finansial === "number" ||
+        typeof risk.dampak_hukum === "number" ||
+        typeof risk.frekuensi === "number" ||
+        typeof risk.ada_pengendalian === "boolean" ||
+        (typeof risk.deskripsi_pengendalian === "string" && risk.deskripsi_pengendalian.trim())
+    );
+}
+
 function getSurveyStatusLabel(
     hasRespondent: boolean,
     completed: boolean,
@@ -54,13 +72,16 @@ export default function SurveiRisikoOverview() {
     const surveyCompleted = Boolean(progress?.completed || progress?.finished_at);
     const currentRiskNumber = typeof progress?.current_risk === "number" ? progress.current_risk + 1 : null;
     const totalRiskCount = STATIC_SURVEY_RISKS.length;
+    const answeredRiskCount = Array.isArray(progress?.items)
+        ? progress.items.filter((item) => hasPersistedRiskAnswer(item as Record<string, any>)).length
+        : 0;
     const progressPercent = !hasRespondent
         ? 0
         : surveyCompleted
             ? 100
-            : currentRiskNumber !== null && totalRiskCount > 0
-                ? Math.round((currentRiskNumber / totalRiskCount) * 100)
-                : 12;
+            : totalRiskCount > 0 && answeredRiskCount > 0
+                ? Math.round((answeredRiskCount / totalRiskCount) * 100)
+                : 0;
     const surveyStatus = getSurveyStatusLabel(hasRespondent, surveyCompleted, currentRiskNumber, totalRiskCount);
     const statusTitle = !hasRespondent
         ? "Mulai asesmen risiko dari data responden"
@@ -141,8 +162,8 @@ export default function SurveiRisikoOverview() {
 
     return (
         <RequireCompanyProfile>
-            <div className="dashboard-page-wrap relative min-h-screen overflow-hidden font-sans">
-                <div className="mx-auto max-w-7xl space-y-6 px-4 pb-12 pt-20 sm:px-6">
+            <div>
+                <div className="mx-auto max-w-7xl space-y-6 pb-12">
                     <PageHeader
                         icon={ClipboardList}
                         title="Survei Profil Risiko"

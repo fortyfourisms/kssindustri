@@ -39,7 +39,7 @@ export function Hero() {
   }, [displayText, fullText, isDeleting, slogans.length, typingSpeed]);
 
   return (
-    <section className="relative isolate flex min-h-[84vh] items-center overflow-hidden bg-transparent pb-16 pt-28 sm:min-h-[88vh] sm:pb-20 lg:min-h-[92vh] lg:pb-24 lg:pt-36 xl:pt-40">
+    <section className="relative isolate flex min-h-[100svh] items-center overflow-hidden bg-transparent pb-20 pt-28 sm:min-h-[88vh] sm:pb-20 lg:min-h-[92vh] lg:pb-24 lg:pt-36 xl:pt-40">
       <div className="absolute inset-0 z-[1] bg-[radial-gradient(circle_at_top,rgba(96,239,255,0.12),transparent_32%),linear-gradient(to_bottom,rgba(255,255,255,0.65),rgba(255,255,255,0.15)_40%,transparent_100%)]" />
       <div className="absolute left-1/2 top-24 z-[1] h-72 w-72 -translate-x-1/2 rounded-full bg-cyan-300/10 blur-3xl" />
       <div className="absolute bottom-0 left-1/2 z-[1] h-56 w-[42rem] -translate-x-1/2 rounded-full bg-blue-400/10 blur-3xl" />

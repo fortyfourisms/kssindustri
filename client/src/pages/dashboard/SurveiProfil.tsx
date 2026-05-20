@@ -873,8 +873,6 @@ export default function SurveiProfil() {
         ? 0
         : typeof totalRiskCount === "number" && totalRiskCount > 0 && answeredRiskCount > 0
             ? Math.round((answeredRiskCount / totalRiskCount) * 100)
-            : typeof totalRiskCount === "number" && totalRiskCount > 0
-                ? Math.round((currentRiskNumber / totalRiskCount) * 100)
             : Math.round((answeredFields / totalFields) * 100);
     const isLastRisk = step === 1 && !hasNextRisk(resolvedRisk, activeProgress as Record<string, any> | null, riskCatalog);
     const nextLabel = step === 0
@@ -896,7 +894,7 @@ export default function SurveiProfil() {
 
     return (
         <RequireCompanyProfile>
-            <div className="dashboard-page-wrap relative min-h-screen overflow-hidden font-sans">
+            <div>
                 {/* Gradient Progress Bar */}
                 <div className="fixed top-0 left-0 z-50 h-1.5 w-full" style={{ background: "var(--dashboard-progress-track)" }}>
                     <div
@@ -905,7 +903,7 @@ export default function SurveiProfil() {
                     />
                 </div>
 
-                <div className="mx-auto max-w-7xl space-y-6 px-4 pb-12 pt-20 sm:px-6 relative z-10">
+                <div className="mx-auto max-w-7xl space-y-6 pb-12 relative z-10">
                     <PageHeader
                         icon={Building2}
                         title={pageTitle}

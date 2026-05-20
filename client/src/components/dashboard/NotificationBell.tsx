@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Bell, CheckCheck, ChevronDown, ChevronUp, Wifi, WifiOff } from "lucide-react";
 import {
     DropdownMenu,
@@ -24,8 +25,8 @@ function formatNotificationTime(timestamp: string) {
 
 export function NotificationBell() {
     const [isOpen, setIsOpen] = useState(false);
-    const [showAllNotifications, setShowAllNotifications] = useState(false);
     const [expandedNotificationId, setExpandedNotificationId] = useState<string | null>(null);
+    const navigate = useNavigate();
     const {
         notifications,
         unreadCount,
@@ -50,7 +51,6 @@ export function NotificationBell() {
                 setIsOpen(open);
 
                 if (!open) {
-                    setShowAllNotifications(false);
                     setExpandedNotificationId(null);
                 }
             }}
@@ -128,8 +128,7 @@ export function NotificationBell() {
                 </div>
 
                 <ScrollArea className={cn(
-                    "transition-all",
-                    showAllNotifications ? "max-h-[min(80vh,640px)]" : "max-h-[min(55vh,420px)]"
+                    "max-h-[min(55vh,420px)] transition-all"
                 )}>
                     <div className="space-y-2 p-2 pr-3 sm:pr-4">
                         {!isAvailable ? (
@@ -238,7 +237,7 @@ export function NotificationBell() {
                     </div>
                 </ScrollArea>
 
-                {notifications.length > 3 ? (
+                {isAvailable ? (
                     <div className="border-t px-4 py-3" style={{ borderColor: "var(--dashboard-border)" }}>
                         <Button
                             type="button"
@@ -246,9 +245,13 @@ export function NotificationBell() {
                             size="sm"
                             className="h-11 w-full rounded-xl px-3 text-xs hover:bg-[var(--dashboard-action-soft-hover)] hover:text-[var(--dashboard-action-soft-fg-strong)]"
                             style={{ color: "var(--dashboard-action-soft-fg)" }}
-                            onClick={() => setShowAllNotifications((current) => !current)}
+                            onClick={() => {
+                                setIsOpen(false);
+                                setExpandedNotificationId(null);
+                                navigate("/notifikasi");
+                            }}
                         >
-                            {showAllNotifications ? "Ringkas daftar" : "Lihat semua"}
+                            Lihat semua notifikasi
                         </Button>
                     </div>
                 ) : null}
