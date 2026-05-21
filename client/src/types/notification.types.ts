@@ -4,6 +4,11 @@ export interface NotificationItem {
     description: string;
     timestamp: string;
     read: boolean;
+    type: string;
+    typeLabel: string;
+    actorName: string;
+    actorUsername: string;
+    actorAvatar: string;
 }
 
 export interface NotificationsListResult {
@@ -97,7 +102,63 @@ function humanizeNotificationDescription(value: string) {
     const mappedDescription = NOTIFICATION_DESCRIPTION_MAP[normalized];
     if (mappedDescription) return mappedDescription;
 
-    return trimmed;
+    return trimmed
+        .replace(/_/g, " ")
+        .replace(/\bikas\b/gi, "IKAS")
+        .replace(/\bkse\b/gi, "KSE")
+        .replace(/\bcsirt\b/gi, "CSIRT")
+        .replace(/\bsdm\b/gi, "SDM")
+        .replace(/\s+/g, " ")
+        .replace(/^\w/, (char) => char.toUpperCase());
+}
+
+function humanizeNotificationType(value: string) {
+    const normalized = value.trim().toLowerCase();
+    if (!normalized) return "Umum";
+
+    if (
+        normalized === "resource_created" ||
+        normalized === "resource created"
+    ) {
+        return "Penambahan data";
+    }
+
+    if (
+        normalized.includes("edit_requested") ||
+        normalized.includes("edit_actioned") ||
+        normalized.includes("edit_approved") ||
+        normalized.includes("edit_rejected")
+    ) {
+        return "Permintaan edit data";
+    }
+
+    if (
+        normalized === "resource_updated" ||
+        normalized === "resource updated" ||
+        normalized.endsWith("_updated") ||
+        normalized.endsWith("_validated") ||
+        normalized.endsWith("_verified") ||
+        normalized.endsWith("_approved") ||
+        normalized.endsWith("_rejected") ||
+        normalized.endsWith("_actioned")
+    ) {
+        return "Perubahan data";
+    }
+
+    const mappedTitle = NOTIFICATION_TITLE_MAP[normalized];
+    if (mappedTitle) return mappedTitle;
+
+    return normalized
+        .split(/[_\s]+/)
+        .filter(Boolean)
+        .map((segment) => {
+            if (segment === "ikas" || segment === "kse" || segment === "csirt") {
+                return segment.toUpperCase();
+            }
+
+            return segment.charAt(0).toUpperCase() + segment.slice(1);
+        })
+        .join(" ");
 }
 
 function fallbackNotificationId(record: Record<string, unknown>) {
@@ -118,6 +179,11 @@ export function normalizeNotification(value: unknown): NotificationItem | null {
     const record = toRecord(value);
     if (!record) return null;
 
+    const userRecord =
+        toRecord(record.user) ||
+        toRecord(record.sender) ||
+        toRecord(record.actor);
+
     const id =
         toStringValue(record.id) ||
         toStringValue(record.notification_id) ||
@@ -129,6 +195,12 @@ export function normalizeNotification(value: unknown): NotificationItem | null {
         toStringValue(record.judul) ||
         toStringValue(record.type) ||
         "Notifikasi";
+
+    const rawType =
+        toStringValue(record.type) ||
+        toStringValue(record.category) ||
+        toStringValue(record.notification_type) ||
+        toStringValue(record.kind);
 
     const description =
         toStringValue(record.description) ||
@@ -151,12 +223,29 @@ export function normalizeNotification(value: unknown): NotificationItem | null {
         toBooleanValue(record.isRead) ||
         toStringValue(record.status).toLowerCase() === "read";
 
+    const actorName =
+        toStringValue(userRecord?.display_name) ||
+        toStringValue(userRecord?.name) ||
+        toStringValue(userRecord?.full_name) ||
+        toStringValue(userRecord?.username);
+
+    const actorUsername = toStringValue(userRecord?.username);
+    const actorAvatar =
+        toStringValue(userRecord?.foto_profile) ||
+        toStringValue(userRecord?.photo_profile) ||
+        toStringValue(userRecord?.avatar);
+
     return {
         id,
         title: humanizeNotificationTitle(rawTitle),
         description: humanizeNotificationDescription(description),
         timestamp,
         read,
+        type: rawType,
+        typeLabel: humanizeNotificationType(rawType),
+        actorName,
+        actorUsername,
+        actorAvatar,
     };
 }
 

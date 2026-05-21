@@ -26,6 +26,16 @@ function sortByLatestPastEvent(a: EventItem, b: EventItem) {
   return new Date(b.eventDate).getTime() - new Date(a.eventDate).getTime();
 }
 
+function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .replace(/-{2,}/g, "-");
+}
+
 export function decodeHtmlEntities(value: string) {
   const namedEntities: Record<string, string> = {
     amp: "&",
@@ -214,10 +224,13 @@ function mapEventItem(item: EventApiItem): EventItem {
   const eventDate = item.tanggal || item.created_at || new Date().toISOString();
   const status = resolveEventStatus(item.status, eventDate);
   const numericId = typeof item.id === "number" ? item.id : Number(item.id);
+  const fallbackSlug = `${String(item.id)}-${slugify(title || "kegiatan")}`;
+  const slug = slugify(item.slug?.trim() || "") || fallbackSlug;
 
   return {
     id: String(item.id),
     numericId: Number.isFinite(numericId) ? numericId : undefined,
+    slug,
     title,
     shortDescription: shortenDescription(getPreviewText(fullDescription)),
     fullDescription,
@@ -313,9 +326,9 @@ export const eventsService = {
     return events.filter((event) => event.status === "upcoming").sort(sortByNearestEvent);
   },
 
-  async getEventDetail(eventId: string) {
+  async getEventDetail(eventSlugOrId: string) {
     const events = await getAllEvents();
-    const event = events.find((item) => item.id === eventId);
+    const event = events.find((item) => item.slug === eventSlugOrId || item.id === eventSlugOrId);
     if (!event) {
       throw new Error("Event tidak ditemukan.");
     }

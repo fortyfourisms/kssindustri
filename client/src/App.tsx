@@ -38,6 +38,7 @@ import SurveiProfil from "@/pages/dashboard/SurveiProfil";
 import SurveiRisikoOverview from "@/pages/dashboard/SurveiRisikoOverview";
 import EditProfil from "@/pages/dashboard/EditProfil";
 import PengaturanAkun from "@/pages/dashboard/PengaturanAkun";
+import NotificationsPage from "@/pages/dashboard/NotificationsPage";
 
 import { LMSDashboard } from "@/features/lms/pages/LMSDashboard";
 import LMSMateri from "@/features/lms/pages/LMSMateri";
@@ -65,7 +66,7 @@ const router = createBrowserRouter([
   { path: "/blog", element: <Blogs /> },
   { path: "/blog/:slug", element: <BlogArticle /> },
   { path: "/events", element: <Events /> },
-  { path: "/events/:eventId", element: <EventDetail /> },
+  { path: "/events/:eventSlug", element: <EventDetail /> },
   {
     path: "/onboarding-perusahaan",
     element: (
@@ -139,6 +140,11 @@ const router = createBrowserRouter([
           </OrganizationRoute>
         ),
         handle: { title: "Form Survei Risiko" },
+      },
+      {
+        path: "/notifikasi",
+        element: <NotificationsPage />,
+        handle: { title: "Notifikasi" },
       },
       {
         path: "/dashboard/ikas",

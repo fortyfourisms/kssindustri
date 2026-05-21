@@ -9,11 +9,12 @@ import { Loader2, Lock, UserCircle, Mail, User, Save } from "lucide-react";
 import { motion } from "framer-motion";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "@/stores/auth.store";
+import { emailSchema, usernameSchema } from "@/lib/form-validation";
 import { AppButton, AppInput, FormSection } from "@/ui";
 
 const AkunSchema = z.object({
-    username: z.string().min(2, "Username minimal 2 karakter"),
-    email: z.string().email("Email tidak valid"),
+    username: usernameSchema,
+    email: emailSchema,
 });
 type AkunForm = z.infer<typeof AkunSchema>;
 
@@ -21,7 +22,7 @@ const PasswordSchema = z
     .object({
         currentPassword: z.string().min(1, "Password lama wajib diisi"),
         newPassword: z.string().min(8, "Password baru minimal 8 karakter"),
-        confirmPassword: z.string(),
+        confirmPassword: z.string().min(1, "Konfirmasi password wajib diisi"),
     })
     .refine((v) => v.newPassword === v.confirmPassword, {
         message: "Password baru tidak cocok",

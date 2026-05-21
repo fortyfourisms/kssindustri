@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { RequireCompanyProfile } from "@/components/RequireCompanyProfile";
 import { PageHeader } from "@/components/dashboard/PageHeader";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useCompanyProfile } from "@/hooks/useCompanyProfile";
 import { useUser } from "@/hooks/useAuth";
 import { useSurveyStore } from "@/stores/survey.store";
@@ -23,6 +24,24 @@ const PRIMARY_BUTTON_CLS = "button-force-white dashboard-primary-button inline-f
 const SECONDARY_BUTTON_CLS = "button-force-white dashboard-secondary-button inline-flex items-center justify-center gap-2 rounded-xl border px-6 py-3 text-sm font-semibold transition-all hover:-translate-y-0.5";
 const WARNING_BUTTON_CLS = "button-force-white dashboard-warning-button inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3 text-sm font-semibold transition-all hover:-translate-y-0.5";
 const CARD_CLS = "dashboard-section-card rounded-[1.75rem] border p-6 shadow-sm";
+
+function hasPersistedRiskAnswer(risk: Record<string, any> | null | undefined): boolean {
+    if (!risk) return false;
+    if (risk.pernah_terjadi === true) return true;
+    if (risk.pernah_terjadi === false && typeof risk.alasan === "string" && risk.alasan.trim()) {
+        return true;
+    }
+
+    return Boolean(
+        typeof risk.dampak_reputasi === "number" ||
+        typeof risk.dampak_operasional === "number" ||
+        typeof risk.dampak_finansial === "number" ||
+        typeof risk.dampak_hukum === "number" ||
+        typeof risk.frekuensi === "number" ||
+        typeof risk.ada_pengendalian === "boolean" ||
+        (typeof risk.deskripsi_pengendalian === "string" && risk.deskripsi_pengendalian.trim())
+    );
+}
 
 function getSurveyStatusLabel(
     hasRespondent: boolean,
@@ -38,7 +57,7 @@ function getSurveyStatusLabel(
 export default function SurveiRisikoOverview() {
     const navigate = useNavigate();
     const { data: user } = useUser();
-    const { perusahaan } = useCompanyProfile(user ?? null);
+    const { perusahaan, isResolvingPerusahaan } = useCompanyProfile(user ?? null);
     const fetchCurrentRespondent = useSurveyStore((state) => state.fetchCurrentRespondent);
     const currentRespondent = useSurveyStore((state) => state.currentRespondent);
     const progress = useSurveyStore((state) => state.progress);
@@ -53,13 +72,16 @@ export default function SurveiRisikoOverview() {
     const surveyCompleted = Boolean(progress?.completed || progress?.finished_at);
     const currentRiskNumber = typeof progress?.current_risk === "number" ? progress.current_risk + 1 : null;
     const totalRiskCount = STATIC_SURVEY_RISKS.length;
+    const answeredRiskCount = Array.isArray(progress?.items)
+        ? progress.items.filter((item) => hasPersistedRiskAnswer(item as Record<string, any>)).length
+        : 0;
     const progressPercent = !hasRespondent
         ? 0
         : surveyCompleted
             ? 100
-            : currentRiskNumber !== null && totalRiskCount > 0
-                ? Math.round((currentRiskNumber / totalRiskCount) * 100)
-                : 12;
+            : totalRiskCount > 0 && answeredRiskCount > 0
+                ? Math.round((answeredRiskCount / totalRiskCount) * 100)
+                : 0;
     const surveyStatus = getSurveyStatusLabel(hasRespondent, surveyCompleted, currentRiskNumber, totalRiskCount);
     const statusTitle = !hasRespondent
         ? "Mulai asesmen risiko dari data responden"
@@ -91,21 +113,29 @@ export default function SurveiRisikoOverview() {
                 ? `Tahap berikutnya yang terdeteksi: ${nextStep}.`
                 : "Lanjutkan ke risiko berikutnya sesuai progres terakhir yang tersimpan.";
 
+    const isRespondentLoading = loading && !currentRespondent;
+    const isSurveyStatusLoading = loading && hasRespondent && !progress;
+    const instansiValue = currentRespondent?.nama_perusahaan || perusahaan?.nama_perusahaan || null;
+    const isInstansiLoading = !instansiValue && (loading || isResolvingPerusahaan);
+
     const summaryItems = [
         {
             label: "Status Responden",
-            value: hasRespondent ? "Sudah tersedia" : loading ? "Memuat data..." : "Belum tersedia",
+            value: hasRespondent ? "Sudah tersedia" : "Belum tersedia",
             icon: UserRound,
+            loading: isRespondentLoading,
         },
         {
             label: "Status Survei",
             value: surveyStatus,
             icon: surveyCompleted ? CheckCircle2 : Clock3,
+            loading: isSurveyStatusLoading,
         },
         {
             label: "Instansi",
-            value: currentRespondent?.nama_perusahaan || perusahaan?.nama_perusahaan || "Belum tersedia",
+            value: instansiValue || "Belum tersedia",
             icon: ShieldCheck,
+            loading: isInstansiLoading,
         },
     ];
 
@@ -132,8 +162,8 @@ export default function SurveiRisikoOverview() {
 
     return (
         <RequireCompanyProfile>
-            <div className="dashboard-page-wrap relative min-h-screen overflow-hidden font-sans">
-                <div className="mx-auto max-w-7xl space-y-6 px-4 pb-12 pt-20 sm:px-6">
+            <div>
+                <div className="mx-auto max-w-7xl space-y-6 pb-12">
                     <PageHeader
                         icon={ClipboardList}
                         title="Survei Profil Risiko"
@@ -215,9 +245,13 @@ export default function SurveiRisikoOverview() {
                                                     <p className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--dashboard-text-muted)" }}>
                                                         {item.label}
                                                     </p>
-                                                    <p className="mt-1 text-sm font-semibold" style={{ color: "var(--dashboard-text)" }}>
-                                                        {item.value}
-                                                    </p>
+                                                    {item.loading ? (
+                                                        <Skeleton className="mt-2 h-5 w-32 rounded-lg" />
+                                                    ) : (
+                                                        <p className="mt-1 text-sm font-semibold" style={{ color: "var(--dashboard-text)" }}>
+                                                            {item.value}
+                                                        </p>
+                                                    )}
                                                 </div>
                                             </div>
                                         );

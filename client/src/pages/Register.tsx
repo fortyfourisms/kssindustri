@@ -9,19 +9,20 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { PerusahaanSelector } from "@/components/PerusahaanSelector";
 import { TurnstileWidget, type TurnstileWidgetHandle } from "@/components/TurnstileWidget";
+import { emailSchema, usernameSchema } from "@/lib/form-validation";
 import Logo from "@/assets/d44.svg";
 
 const RegisterSchema = z
     .object({
-        username: z.string().min(3, "Username must be at least 3 characters"),
-        email: z.string().email("Invalid email format"),
+        username: usernameSchema,
+        email: emailSchema,
         password: z.string()
             .min(8, "Password does not meet requirements")
             .regex(/[a-z]/, "Password does not meet requirements")
             .regex(/[A-Z]/, "Password does not meet requirements")
             .regex(/[0-9]/, "Password does not meet requirements")
             .regex(/[^a-zA-Z0-9]/, "Password does not meet requirements"),
-        confirmPassword: z.string(),
+        confirmPassword: z.string().min(1, "Passwords do not match"),
         perusahaanId: z.string().min(1, "Institution/company is required"),
     })
     .refine((v) => {

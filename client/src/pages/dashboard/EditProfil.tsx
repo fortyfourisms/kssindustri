@@ -22,19 +22,28 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useSearchParams } from "react-router-dom";
 import { getMediaUrl } from "@/lib/utils";
+import {
+    companyNameSchema,
+    emailSchema,
+    optionalEmailSchema,
+    optionalPhoneSchema,
+    optionalWebsiteSchema,
+    personNameSchema,
+    picSchema,
+} from "@/lib/form-validation";
 
 const ProfileSchema = z.object({
-    display_name: z.string().min(2, "Nama pengguna minimal 2 karakter"),
-    email: z.string().email("Email tidak valid"),
-    jabatan: z.string().optional().nullable(),
+    display_name: personNameSchema,
+    email: emailSchema,
+    jabatan: z.string().trim().max(100, "Jabatan maksimal 100 karakter").optional().nullable(),
 });
 
 const PerusahaanSchema = z.object({
-    nama_perusahaan: z.string().min(1, "Nama perusahaan wajib diisi"),
-    alamat: z.string().optional().nullable(),
-    email: z.string().email("Email tidak valid").optional().nullable().or(z.literal("")),
-    telepon: z.string().optional().nullable(),
-    website: z.string().optional().nullable(),
+    nama_perusahaan: companyNameSchema,
+    alamat: z.string().trim().max(255, "Alamat maksimal 255 karakter").optional().nullable(),
+    email: optionalEmailSchema.optional().nullable(),
+    telepon: optionalPhoneSchema.optional().nullable(),
+    website: optionalWebsiteSchema.optional().nullable(),
     photo: z.string().optional().nullable(),
     id_sub_sektor: z.string().optional().nullable(),
 });
@@ -112,10 +121,25 @@ function PicModal({
         email: initialData?.email || "",
         telepon: initialData?.telepon || ""
     });
+    const [errors, setErrors] = useState<Partial<Record<keyof typeof form, string>>>({});
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        onSave({ ...form, id_perusahaan: idPerusahaan });
+        const parsed = picSchema.safeParse(form);
+        if (!parsed.success) {
+            const nextErrors: Partial<Record<keyof typeof form, string>> = {};
+            for (const issue of parsed.error.issues) {
+                const field = issue.path[0] as keyof typeof form | undefined;
+                if (field && !nextErrors[field]) {
+                    nextErrors[field] = issue.message;
+                }
+            }
+            setErrors(nextErrors);
+            return;
+        }
+
+        setErrors({});
+        onSave({ ...parsed.data, id_perusahaan: idPerusahaan });
     };
 
     return (
@@ -129,14 +153,17 @@ function PicModal({
                     <div>
                         <label className={LABEL_CLS}>Nama Lengkap</label>
                         <input required value={form.nama} onChange={(e) => setForm({ ...form, nama: e.target.value })} className={INPUT_CLS} placeholder="Nama PIC" />
+                        {errors.nama ? <p className={ERROR_TEXT_CLS}>{errors.nama}</p> : null}
                     </div>
                     <div>
                         <label className={LABEL_CLS}>Email</label>
                         <input required type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className={INPUT_CLS} placeholder="email@domain.com" />
+                        {errors.email ? <p className={ERROR_TEXT_CLS}>{errors.email}</p> : null}
                     </div>
                     <div>
                         <label className={LABEL_CLS}>Telepon</label>
-                        <input required value={form.telepon} onChange={(e) => setForm({ ...form, telepon: e.target.value })} className={INPUT_CLS} placeholder="Nomor Telepon" />
+                        <input required type="tel" value={form.telepon} onChange={(e) => setForm({ ...form, telepon: e.target.value })} className={INPUT_CLS} placeholder="Nomor Telepon" />
+                        {errors.telepon ? <p className={ERROR_TEXT_CLS}>{errors.telepon}</p> : null}
                     </div>
                     <div className="flex gap-3 pt-4">
                         <button type="button" onClick={onClose} className={`${MUTED_BUTTON_CLS} flex-1 justify-center py-2.5 font-bold`}>Batal</button>

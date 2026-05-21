@@ -12,6 +12,7 @@ import { RequireCompanyProfile } from "@/components/RequireCompanyProfile";
 import { motion, AnimatePresence } from "framer-motion";
 import { useCsirtProfile } from "@/hooks/useCsirtProfile";
 import { useUser } from "@/hooks/useAuth";
+import { csirtProfileSchema, csirtSdmSchema } from "@/lib/form-validation";
 import type { SdmCsirt, SeCsirt } from "@/types/csirt.types";
 
 const INPUT_CLS = "dashboard-input w-full rounded-xl border px-4 py-2.5 text-sm transition";
@@ -114,6 +115,7 @@ function FileUploadField({
 
 // ─── Modal: CSIRT Profile Create ──────────────────────────────────────────────
 function CreateCsirtModal({ onSubmit, onClose, loading, idPerusahaan }: any) {
+    const { toast } = useToast();
     const [formData, setFormData] = useState({ nama_csirt: "", web_csirt: "", telepon_csirt: "", email_csirt: "" });
     const [photoCsirt, setPhotoCsirt] = useState<File | null>(null);
     const [fileRfc, setFileRfc] = useState<File | null>(null);
@@ -122,11 +124,20 @@ function CreateCsirtModal({ onSubmit, onClose, loading, idPerusahaan }: any) {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        const parsed = csirtProfileSchema.safeParse(formData);
+        if (!parsed.success) {
+            toast({
+                title: "Data CSIRT belum valid",
+                description: parsed.error.issues[0]?.message || "Periksa kembali data CSIRT.",
+                variant: "destructive",
+            });
+            return;
+        }
         const fd = new FormData();
-        fd.append("nama_csirt", formData.nama_csirt);
-        fd.append("web_csirt", formData.web_csirt);
-        fd.append("telepon_csirt", formData.telepon_csirt);
-        fd.append("email_csirt", formData.email_csirt);
+        fd.append("nama_csirt", parsed.data.nama_csirt);
+        fd.append("web_csirt", parsed.data.web_csirt);
+        fd.append("telepon_csirt", parsed.data.telepon_csirt);
+        fd.append("email_csirt", parsed.data.email_csirt);
         if (idPerusahaan) fd.append("id_perusahaan", idPerusahaan);
         if (photoCsirt) fd.append("photo_csirt", photoCsirt);
         if (fileRfc) fd.append("file_rfc2350", fileRfc);
@@ -150,15 +161,15 @@ function CreateCsirtModal({ onSubmit, onClose, loading, idPerusahaan }: any) {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label className={LABEL_CLS}>Website CSIRT <RequiredMark /></label>
-                            <input value={formData.web_csirt} onChange={(e) => setFormData({ ...formData, web_csirt: e.target.value })} required className={INPUT_CLS} placeholder="Contoh: https://csirt.perusahaan.go.id" />
+                            <input type="url" value={formData.web_csirt} onChange={(e) => setFormData({ ...formData, web_csirt: e.target.value })} required className={INPUT_CLS} placeholder="Contoh: https://csirt.perusahaan.go.id" />
                         </div>
                         <div>
                             <label className={LABEL_CLS}>Telepon CSIRT <RequiredMark /></label>
-                            <input value={formData.telepon_csirt} onChange={(e) => setFormData({ ...formData, telepon_csirt: e.target.value })} required className={INPUT_CLS} placeholder="Contoh: +62 21 12345678" />
+                            <input type="tel" value={formData.telepon_csirt} onChange={(e) => setFormData({ ...formData, telepon_csirt: e.target.value })} required className={INPUT_CLS} placeholder="Contoh: +62 21 12345678" />
                         </div>
                         <div>
                             <label className={LABEL_CLS}>Email CSIRT <RequiredMark /></label>
-                            <input value={formData.email_csirt} onChange={(e) => setFormData({ ...formData, email_csirt: e.target.value })} required className={INPUT_CLS} placeholder="Contoh: csirt@perusahaan.go.id" />
+                            <input type="email" value={formData.email_csirt} onChange={(e) => setFormData({ ...formData, email_csirt: e.target.value })} required className={INPUT_CLS} placeholder="Contoh: csirt@perusahaan.go.id" />
                         </div>
                     </div>
                     <div className="pt-2">
@@ -212,6 +223,7 @@ function CreateCsirtModal({ onSubmit, onClose, loading, idPerusahaan }: any) {
 
 // ─── Modal: CSIRT Profile Edit ────────────────────────────────────────────────
 function EditCsirtModal({ initial, onSubmit, onClose, loading, idPerusahaan }: any) {
+    const { toast } = useToast();
     const [formData, setFormData] = useState({
         nama_csirt: initial?.nama_csirt || "",
         web_csirt: initial?.web_csirt || "",
@@ -225,11 +237,20 @@ function EditCsirtModal({ initial, onSubmit, onClose, loading, idPerusahaan }: a
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        const parsed = csirtProfileSchema.safeParse(formData);
+        if (!parsed.success) {
+            toast({
+                title: "Data CSIRT belum valid",
+                description: parsed.error.issues[0]?.message || "Periksa kembali data CSIRT.",
+                variant: "destructive",
+            });
+            return;
+        }
         const fd = new FormData();
-        fd.append("nama_csirt", formData.nama_csirt);
-        fd.append("web_csirt", formData.web_csirt);
-        fd.append("telepon_csirt", formData.telepon_csirt);
-        fd.append("email_csirt", formData.email_csirt);
+        fd.append("nama_csirt", parsed.data.nama_csirt);
+        fd.append("web_csirt", parsed.data.web_csirt);
+        fd.append("telepon_csirt", parsed.data.telepon_csirt);
+        fd.append("email_csirt", parsed.data.email_csirt);
         // Do not append id_perusahaan on update to prevent permission errors
         if (photoCsirt) fd.append("photo_csirt", photoCsirt);
         if (fileRfc) fd.append("file_rfc2350", fileRfc);
@@ -253,15 +274,15 @@ function EditCsirtModal({ initial, onSubmit, onClose, loading, idPerusahaan }: a
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label className={LABEL_CLS}>Website CSIRT <RequiredMark /></label>
-                            <input value={formData.web_csirt} onChange={(e) => setFormData({ ...formData, web_csirt: e.target.value })} required className={INPUT_CLS} placeholder="Contoh: https://csirt.perusahaan.go.id" />
+                            <input type="url" value={formData.web_csirt} onChange={(e) => setFormData({ ...formData, web_csirt: e.target.value })} required className={INPUT_CLS} placeholder="Contoh: https://csirt.perusahaan.go.id" />
                         </div>
                         <div>
                             <label className={LABEL_CLS}>Telepon CSIRT <RequiredMark /></label>
-                            <input value={formData.telepon_csirt} onChange={(e) => setFormData({ ...formData, telepon_csirt: e.target.value })} required className={INPUT_CLS} placeholder="Contoh: +62 21 12345678" />
+                            <input type="tel" value={formData.telepon_csirt} onChange={(e) => setFormData({ ...formData, telepon_csirt: e.target.value })} required className={INPUT_CLS} placeholder="Contoh: +62 21 12345678" />
                         </div>
                         <div>
                             <label className={LABEL_CLS}>Email CSIRT <RequiredMark /></label>
-                            <input value={formData.email_csirt} onChange={(e) => setFormData({ ...formData, email_csirt: e.target.value })} required className={INPUT_CLS} placeholder="Contoh: csirt@perusahaan.go.id" />
+                            <input type="email" value={formData.email_csirt} onChange={(e) => setFormData({ ...formData, email_csirt: e.target.value })} required className={INPUT_CLS} placeholder="Contoh: csirt@perusahaan.go.id" />
                         </div>
                     </div>
                     <div className="pt-2">
@@ -324,6 +345,7 @@ function CreateSdmModal({ csirtId, onSave, onClose, loading }: {
     onClose: () => void;
     loading: boolean;
 }) {
+    const { toast } = useToast();
     const [form, setForm] = useState({ nama_personel: "", jabatan_csirt: "", jabatan_perusahaan: "", skill: "" });
     const [sertifikasiList, setSertifikasiList] = useState<string[]>([]);
     const [sertInput, setSertInput] = useState("");
@@ -341,7 +363,19 @@ function CreateSdmModal({ csirtId, onSave, onClose, loading }: {
         setSertifikasiList(sertifikasiList.filter((_, i) => i !== idx));
     };
 
-    const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); onSave({ id_csirt: csirtId, ...form, sertifikasi: sertifikasiList.join(", ") }); };
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        const parsed = csirtSdmSchema.safeParse({ ...form, sertifikasi: sertifikasiList.join(", ") });
+        if (!parsed.success) {
+            toast({
+                title: "Data SDM belum valid",
+                description: parsed.error.issues[0]?.message || "Periksa kembali data SDM.",
+                variant: "destructive",
+            });
+            return;
+        }
+        onSave({ id_csirt: csirtId, ...parsed.data });
+    };
 
     return (
         <div className={MODAL_BACKDROP_CLS}>
@@ -408,6 +442,7 @@ function EditSdmModal({ initial, csirtId, onSave, onClose, loading }: {
     onClose: () => void;
     loading: boolean;
 }) {
+    const { toast } = useToast();
     const [form, setForm] = useState({
         nama_personel: initial.nama_personel || "",
         jabatan_csirt: initial.jabatan_csirt || "",
@@ -432,7 +467,19 @@ function EditSdmModal({ initial, csirtId, onSave, onClose, loading }: {
         setSertifikasiList(sertifikasiList.filter((_, i) => i !== idx));
     };
 
-    const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); onSave({ id_csirt: csirtId, ...form, sertifikasi: sertifikasiList.join(", ") }); };
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        const parsed = csirtSdmSchema.safeParse({ ...form, sertifikasi: sertifikasiList.join(", ") });
+        if (!parsed.success) {
+            toast({
+                title: "Data SDM belum valid",
+                description: parsed.error.issues[0]?.message || "Periksa kembali data SDM.",
+                variant: "destructive",
+            });
+            return;
+        }
+        onSave({ id_csirt: csirtId, ...parsed.data });
+    };
 
     return (
         <div className={MODAL_BACKDROP_CLS}>
@@ -639,7 +686,7 @@ export default function CSIRT() {
     });
 
     const { data: seList = [], isLoading: isLoadingSe } = useQuery({
-        queryKey: ["se", activeCsirtId],
+        queryKey: ["se_csirt", activeCsirtId],
         queryFn: () => csirtService.getSeByCsirtId(activeCsirtId as string),
         enabled: !!activeCsirtId,
     });
